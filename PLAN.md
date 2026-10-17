@@ -2,11 +2,13 @@
 
 **Start here:** confirm which sensors the team can physically use. That choice fixes the first prediction task.
 
+**Environment reading path:** [first episode](#210-environment-v0-the-first-complete-episode) → [five challenges](#211-five-challenges-with-a-reason-for-each) → [difficulty and saturation](#212-keep-the-benchmark-informative-as-models-improve) → [sensor configuration](#213-make-the-sensor-easy-to-plug-in-and-the-benchmark-easy-to-tune).
+
 **Product:** help a medic or team operator follow people remotely, see who needs a check, and track an authorized response.
 
 **Research:** teach AI agents to write small, executable models of an individual's exertion and recovery using the same inputs our wearable provides.
 
-**Status — October 17, 2026:** plan updated after reading the connected Slack announcements, general questions, relevant threads, and the organizer hardware workbook. Listed parts are verified against the workbook; physical allocation, data collection, predictor performance, deployment, and training results remain unverified. Fine-tuning decisions belong to Nikhil.
+**Status — October 17, 2026:** environment v0 is specified in sections 2.10–2.14; it has not been implemented or empirically calibrated. Plan updated after reading the connected Slack announcements, general questions, relevant threads, and the organizer hardware workbook. Listed parts are verified against the workbook; physical allocation, data collection, predictor performance, deployment, and training results remain unverified. Fine-tuning decisions belong to Nikhil.
 
 ## 1. Hardware device, dashboard, and product
 
@@ -264,4 +266,138 @@ AssayLoop, the Virtual Embryo Challenge, and SynthPert remain research leads fro
 
 **Open event checks:** current five-person judge roster; presentation length/scoring weights; actual equipment allocation and functioning; team proposal status and any separate final deliverable instructions. Judge-specific emphasis remains inference from public work. Fine-tuning remains Nikhil's decision.
 
-**Next action — under two minutes:** check the equipment desk for the SEN-15219, LSM6DSOX, and an available H10 reference; record what the team actually receives.
+**Hardware gate:** check the equipment desk for the SEN-15219, LSM6DSOX, and an available H10 reference; record what the team actually receives.
+
+
+### 2.10 Environment v0: the first complete episode
+
+**Decision:** start with Build, focused on predicting recovery after a recorded activity ends. Keep the task narrow enough to verify and the interface broad enough to reuse for Transfer and Update.
+
+**Example agent assignment:** “Use this person's calibration recordings to build a recovery predictor. You may inspect the files, run fitting code, and request development feedback. Submit an executable predictor for an unseen session.”
+
+1. **Inspect:** read the channel manifest and allowed calibration recordings. Identify units, missing data, activity markers, and target provenance.
+2. **Build:** write a predictor and fit its parameters using the allowed recordings. Simple equations, state-space models, and permitted statistical models are all eligible.
+3. **Evaluate:** request feedback on a separate development session. Receive execution status, error in bpm, and error by time segment. Development feedback may include a residual plot.
+4. **Revise:** use the remaining fixed budget to change the model or fitting process. Preserve every candidate, execution log, and feedback result.
+5. **Submit:** freeze the selected code and fitted artifact. The evaluator runs it against hidden sessions with the same allowed input contract.
+
+**Recovery task input:** the runner supplies an observed history ending at a declared cutoff and the recorded activity-stop marker. The submitted predictor generates a future trajectory without seeing future pulse values. Initially allow a recovery-only schedule where the subsequent rest condition is known; validate that it was actually recorded. Later activity-conditioned tasks may provide future activity inputs, but must be labeled separately.
+
+**Provisional pilot settings:** 60 seconds of observed history, a 120-second prediction horizon, three development-feedback calls, and ten minutes of agent time per episode. These are engineering starting points, not evidence that recordings support them. Shorten or extend them using development recordings before freezing a scored version. Record token use, fitting runtime, execution runtime, and wall-clock limits separately.
+
+### 2.11 Five challenges, with a reason for each
+
+These are capability checks inside the three environments, not five independent products. Launch challenge 1 first; add the others when recordings and pilot results support them.
+
+| Challenge | What changes / what the agent must do | Why it belongs | Evidence required |
+| --- | --- | --- | --- |
+| 1. Personalize — Build | Fit an individual's response from a small set of calibration recordings; predict another session | Tests whether personal data improves on the population predictor | Improvement over population and directly fitted individual baselines on hidden sessions |
+| 2. Improve from feedback — Build | Revise a submitted predictor after limited development evaluations | Tests whether the agent learns from an experiment | Hidden performance of its first and selected final submissions, evaluated afterward without exposing test feedback |
+| 3. Transfer activity — Transfer | Adapt an existing predictor with a small amount of evidence from a changed activity pattern or workload | Tests whether it can handle new operational conditions | Separate unseen sessions in the new condition; report adaptation-data duration |
+| 4. Update across sessions — Update | Use a later recording while preserving useful earlier behavior | Tests continued personalization without forgetting | New-session improvement and earlier-session retention reported separately |
+| 5. Handle incomplete evidence — modifier on Build/Transfer/Update | Remain usable with validated gaps or degraded channels; provide uncertainty if supported | Wearable deployment includes incomplete observations | Error and coverage on independently valid targets; uncertainty scored by a proper rule if enabled |
+
+Challenge 5 supports the modeling task; sensor-fault detection is not the main research contribution. Optional inputs, interval estimates, and abstention must have explicit scoring rules. An agent cannot improve its headline score by skipping hard windows. In the primary point-prediction track it must return every required prediction; report execution failures separately. Add an abstention track only with a fixed coverage requirement or a fixed penalty.
+
+**Feedback ablation:** compare revision with real development feedback against the same agent given the same total time and calls but no numeric development feedback. Preserve the original base-model and numerical-baseline comparisons. This checks whether interaction helps beyond extra computation.
+
+### 2.12 Keep the benchmark informative as models improve
+
+**“Unsaturated” means competitors still have measurable room to improve on useful, solvable tasks. It cannot be guaranteed by a design document or by generating unlimited examples.** We must run strong agents and conventional fitting methods to find the actual ceiling.
+
+**Difficulty comes from five controlled sources:**
+
+| Control | Easy starting case | Harder supported case | Guardrail |
+| --- | --- | --- | --- |
+| Personalization data | Several complete sessions | Fewer or shorter calibration recordings | Ensure calibration still contains enough information for the prediction task |
+| Response structure | One response timescale | Different exertion/recovery timescales, slow drift, or multiple response components | Include only dynamics grounded in development data or clearly labeled synthetic stress tests |
+| Generalization | Familiar activity pattern | New activity sequence or held-out dynamics family | Changing random seeds alone does not test structural generalization |
+| Adaptation budget | More new-session evidence and feedback calls | Less adaptation evidence or fewer evaluations | Use equal budgets for all competitors within each comparison |
+| Observation quality | Clean aligned channels | Gaps and artifacts measured in our acquisition pipeline | Keep underlying physiological change distinct from sensor error |
+
+**Do not add arbitrary noise to make everyone fail.** If the target cannot be predicted from the permitted inputs, characterize the information limit, improve measurements, or narrow the claim. A hard task needs a plausible route to better performance.
+
+**Pilot diagnosis:** run a population model, direct individual curve fitting, an automatic model-selection workflow, the U.S. base model, and selected frontier agents on the same development episodes. Inspect individual cases as well as averages.
+
+| What the pilot shows | Decision |
+| --- | --- |
+| Everyone scores well and similarly | Keep the slice as a basic check; add supported transfer, reduced-data, or multi-session challenges |
+| A fixed fitter wins throughout | Report that result. Test whether the agent adds value in model selection/adaptation; retire an uninformative agent task if it does not |
+| Everyone fails, including strong numerical methods | Diagnose missing inputs, labels, synchronization, or impossible extrapolation before increasing difficulty |
+| Rankings change across repeats | Increase repeated episodes or participants; report uncertainty before ranking models |
+| Improvements appear only on synthetic cases | Claim simulator improvement and keep real-data transfer unresolved |
+
+**Renew cases without moving the target:** publish a versioned task distribution and frozen scoring protocol. Keep the current test batch fixed within a leaderboard version. Add genuinely new recordings and validated dynamics in a later version; rerun anchor baselines and compare models within the same version. Record hashes and seeds so a result can be reproduced. Fresh cases help limit contamination; they do not prove difficulty or scientific novelty. [LiveBench research](https://arxiv.org/abs/2406.19314) motivates refreshed cases and objective scoring, without guaranteeing immunity to contamination.
+
+**Prevent shortcuts:** keep complete sessions together, fit normalizers and preprocessing only on allowed data, and ensure online features never use samples beyond their cutoff. Do not put hidden parameters, future targets, or generator seeds into agent-visible files or metadata. Separate the runner's hidden labels from the candidate's inputs. Audit near-duplicate recordings and do not split overlapping windows between support and hidden sessions.
+
+### 2.13 Make the sensor easy to plug in and the benchmark easy to tune
+
+Use five small components with explicit responsibilities:
+
+| Component | Responsibility | What changes after the sensor works |
+| --- | --- | --- |
+| Sensor adapter | Convert device outputs into a common timestamped recording format | Device parsing, units, channel availability, delays, quality flags |
+| Recording store | Keep immutable raw files and processed versions with provenance | Add real sessions; retain participant/session grouping |
+| Episode builder | Select support, development, and hidden recordings for a challenge | Coverage requirements, durations, horizons, input channels |
+| Participant generator | Fit supported response families and measurement variation from permitted recordings | Parameters and measured artifact distributions; no test participants used for generator fitting |
+| Agent runner and evaluator | Expose tools, enforce budgets, execute submissions, calculate metrics, save traces | Keep the interface stable; version scoring changes explicitly |
+
+**Common recording contract:** relative time in seconds; pseudonymous participant and session IDs; available pulse and movement channels with units; validity masks; activity markers; device/processing versions; and target provenance. Required fields and optional fields are explicit. A missing channel remains missing. Retain device sample timestamps rather than assuming arrival order gives synchronization.
+
+**Reference separation:** independent ECG/chest-strap labels may score a prediction while being unavailable as live model inputs. If no independent reference is collected, label the target as the sensor-derived pulse estimate and scope claims accordingly. Do not score “true physiology during PPG dropout” unless an independent usable reference exists.
+
+**One configuration controls each episode family.** An illustrative specification:
+
+```yaml
+benchmark_version: pilot-0
+challenge: build_recovery
+sensor_profile: pending_actual_device
+input_channels: [pulse_bpm, movement, quality, activity_markers]
+target_source: pending_reference_check
+history_seconds: 60
+forecast_seconds: 120
+support_sessions: 2
+development_sessions: 1
+hidden_sessions: 1
+max_feedback_calls: 3
+agent_wall_seconds: 600
+primary_metric: phase_balanced_mae_bpm
+```
+
+Counts and durations above are provisional. A virtual episode can supply them immediately; a real episode is enabled only when distinct recordings exist. Public configurations describe the contract. Final-test record IDs, target files, and seeds live in the evaluator's private manifest.
+
+**After hardware is ready:**
+
+1. **Confirm the data contract — about 30–60 minutes after a usable recording exists:** inspect actual outputs and timestamps; decide processed-input availability and reference target.
+2. **Collect a pilot — about 1–2 hours if capture works:** obtain distinct voluntary activity/recovery recordings with markers. A one-person collection is a plumbing and feasibility pilot.
+3. **Calibrate difficulty — about 1–2 hours of engineering plus agent runtime:** fit numerical baselines, set supported horizons and data requirements, and diagnose easy versus impossible slices using development data.
+4. **Freeze pilot-1 — about 30–60 minutes:** save the config, processing versions, metrics, budgets, and participant/session splits before scoring competitors.
+5. **Run the comparison:** calculate actual runtime as number of episodes × repeated runs × agent time limit, plus baseline and evaluation costs. Use identical episode batches across competitors.
+
+These are planning estimates, contingent on capture quality. Broader participant collection and biological validation require additional time.
+
+### 2.14 Training feedback, final scoring, and tuning boundaries
+
+**Two levels of splitting:**
+
+| Level | How it works |
+| --- | --- |
+| Across participants | Agent-training participants fit the generator and supply training episodes. Separate development participants guide benchmark/model choices. Final-test participants never inform those choices. |
+| Inside an episode | The agent sees support recordings and limited development feedback for the target person. A different session remains hidden. Calibration on a test person's explicitly supplied support data is permitted personalization; it does not make their hidden session available. |
+
+Synthetic training episodes can be resampled freely from the training distribution. Benchmark development uses separate seeds and cases, plus withheld development participants. Final scoring uses sealed test cases with restricted submissions and no per-window feedback. Full traces and labels can be released after a test batch is retired if participant permissions allow; use a new batch for future comparisons.
+
+**Primary error:** for a challenge with exertion and recovery, calculate MAE separately in each phase and average the two phase errors equally. For recovery-only tasks, report recovery MAE. Average sessions within each participant, then participants equally. Never let a long easy rest recording dominate the result. Keep synthetic and real panels separate, and report each challenge separately before proposing an overall score.
+
+**Improvement over baseline:** report `1 - agent_error / baseline_error` with the baseline fixed before testing. Positive means improvement, zero matches, and negative means worse. Always report raw bpm error too. Near-zero baseline error makes the ratio unstable; predeclare a minimum denominator or omit the ratio on that slice. Baselines are not an oracle ceiling; an agent may beat them.
+
+**Feedback/reward interface for future training:** return a machine-readable result containing execution validity, phase errors, baseline errors, resource use, and version IDs. An illustrative bounded training signal is `-min(development_MAE_bpm / 10, 1)` for valid submissions and `-2` for failed execution. This keeps failed execution worse than a successful prediction, but saturates training feedback above 10 bpm; tune the scale on development data before freezing it. Raw final-test MAE remains uncapped. This is a candidate interface example, not a selected fine-tuning recipe. Keep final-test outcomes out of training. Nikhil selects the eventual learning method and reward mapping.
+
+**Separate audit:** an LLM judge reviews experiments, revisions, and justified claims using the saved trace. Its score does not override hidden numerical error. Uncertainty, abstention, and model complexity become scored objectives only in separately specified tracks; they are not adjustable penalties introduced after results are known.
+
+**Close prior work:** [TimeSeriesGym](https://arxiv.org/abs/2505.13291) already evaluates agents on time-series engineering and multiple artifacts with numerical and LLM-based evaluation. We should inspect its [runner and grading interfaces](https://github.com/moment-timeseries-foundation-model/TimeSeriesGym) before choosing to reuse infrastructure. Our proposed specialization is wearable-grounded personal response modeling across Build, Transfer, and Update, with real-session validation. This is a positioning hypothesis, not established novelty.
+
+**First decisive experiment:** on an untouched session, compare a directly fitted personalized response model with an agent that has the same recordings and fitting resources. If the agent cannot improve the predictor or adapt it more usefully across the tested cases, report that and revisit the task before committing to a large training run.
+
+**Next action — under two minutes:** confirm whether the first recording will include an H10 reference alongside PPG and movement. That sets the benchmark target and the claims we can evaluate.
