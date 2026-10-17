@@ -1,311 +1,123 @@
-# Hardware Dashboard Focus
+# DefenseBio Hackathon — Unified Knowledge Base
 
-- Hardware identified as the main focus going forward
-- Dashboard needed for control and officer visibility
-- Framed as a narrative push around American models, where confidence is higher than on the hardware side itself
+**Last consolidated:** October 17, 2026 (America/Los_Angeles)  
+**Canonical detailed plan:** [PLAN.md](PLAN.md), current on main. This KB combines the earlier Slack/meeting notes with the current project direction and confirmed event context. Use the plan for full product, benchmark, experiment, and scoring specifications.  
+**Source standard:** Distinguish organizer-confirmed facts, team proposals, and unverified assumptions. Slack search/history can be incomplete; follow the source links before acting on changing logistics.
 
-# Sensor Data Collection Plan
+## 1. Current direction
 
-- Data to be sourced from two places:
-  - Hackathon team sensors
-  
-  - Own sensors
-- Proposed sequence: collect data first, then build on top of it
-- One participant considering shifting effort toward sensor work to support the other before splitting off
+### Product
 
-# 5G and AI Benchmarking
+Help a medic or team operator follow several people when direct assessment is delayed. The operator needs to know **who needs a check, what changed, and what response has already happened**.
 
-- 5G / AI benchmark work mentioned as a parallel workstream
-- Effort allocation still being weighed between benchmark work and sensor collaboration
+The product loop is:
 
-# Ambient Notes
+1. Capture supported wearable measurements and manual events.
+2. Show the person’s current evidence, data quality/freshness, movement/activity, and pulse trend.
+3. Compare the observed response with a clearly labeled experimental personal exertion/recovery predictor.
+4. Put an explainable reason in an attention queue for operator review.
+5. Let the operator request a check, acknowledge it, record a response, and see reassessment.
 
-- Brief discussion of AI search tools: Gemini used to find a nearby breakfast spot
-- DeepSeek Flash 4.1 mentioned: loses to Claude, only ~10% faster than UltraFast
-- RSI referenced as a topic of shared interest; someone relevant may be worth reaching out to
+The primary user is an operator/medic, not an autonomous medical device. A deviation from a predictor means “check the person or the measurement”; it is not a diagnosis. Any physical output in a demo must be harmless and human-approved.
 
+### Event fit
 
+- **Lead track:** Human Performance & Prolonged Field Care.
+- **Secondary fit:** Biological Data for Defense, through synchronized wearable data and executable modeling.
+- **Official prompt match:** “Operational Phenotyping with Minimal Sensors” asks for useful operational-health signals while minimizing device burden (wearing, charging, and reliability). Signal processing and biohardware optimization are suggested demo types.
+- **Demo principle:** show a tangible sensor → visible evidence → operator action → reassessment loop. A model or dashboard alone is not proof that a complete product loop works.
+- Event direction, track prompts, and demo guidance are in the [organizer build announcement](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790278909686629).
 
+### Research
 
------ 
+Test whether an AI agent can build, transfer, and update a small executable model of an individual’s exertion and recovery using the same allowed inputs as the wearable product. This is a proposed benchmark, not an implemented, calibrated, or validated result.
 
+The decisive early comparison is an agent versus a directly fitted personalized model, with the same permitted data and fitting resources, on an untouched session. If the agent does not improve prediction or useful adaptation, report that and revisit the task before investing in a large training run. Fine-tuning method, training recipe, and reward mapping remain decisions for Nikhil.
 
-# Project Context
+## 2. Project history and decision trail
 
-- Hackathon project: soldier wellness monitoring using provided sensors
-- Focus track: prolonged field care, injury prevention during training
-- Sensor inventory available:
-  - ECG/EKG (electrical heart signal)
-  - PPG (photoplethysmography)
-  - EDA/GSR (electrodermal activity, galvanic skin response)
-  - Skin temperature
-  - CO2 (air-based)
-  - IMU/gyroscope (likely not needed)
+Earlier brainstorming explored three broad directions:
 
-# Recommended Sensor Configuration
+1. **Fine-tune an open U.S. model to outperform Chinese models in an RL environment.** This was judged the weakest initial project fit without a task-grounded product and evidence.
+2. **Protein-binding design/RL.** Potentially relevant to countermeasures, vaccines, or delivery, but dependent on substantial protein-design expertise and validation.
+3. **Distributed phenotyping with minimal sensors.** Compare wearable channels and models to learn what can be inferred from limited, practical signals. This fit the event prompt best.
 
-- Best signals for the use case: EDA/GSR + skin temperature
-  - EDA/GSR measures sweat gland activity via skin conductance
-  - Skin temperature tracks heat load directly
-- CO2 sensor: air-based, so cannot directly monitor blood O2 conversion
-- ECG: useful but form factor is a challenge (chest/neck placement impractical under 60-200 lb tactical load)
-- Interstitial fluid sensors would be ideal but not available
-  - Interstitial fluid reflects cortisol, glucose, stress, and heart rate changes in real time
+A later brainstorm combined phenotyping with a soldier-status dashboard and imagined casualty detection, geolocation, extraction prioritization, and targeted protein/stimulant delivery with a human confirmation button. Those are **historical concepts, not the current MVP**. The current scope narrows to an operator-reviewed exertion/recovery monitoring loop and a model-building benchmark. Therapeutic delivery, injury diagnosis, autonomous casualty triage, and location tracking are not demonstrated or supported by the current sensors. Do not imply the wearable can safely trigger drug delivery.
 
-# Soldier Perspective: Real Gaps in the Field
+Earlier notes suggested heat-casualty warning during training and preferred EDA/GSR plus skin temperature. These remain possible future research questions, not validated signals or the selected first build. “CO2” in the inventory is an ambient air measurement; it does not directly measure blood oxygen conversion. One PPG stream does not establish complete physiology.
 
-- Training environment is the primary use case, not active missions
-- Biggest training risk: heat casualties
-  - Soldiers operate in 105-120°F for extended hours
-  - Body shuts down when it cannot cool itself
-- Key need: a pre-warning system that monitors temperature and sweat, then alerts when rest is needed
-- Formation/mission context: sensors would be too intrusive; training-side application is the right fit
+## 3. Hardware: inventory versus actual access
 
-# LLM and AI Limitations for Biomedical Data
+The organizer posted a rough onsite inventory on October 16 with an attached workbook, DefenseBio_Hackathon_Hardware_Final_v2 (1).xlsx (Slack file F0C9SS9HCM9). The workbook is evidence of what was listed, **not** that our team received, reserved, or tested any item. The organizer said onsite hardware is first come, first served in event logistics messages; team access remains to be checked. Teams’ own hardware requires registration approval. One shared four-legged robot with an arm/claw was announced, but the product does not depend on it.
 
-- Strong pushback on using LLMs to analyze or model soldier physiology
-- Too many unaccounted variables:
-  - Metabolic rate, genetic disorders, diet, tobacco/alcohol use, mental distress, hormonal changes
-- Neuroplasticity analogy: neuron connections change daily, so any mapping is immediately outdated
-  - A live, continuously updating AI translator would be needed, which is not feasible
-- LLMs described as “a better dictionary”: useful for finding connections and keywords, not modeling biological reality
-- Recommended approach: collect data, then manually analyze with domain experts and doctors
+| Workbook item | Proposed role | Open verification |
+| --- | --- | --- |
+| SparkFun Pulse Oximeter & Heart Rate Sensor, Qwiic **SEN-15219** (row 7) | Pulse/PPG signal for an initial response-prediction task | Physical access, raw/processed output, placement, motion quality. Workbook notes reset/MFIO jumpers beyond Qwiic. |
+| Adafruit **LSM6DSOX** STEMMA QT (row 13) | Movement/orientation context | Access, mounting, sampling rate, timestamps, useful activity features. |
+| **Polar H10**, Polar Verity Sense, **AD8232** ECG front end (rows 8, 16–17) | Prefer H10 as an independent development reference if allocated | Access, output, synchronization, and signal quality. Verity Sense is optical, not an ECG reference. |
+| Arduino Nano ESP32 **ABX00083** or Adafruit ESP32-S3 Feather; buttons, LEDs, power banks, straps (rows 2–3, 37, 44, 47–49) | Capture and manual distress/acknowledgment loop | Exact board received, wiring, power, and connection. Nano has no Qwiic port; workbook lists adapters. |
+| SparkFun Qwiic **TMP117** and Grove GSR (rows 10, 12) | Optional observed channels | Access, contact, quality, response time, and a defined validation target before adding scope. |
 
-# Recommended Direction and Next Steps
+**Current hardware hypothesis:** SEN-15219 pulse + LSM6DSOX movement + a manual distress button, if working units are available. Prefer H10 as an independent reference if allocated. Keep temperature and GSR optional. Confirm hardware before locking the first prediction target. The workbook’s application ideas (including contactless heartbeat, fever, and tissue oxygenation proxies) are suggestions, not demonstrated performance or clinical capabilities.
 
-- Sensor system should serve as a pre-injury warning system
-- Output data (sweat levels, temperature, ECG) can be shown to doctors as reference points
-  - E.g., sweat produced before a heat collapse event as a baseline marker
-- Goal: monitor signals continuously, flag risk thresholds, support training plan improvement
+Older brainstorming mentioned ECG, PPG, EDA/GSR, skin temperature, CO2, IMU, force-sensitive resistors, 60 GHz radar, thermal camera, VOC/particulate and spectral sensors, night vision webcam, and broad “sensor kit” availability. Treat that as an early/rough list. The October 16 workbook and actual equipment desk confirmation are the current inventory references. Do not assume every channel is available per team.
 
-# Next Steps
+An EEG availability question was asked October 16; no reply was present in its thread when checked. EEG availability is unknown. [Question thread](https://2026sddefense-dcs5018.slack.com/archives/C0C3TDMLM4Z/p1792199415550999).
 
-- **Email G with follow-up questions on sensor design and use cases**
+## 4. Data, product, and safety boundaries
 
----
+- Distinguish measured values from inferred states, alerts, and clinical conclusions. A predictor is experimental; do not claim clinical efficacy, injury prediction, treatment guidance, or operational readiness without appropriate validation.
+- Missing, stale, disconnected, and poor-quality data must be visible and distinct from normal. Show the measurements and reason behind each alert.
+- An IMU alone does not prove injury or consciousness. Skin temperature does not establish core temperature. PPG-derived pulse is not an independent ground-truth reference.
+- Keep LIVE, REPLAY, and SYNTHETIC data clearly labeled. Acknowledgment or a harmless indicator does not demonstrate therapeutic effect.
+- Preserve participant/session IDs in pseudonymous form, timestamps, units, device and processing versions, validity masks, activity markers, and target provenance. Collect only voluntary, comfortable recordings with appropriate consent. Do not prescribe exertion from model output.
+- If independent reference data are unavailable, label the target as a sensor-derived estimate and limit claims accordingly. Never claim the underlying physiology is known during sensor dropout without an independent usable reference.
+- Location is optional. Label whether it comes from a live phone, replay, or a manually placed demo marker; GPS-denied capability is not established.
+- Product and dashboard execute reviewed predictors. Agent-generated code does not automatically replace a deployed model.
 
-Chat with meeting transcript: https://notes.granola.ai/t/5cc3179a-fc62-46b3-80c4-98e7c091a994
+## 5. Benchmark summary
 
+The full environment specification is in [PLAN.md](PLAN.md), sections 2.1–2.14. In brief:
 
------ 
-# Hackathon Overview
+- **Build:** fit a personalized predictor from limited calibration recordings; evaluate on another session from that participant.
+- **Transfer:** adapt an existing predictor to a changed activity/workload with limited new evidence; evaluate on separate unseen sessions.
+- **Update:** use later recordings while preserving earlier-session performance.
+- Build comes first. Transfer needs genuine activity/workload coverage; Update needs repeated sessions. Until those data exist, latter environments are proposals.
+- Inputs are frozen at each prediction time. Future targets are hidden. Activity-conditioned tasks and forecasts based only on past values are separate tasks.
+- Keep participants and sessions grouped across splits. Separate training, development, and final-test participants. Personalization on explicitly supplied support data is allowed; hidden-session access is not.
+- Fit preprocessing only on permitted data; keep complete sessions together; do not split overlapping windows across support and hidden sets; hide target files, future labels, generator seeds, and private manifests.
+- Report raw bpm error and execution/resource information. For exertion/recovery episodes, compute MAE for each phase and average phase errors equally; average sessions within participants and participants equally. Keep synthetic and real results separate.
+- Fixed numerical baselines, a direct individual fit, and selected agents should use the same episodes and budgets. Preserve first and final submissions and all feedback traces. Test feedback/revision separately from extra compute.
+- Synthetic participants can add practice episodes, not independent human evidence. A small dataset supports only a narrow simulator prototype; report a synthetic gain as synthetic until real-session transfer is shown.
+- Dataset size, pilot duration, and provisional episode settings must be calibrated using development data. Do not claim an unsaturated benchmark from design alone.
+- Candidate reward mappings and LLM trace audits are development ideas, not selected scoring rules. Numerical hidden-test performance remains primary; any quality judge does not override it.
+- Related work and novelty still need review. The plan identifies [TimeSeriesGym](https://github.com/moment-timeseries-foundation/TimeSeriesGym) and prior personalized physiological modeling as comparison points. Novelty is a hypothesis, not established.
 
-- Biodefense-themed hackathon with extensive sensor kit provided
-- 5 tracks: Frontier Bio for the Battlefield, Human Performance and Prolonged Field Care, Biological Data for Defense, Biosecurity and AI-Guided Countermeasures, Distributed Biomanufacturing
-- $10K first prize per track (5 tracks total)
-- Judges are biotech/defense-oriented, not pure science academics
-- Key constraint: not bio experts, so ideas must be buildable with sensors on hand
+## 6. Event facts and logistics
 
-# Three Ideas Evaluated
+- The organizers describe a 24-hour build. The Slack build prompt requests preparation beforehand and says teams can bring hardware subject to registration approval.
+- Event project/proposal form: the September welcome message specified one per team by **October 15, 11:59 p.m. Pacific**. That deadline has passed. This message does not establish a final code deadline or prove our team submitted. [Welcome announcement](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790225319014299).
+- Slack-based schedule/logistics messages summarized in the earlier KB stated registration at 9:30 a.m. Saturday Oct 17, briefings at 11:00 a.m., build clock noon Saturday through noon Sunday Oct 18, demos at noon Sunday, and final judging at 2:00 p.m. These are event-day details and should not be treated as upcoming. Photo ID and onsite registration approval were stated as entry requirements. Check the [event page](https://luma.com/kfgh2fvu) or organizers for corrections.
+- A historical proposal described a three-minute presentation. The current plan explicitly treats that only as a rehearsal format: no official per-team demo duration or scoring rubric was verified in the reviewed Slack searches.
+- Judges, current attendance, proposal submission status, equipment allocation, final deliverable instructions, and EEG availability are not established by this KB.
 
-- Idea 1: Fine-tune open American models to outperform Chinese adversarial AI
-  - Train in RL environments; defense framing around AI biosecurity
-  - Assessed as weakest of the three
-- Idea 2: Protein bonding RL environment
-  - Goes beyond AlphaFold (folding only) to optimize proteins that bind to a target substructure
-  - Applications: bioweapon countermeasures, vaccine design, targeted drug delivery
-  - Viable only with protein design expertise; keep as alternate
-- Idea 3: Distributed phenotyping via minimal sensors
-  - Use many sensors to find which single sensor best predicts all others
-  - Build a lightweight, single-sensor wearable from that result
-  - Assessed as strongest fit for the hackathon
+## 7. Current status and next decisive checks
 
-# Pivot: Merge Ideas 2 and 3 (Core Concept)
+**Verified from reviewed sources:** official track/build prompt; Oct 16 inventory announcement and attached workbook; the EEG question and lack of thread reply at review time; proposal form deadline wording; current PLAN.md on main with the product and benchmark plan.
 
-- Wearable monitors soldier vitals and activity (accelerometer, gyroscope, heart rate, ECG)
-- Detects when a soldier is down via fluctuating vitals and loss of movement
-- Triggers targeted protein/stimulant delivery to stabilize the casualty
-  - Inspired by Orexin receptor research cited in the hackathon prompt
-  - Delivery gated behind human approval: buzzer + button confirm, or voice command (“I’m hit”)
-- Central operator dashboard shows:
-  - Live location of all warfighters
-  - Who is active, injured, or critical
-  - Triage priority for extraction
-- GPS: use phone/laptop API for demo; AirTag or similar as fallback
-  - GPS-denied mode discussed but deprioritized for now
+**Not verified:** receipt or working state of any sensor/board; H10 reference access; data permissions/consent; synchronized pilot capture; participant coverage; predictor performance; implementation/deployment; project-form submission; any separate final deliverable; EEG availability.
 
-# Product and Demo Strategy
+1. Confirm and test the actual SEN-15219, LSM6DSOX, board, and H10 availability.
+2. Decide whether the first recording includes H10 alongside PPG and movement. That fixes target provenance and what can be scored.
+3. Capture one consented, synchronized, comfortable pilot with activity markers; inspect signal quality and timestamps before expanding scope.
+4. Build the smallest end-to-end sensor → evidence → operator check/action → reassessment loop.
+5. Compare a direct personalized fitter and an agent with the same evidence on an untouched session before expanding training or simulator work.
 
-- Build a physical sensor prototype (chest strap or arm strap)
-- Demo: hook up all sensors, show single-sensor reconstruction of full signal suite
-  - Display combined vs. estimated charts to prove accuracy
-- Protein delivery mechanism shown conceptually, not physically injected
-- Avoid pure research/benchmark framing: judges want a buildable product, not a model
-- Normalize vitals relative to individual baseline to generalize across soldiers
+## 8. Source links
 
-# Sensor Kit Available
-
-- ECG, PPG, heart rate, IMU, skin temperature, force-sensitive resistors
-- 60 GHz radar, thermal camera, CO2/VOC/particulate sensors, 11-channel spectral sensor
-- Polar H10 chest strap, Velostat sheet, USB night vision webcam
-- Breadboards, I2C wiring, soldering stations on site
-- Personal sensors (accelerometer, gyroscope) can be brought from dorm
-
-# Next Steps
-
-- **Submit project proposal with 3 ideas**
-- **Scope and validate the merged Idea 2+3 concept**
-- **Bring personal sensor kit (accelerometer, gyroscope) to hackathon**
-- **Research judges' backgrounds to sharpen pitch angle**
-
----
-
-Chat with meeting transcript: https://notes.granola.ai/t/9ae0ff66-23de-4e06-a10a-e630c680e8a0
-
-The first San Diego Defense × Bio hackathon. 24 hours straight. $10K to the winning team.
-
-Five Tracks:
-
-- Frontier Bio for the Battlefield and the Homefront
-
-- Biological Data for Defense
-
-- Human Performance & Prolonged Field Care
-
-- Distributed Biomanufacturing
-
-- Biosecurity & AI-guided Countermeasures
-
-​Day 1: Briefings from stakeholders on Defense and national capability gaps begin at 11:00am. Teams begin building at noon with 24 hours to complete the build.
-
-Day 2: Demos begin at noon on Sunday (in-person). $10K first prize.
-
-​The last hackathon like this in SoCal launched multiple billion-dollar defense companies.
-
-​Hosted by American Bioenhancement Corp. Sponsored by 1517 Fund, Pilgrim Labs, Biosphere, Satomic, Adaptyv, and Permanence Bio.
-
-​Approval required. Apply below. After approval you'll be onboarded to the Hackathon Slack for team formation.
-Blasts
-Toby Myers
-Today, 9:53 AM
-
-​WIFI:
-
-​We have 2 networks in the building that will be active for the full 24 hours. 317 is active now and we’ll bring 318 online once the building begins.
-
-​1.
-
-​WiFiTnet-317
-
-​Password: Wifit@7856
-
-​2.
-
-​WiFiTnet-318
-
-​Password: Wifit@5687
-
-​-Toby
-Toby Myers
-Yesterday, 2:18 PM
-
-​COMPETITORS:
-
-​Less than 24 hours until the building begins. If you have not yet joined the slack, join here:
-
-​https://join.slack.com/t/2026sddefense-dcs5018/shared_invite/zt-4ar9avjo2-Bz9MS2n5kNxjzW1x4roreg?referrer=luma&utm_source=luma
-
-​We’ve compiled a list of provided hardware, which we’ll share in the slack shortly. Hardware is first come-first served.
-
-​Worth repeating: if you plan to form your team onsite, make sure to arrive early so you have time to register. All teams and builds must register before the event.
-
-​Bring whatever you need to build for 24 hours straight, including small snacks if needed (some will be provided). There is extra space in the facility upstairs that can serve as a rest area.
-Toby Myers
-Yesterday, 2:10 PM
-Hackathon Announcement
-
-​We’ve added several speakers to the list, including former DARPA leaders and ex-special operations personnel.
-
-​Rumor has it there will be an ex-Army Ranger manning a grill in the parking lot, and plenty of electrolytes and caffeine/nootropics onsite.
-
-​We expect the event to be pretty packed, especially at registration & kickoff, so plan accordingly. Don’t forget, ID is strictly required for entry!
-
-​COMPETITORS:
-
-​If you plan to form your team onsite, make sure to arrive early so you have time to register. All teams and builds must register.
-
-​Bring whatever you need to build for 24 hours straight, including small snacks if needed (some will be provided). There is extra space in the facility upstairs that can serve as a rest area.
-Toby Myers
-Oct 14, 8:00 AM
-Full event schedule, food, and logistics
-
-​Hi everyone, we're super excited to kick things off on Saturday.
-
-Some more information for the day of:
-
-Food at the facility will be minimal and no food of any kind is allowed in the lab, but we will provide plenty of caffeinated beverages and small items.
-
-The Craft Taco is across right the street and has some of San Diego's best gourmet tacos. They will be providing a discount to all attendees (via digital code you can show at the counter). Plenty of good food is available within walking distance.
-
-Parking will be available in the lots onsite subject to tenant priority (it's a weekend, so more spots should be available). Please be as efficient as possible with carpooling.
-
-SATURDAY:
-11578 Sorrento Valley Road, Suite 25
-Registration is at 9:30am, and briefings begin at 11:00am sharp.
-PHOTO ID IS REQUIRED FOR ENTRY.
-
-Speakers: Spencer Macdonald (ex-Pentagon + ABE), Alan Tomusiak (Permanence Bio), Warren Fogler (ex-Navy EOD), Arye Lipman (BioSphere), Jake Adler (Pilgrim Labs), Corey Howe (Adaptyv Bio), and Edward You (ex-FBI Biosecurity agent).
-
-​Hackathon kick-off at 12:00pm - the 24-hour build clock begins.
-
-SUNDAY:
-
-Building continues until 12:00pm.
-
-Demos begin immediately at noon (onsite).
-
-Judges and final winner selection will be at 2:00pm!
-Toby Myers
-Oct 13, 8:30 AM
-Important info for the hackathon
-
-​We’re excited to welcome you to the DefenseBio hackathon.
-
-​Address is 11578 Sorrento Valley Rd, Suite 25, doors open at 9:30am for early check in. Event schedule has been posted on the Luma page.
-
-Photo ID is required for check-in. Everyone entering the building must be approved on Luma, no exceptions. Please arrive with enough time to check in before the briefings begin.
-
-We've finalized our list of judges:
-Arye Lipman of Biosphere, Jake Adler of Pilgrim Labs, Moufeed Kaddoura of 1517 fund, Edward You (former FBI biosecurity agent), and Joseph Alzagatiti of American Bioenhancement Corp.
-
-Competitors: if you haven't joined the slack yet, the link is here: https://join.slack.com/t/2026sddefense-dcs5018/shared_invite/zt-4ar9avjo2-Bz9MS2n5kNxjzW1x4roreg?referrer=luma
-
-Feel free to reach out to the event organizers via slack if you have questions on team formation, builds, or anything else.
-Toby Myers
-Sep 23, 10:52 PM
-Approved Competitors: Join the Slack to get started!
-
-​We’ll be using Slack for event updates, team coordination, logistics, and announcements.
-
-​If you are competing, please join the slack as soon as you can:
-
-​https://join.slack.com/t/2026sddefense-dcs5018/shared_invite/zt-4ar9avjo2-Bz9MS2n5kNxjzW1x4roreg
-
-​-ABE Team
-Spencer Macdonald
-Sep 22, 4:08 PM
-Welcome and Onboarding for San Diego Defense X Bio Hackathon 2026
-
-​Afternoon, all.
-
-​Thank you for registering for the SD Defense X Bio Hackathon 2026, sponsored by 1517, Pilgrim Labs, Satomic, and Adaptyv. 
-
-​Things to put on your radar: 
-
-​1. Slack invites will go live shortly to the email you registered with
-
-​2. Prompts for projects to build on during the hackathon are in the Slack channel announcements
-
-​3. When you form your team, please submit the Google Form (ONE PER TEAM) by 10/10/2026, also found in the Slack
-
-​Any questions or concerns, paste to the general-questions in Slack. 
-
-​See you all soon! 
-
-​-ABE Team
-Location
-
-
-
-
-
+- [Current detailed project and benchmark plan](PLAN.md)
+- [Slack: tracks and build guidance, Sep 24](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790278909686629)
+- [Slack: hardware announcement and attached workbook, Oct 16](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1792194966030419)
+- [Slack: EEG availability question, Oct 16](https://2026sddefense-dcs5018.slack.com/archives/C0C3TDMLM4Z/p1792199415550999)
+- [Slack: welcome and project-form deadline, Sep 23](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790225319014299)
+- [Event page and logistics](https://luma.com/kfgh2fvu)
