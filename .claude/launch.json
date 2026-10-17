@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "sensor/.venv/bin/python",
+      "runtimeArgs": ["-u", "dashboard/server.py"],
+      "port": 8765
+    },
+    {
+      "name": "dashboard-live",
+      "runtimeExecutable": "sensor/.venv/bin/python",
+      "runtimeArgs": ["-u", "dashboard/server.py", "--live", "--port", "8766"],
+      "port": 8766
+    }
+  ]
+}

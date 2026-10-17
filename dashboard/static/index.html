@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f11;
+  --panel: #14171a;
+  --raised: #1b1f23;
+  --line: #24292e;
+  --text: #e4e6e8;
+  --muted: #8a9097;
+  --faint: #5b6168;
+  --crit: #f0564a;
+  --warn: #e3a33b;
+  --device: #8796a8;
+  --exp: #6aa6d6;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.4 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+header {
+  height: 48px; display: flex; align-items: center; gap: 24px; padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+header .meta { color: var(--muted); font-size: 13px; display: flex; gap: 20px; }
+header .right { margin-left: auto; display: flex; gap: 20px; align-items: center; color: var(--muted); font-size: 13px; }
+.conn::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); margin-right: 7px; vertical-align: 1px; }
+.conn.on::before { background: #4fb477; }
+
+main {
+  display: grid; grid-template-columns: 320px minmax(0, 1fr) 340px;
+  height: calc(100% - 48px);
+}
+section { min-height: 0; overflow: auto; }
+.col-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 16px 20px 10px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+}
+#team { border-right: 1px solid var(--line); }
+#side { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+
+/* roster */
+.person {
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 2px 12px;
+  width: 100%; text-align: left; padding: 12px 20px; background: none; border: 0; border-bottom: 1px solid var(--line);
+}
+.person:hover { background: var(--panel); }
+.person.sel { background: var(--raised); }
+.person .name { font-weight: 500; }
+.person .sub { color: var(--muted); font-size: 12px; display: flex; gap: 8px; align-items: center; }
+.person .hr { grid-row: 1 / 3; grid-column: 2; display: flex; align-items: center; gap: 12px; }
+.person .bpm { font-size: 22px; min-width: 48px; text-align: right; }
+.person canvas { width: 64px; height: 28px; display: block; }
+
+.tag { font: 500 10px/1 var(--mono); letter-spacing: .05em; padding: 3px 5px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
+.tag.LIVE { color: #7fd19b; border-color: #2a4535; }
+.status { font-size: 12px; }
+.status.distress { color: var(--crit); font-weight: 600; }
+.status.deviation { color: var(--warn); }
+.status.no-data, .status.no-contact { color: var(--device); }
+.status.ok { color: var(--faint); }
+
+/* detail */
+#detail { padding: 0 28px 28px; }
+.d-head { display: flex; align-items: baseline; gap: 12px; padding: 18px 0 4px; flex-wrap: wrap; }
+.d-head h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.d-head .sub { color: var(--muted); }
+.d-head .actions { margin-left: auto; display: flex; gap: 8px; }
+.metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; margin: 18px 0 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.metric { padding: 12px 0; }
+.metric + .metric { padding-left: 16px; border-left: 1px solid var(--line); }
+.metric .k { color: var(--muted); font-size: 12px; }
+.metric .v { font: 400 24px/1.3 var(--mono); }
+.metric .v small { font-size: 12px; color: var(--muted); margin-left: 3px; }
+.metric .v.crit { color: var(--crit); }
+.metric .v.warn { color: var(--warn); }
+.metric .v.device { color: var(--device); }
+
+.chart-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+.chart-head > span { white-space: nowrap; }
+.chart-head .title { color: var(--text); font-size: 13px; font-weight: 500; }
+.key::before { content: ""; display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--text); margin-right: 6px; vertical-align: 3px; }
+.key.exp::before { border-top: 2px dashed var(--exp); }
+.key.gap::before { height: 8px; border: 0; background: repeating-linear-gradient(45deg, #2a2f35 0 2px, transparent 2px 5px); vertical-align: -1px; }
+.range { margin-left: auto; display: flex; }
+.range button { background: none; border: 1px solid var(--line); padding: 3px 9px; color: var(--muted); font-size: 12px; }
+.range button + button { border-left: 0; }
+.range button.on { background: var(--raised); color: var(--text); }
+#hrChart { width: 100%; height: 280px; display: block; margin-top: 8px; }
+#mvChart { width: 100%; height: 70px; display: block; margin-top: 4px; }
+.foot { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; color: var(--muted); font-size: 12px; }
+.foot b { color: var(--text); font-weight: 500; }
+.note { margin-top: 10px; color: var(--faint); font-size: 12px; max-width: 70ch; }
+
+.btn { background: var(--raised); border: 1px solid var(--line); padding: 6px 12px; border-radius: 4px; font-size: 13px; }
+.btn:hover { border-color: #3a4048; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.primary:hover { background: #fff; }
+.btn.danger { color: var(--crit); }
+
+/* attention queue */
+#queue { flex: 0 0 auto; max-height: 60%; overflow: auto; }
+.empty { padding: 4px 20px 16px; color: var(--faint); font-size: 13px; }
+.alert { padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.alert:first-child { border-top: 1px solid var(--line); }
+.alert .top { display: flex; gap: 8px; align-items: baseline; }
+.alert .who { font-weight: 500; background: none; border: 0; padding: 0; }
+.alert .who:hover { text-decoration: underline; }
+.alert .sev { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.alert .sev.critical { color: var(--crit); }
+.alert .sev.warning { color: var(--warn); }
+.alert .sev.device { color: var(--device); }
+.alert .age { margin-left: auto; color: var(--faint); font-size: 12px; }
+.alert .reason { margin: 4px 0 2px; }
+.alert .state { color: var(--muted); font-size: 12px; }
+.alert .btns { display: flex; gap: 8px; margin-top: 10px; }
+.what { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; color: var(--text); font: 13px var(--sans); }
+.what:focus { outline: none; border-color: #3a4048; }
+.person .sub span { white-space: nowrap; }
+
+#log { flex: 1 1 auto; overflow: auto; border-top: 1px solid var(--line); }
+.ev { display: grid; grid-template-columns: 62px 1fr; gap: 8px; padding: 5px 20px; font-size: 12px; }
+.ev .t { color: var(--faint); }
+.ev.alert-ev .x { color: var(--text); }
+.ev.action .x { color: #9fd1b1; }
+.ev.system .x { color: var(--muted); }
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  #team { order: 1; } #side { order: 2; } #detail { order: 3; }
+  #log { max-height: 240px; }
+  #team, #side { border: 0; border-bottom: 1px solid var(--line); }
+  #queue { max-height: none; }
+  .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric:nth-child(4) { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 600px) {
+  header { padding: 0 16px; } header .meta { display: none; }
+  #detail { padding: 0 16px 24px; }
+  .person, .alert, .ev, .col-head { padding-left: 16px; padding-right: 16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Team Monitor</h1>
+  <div class="meta"><span id="hSession"></span><span id="hCounts"></span></div>
+  <div class="right"><span id="hClock" class="mono"></span><span id="hConn" class="conn">Connecting</span></div>
+</header>
+
+<main>
+  <section id="team">
+    <div class="col-head"><span>Team</span><span id="teamCount"></span></div>
+    <div id="roster"></div>
+  </section>
+
+  <section id="detail"></section>
+
+  <section id="side">
+    <div id="queue">
+      <div class="col-head"><span>Needs attention</span><span id="qCount"></span></div>
+      <div id="alerts"></div>
+    </div>
+    <div id="log">
+      <div class="col-head"><span>Event log</span></div>
+      <div id="events"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const S = { people: new Map(), order: [], alerts: [], events: [], sel: null, range: 300, meta: {}, last: {} };
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour12: false });
+const ago = (s) => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h`;
+const STATUS = { distress: "Distress", deviation: "Off expected", "no data": "No data", "no contact": "No contact", ok: "OK" };
+const fmt = (v, d = 0) => v == null ? "—" : Number(v).toFixed(d);
+
+// ---------------------------------------------------------------- socket
+let ws, serverOffset = 0;
+function connect() {
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onopen = () => { $("#hConn").textContent = "Connected"; $("#hConn").classList.add("on"); };
+  ws.onclose = () => { $("#hConn").textContent = "Reconnecting"; $("#hConn").classList.remove("on"); setTimeout(connect, 1500); };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    serverOffset = m.t - Date.now() / 1000;
+    if (m.type === "snapshot") onSnapshot(m); else onTick(m);
+  };
+}
+const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
+
+function onSnapshot(m) {
+  S.meta = m; S.people.clear(); S.order = [];
+  for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = p.history.at(-1) || {}; }
+  S.alerts = m.alerts; S.events = m.events;
+  if (!S.sel || !S.people.has(S.sel)) S.sel = S.order[0];
+  $("#hSession").textContent = `Session ${m.session}`;
+  renderAll();
+}
+
+function onTick(m) {
+  for (const r of m.people) {
+    const p = S.people.get(r.id);
+    if (!p) continue;
+    p.history.push({ t: r.t, hr: r.hr, exp: r.exp, mv: r.mv, rmssd: r.rmssd });
+    if (p.history.length > 600) p.history.shift();
+    S.last[r.id] = r;
+  }
+  S.alerts = m.alerts;
+  if (m.events.length) S.events.push(...m.events);
+  renderAll();
+}
+
+// ---------------------------------------------------------------- render
+function renderAll() { renderHeader(); renderRoster(); renderDetail(); renderQueue(); renderLog(); }
+
+function renderHeader() {
+  const live = S.order.map((id) => S.people.get(id).source);
+  const n = (s) => live.filter((x) => x === s).length;
+  $("#hCounts").textContent = ["LIVE", "REPLAY", "SYNTHETIC"].filter(n).map((s) => `${n(s)} ${s.toLowerCase()}`).join(" · ");
+  $("#hClock").textContent = clock(Date.now() / 1000 + serverOffset);
+}
+
+function renderRoster() {
+  const ids = S.order;  // fixed order: rows never move under the operator's cursor
+  const root = $("#roster");
+  if (root.children.length !== ids.length) root.innerHTML = "";
+  $("#teamCount").textContent = `${ids.filter((id) => S.last[id].status !== "ok").length} flagged`;
+  ids.forEach((id, i) => {
+    const p = S.people.get(id), r = S.last[id] || {};
+    let el = root.querySelector(`[data-id="${id}"]`);
+    if (!el) {
+      el = document.createElement("button");
+      el.className = "person"; el.dataset.id = id;
+      el.innerHTML = `<span class="name"></span><span class="hr"><canvas></canvas><span class="bpm mono"></span></span><span class="sub"></span>`;
+      el.onclick = () => { S.sel = id; renderAll(); };
+    }
+    if (root.children[i] !== el) root.insertBefore(el, root.children[i] || null);
+    el.classList.toggle("sel", id === S.sel);
+    el.querySelector(".name").textContent = p.name;
+    el.querySelector(".bpm").textContent = fmt(r.hr);
+    const st = r.status || "ok";
+    el.querySelector(".sub").innerHTML = `<span class="tag ${p.source}">${p.source}</span><span>${esc(p.role)}</span><span class="status ${st.replace(" ", "-")}">${STATUS[st]}</span>`;
+    spark(el.querySelector("canvas"), p.history.slice(-120), st);
+  });
+}
+
+function renderDetail() {
+  const p = S.people.get(S.sel);
+  const root = $("#detail");
+  if (!p) { root.innerHTML = ""; return; }
+  if (root.dataset.id !== p.id) {
+    root.dataset.id = p.id;
+    root.innerHTML = `
+      <div class="d-head">
+        <h2>${esc(p.name)}</h2><span class="sub">${esc(p.role)}</span><span class="tag ${p.source}">${p.source}</span>
+        <div class="actions"><button class="btn danger" id="markDistress">Mark distress</button></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
+        <div class="metric"><div class="k">Expected</div><div class="v" id="mExp"></div></div>
+        <div class="metric"><div class="k">Difference</div><div class="v" id="mDev"></div></div>
+        <div class="metric"><div class="k">RMSSD</div><div class="v" id="mRmssd"></div></div>
+        <div class="metric"><div class="k">Movement</div><div class="v" id="mMv"></div></div>
+        <div class="metric"><div class="k">Signal</div><div class="v" id="mQ"></div></div>
+      </div>
+      <div class="chart-head">
+        <span class="title">Heart rate</span><span class="key">Measured</span><span class="key exp">Expected</span><span class="key gap">No data</span>
+        <div class="range">${[120, 300, 600].map((s) => `<button data-r="${s}">${s / 60} min</button>`).join("")}</div>
+      </div>
+      <canvas id="hrChart"></canvas>
+      <div class="chart-head"><span class="title">Movement</span><span>std of acceleration, mG</span></div>
+      <canvas id="mvChart"></canvas>
+      <div class="foot">
+        <span>Device <b>${esc(p.device || "—")}</b></span>
+        <span>Model <b>${esc(S.meta.model)}</b></span>
+        <span>Last sample <b id="mAge">—</b></span>
+      </div>
+      <p class="note">A difference from expected means check this person or the sensor. It is not a diagnosis.${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
+    root.querySelector("#markDistress").onclick = () => send({ type: "distress", person: p.id });
+    root.querySelectorAll(".range button").forEach((b) => b.onclick = () => { S.range = +b.dataset.r; renderDetail(); });
+  }
+  root.querySelectorAll(".range button").forEach((b) => b.classList.toggle("on", +b.dataset.r === S.range));
+  const r = S.last[p.id] || {};
+  const dev = r.hr != null && r.exp != null ? r.hr - r.exp : null;
+  const set = (id, html, cls = "") => { const el = root.querySelector(id); el.innerHTML = html; el.className = "v " + cls; };
+  set("#mHr", `${fmt(r.hr)}<small>bpm</small>`, r.status === "distress" ? "crit" : "");
+  set("#mExp", `${fmt(r.exp)}<small>bpm</small>`);
+  set("#mDev", dev == null ? "—" : `${dev > 0 ? "+" : ""}${fmt(dev)}<small>bpm</small>`, dev != null && Math.abs(dev) > S.meta.deviation_bpm ? "warn" : "");
+  set("#mRmssd", `${fmt(r.rmssd)}<small>ms</small>`);
+  set("#mMv", r.mv == null ? "—" : `${fmt(r.mv)}<small>mG</small>`);
+  set("#mQ", r.quality ?? "—", r.quality && r.quality !== "good" ? "device" : "");
+  root.querySelector("#mAge").textContent = r.age == null ? "—" : `${fmt(r.age, 1)} s ago`;
+  hrChart(root.querySelector("#hrChart"), p.history);
+  mvChart(root.querySelector("#mvChart"), p.history);
+}
+
+function renderQueue() {
+  const open = S.alerts.filter((a) => a.state !== "resolved")
+    .sort((a, b) => ({ critical: 0, warning: 1, device: 2 }[a.severity] - { critical: 0, warning: 1, device: 2 }[b.severity]) || a.opened - b.opened);
+  $("#qCount").textContent = open.length || "";
+  const now = Date.now() / 1000 + serverOffset;
+  const label = { critical: "Distress", warning: "Physiology", device: "Sensor" };
+  const html = open.length ? open.map((a) => {
+    const p = S.people.get(a.person);
+    const btns = a.state === "open" ? `<button class="btn primary" data-a="request_check">Request check</button><button class="btn" data-a="acknowledge">Acknowledge</button>`
+      : a.state === "check requested" ? `<button class="btn primary" data-a="acknowledge">Acknowledge</button>`
+      : `<input class="what" placeholder="What was done" maxlength="200"><button class="btn" data-a="resolve">Resolve</button>`;
+    return `<div class="alert" data-id="${a.id}">
+      <div class="top"><span class="sev ${a.severity}">${label[a.severity]}</span><button class="who" data-p="${a.person}">${esc(p?.name ?? a.person)}</button><span class="age mono" data-t="${a.opened}"></span></div>
+      <div class="reason">${esc(a.reason)}</div>
+      <div class="state">${a.state === "open" ? "Not yet handled" : a.state[0].toUpperCase() + a.state.slice(1)} · ${clock(a.updated)}${a.cleared ? ` · cleared ${clock(a.cleared)}` : ""}</div>
+      <div class="btns">${btns}</div></div>`;
+  }).join("") : `<div class="empty">Nothing open.</div>`;
+  const box = $("#alerts");
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+  box.querySelectorAll(".age").forEach((el) => el.textContent = ago(now - el.dataset.t));
+}
+
+$("#alerts").addEventListener("click", (e) => {
+  const who = e.target.closest(".who");
+  if (who) { S.sel = who.dataset.p; renderAll(); return; }
+  const b = e.target.closest("button[data-a]");
+  if (!b) return;
+  const id = b.closest(".alert").dataset.id;
+  const note = b.closest(".alert").querySelector(".what")?.value.trim() ?? "";
+  send({ type: "action", alert: id, action: b.dataset.a, note });
+});
+
+function renderLog() {
+  const box = $("#events");
+  if (box.dataset.n == S.events.length) return;
+  box.dataset.n = S.events.length;
+  box.innerHTML = S.events.slice(-150).reverse().map((e) => {
+    const who = e.person && S.people.get(e.person)?.name;
+    const text = e.kind === "alert" && who ? `${who}: ${e.text}` : e.text;
+    return `<div class="ev ${e.kind === "alert" ? "alert-ev" : e.kind}"><span class="t mono">${clock(e.t)}</span><span class="x">${esc(text)}</span></div>`;
+  }).join("");
+}
+
+// ---------------------------------------------------------------- charts
+function setup(c) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function path(ctx, pts) {
+  let pen = false;
+  ctx.beginPath();
+  for (const [x, y] of pts) {
+    if (y == null) { pen = false; continue; }
+    pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y); pen = true;
+  }
+  ctx.stroke();
+}
+
+function spark(c, hist, status) {
+  const { ctx, w, h } = setup(c);
+  const v = hist.map((d) => d.hr).filter((x) => x != null);
+  if (v.length < 2) return;
+  const lo = Math.min(...v) - 3, hi = Math.max(...v) + 3;
+  ctx.strokeStyle = status === "distress" ? css("--crit") : status === "deviation" ? css("--warn") : css("--muted");
+  ctx.lineWidth = 1.25;
+  path(ctx, hist.map((d, i) => [i / Math.max(119, hist.length - 1) * w, d.hr == null ? null : h - 2 - (d.hr - lo) / (hi - lo) * (h - 4)]));
+}
+
+function window_(hist) {
+  const tEnd = hist.at(-1)?.t ?? Date.now() / 1000;
+  return { tEnd, t0: tEnd - S.range, pts: hist.filter((d) => d.t >= tEnd - S.range) };
+}
+
+function hrChart(c, hist) {
+  const { ctx, w, h } = setup(c);
+  const { t0, tEnd, pts } = window_(hist);
+  const L = 36, R = 8, T = 12, B = 22;
+  const vals = pts.flatMap((d) => [d.hr, d.exp]).filter((x) => x != null);
+  let lo = vals.length ? Math.min(...vals) : 50, hi = vals.length ? Math.max(...vals) : 100;
+  lo = Math.floor((lo - 8) / 10) * 10; hi = Math.ceil((hi + 8) / 10) * 10;
+  const X = (t) => L + (t - t0) / S.range * (w - L - R);
+  const Y = (v) => T + (1 - (v - lo) / (hi - lo)) * (h - T - B);
+
+  ctx.font = `11px ${css("--mono")}`; ctx.fillStyle = css("--faint"); ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
+  const step = hi - lo > 80 ? 20 : 10;
+  for (let v = lo; v <= hi; v += step) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v) + .5); ctx.lineTo(w - R, Y(v) + .5); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(v, L - 6, Y(v) + 4);
+  }
+  ctx.textAlign = "center";
+  const tickEvery = S.range <= 120 ? 30 : S.range <= 300 ? 60 : 120;
+  for (let t = Math.ceil(t0 / tickEvery) * tickEvery; t <= tEnd; t += tickEvery) { const lbl = clock(t).slice(0, 5 + (tickEvery < 60) * 3), half = ctx.measureText(lbl).width / 2; ctx.fillText(lbl, Math.min(Math.max(X(t), L + half), w - R - half), h - 6); }
+
+  // No-data bands
+  ctx.fillStyle = ctx.createPattern(hatch(), "repeat");
+  let gapStart = null;
+  pts.forEach((d, i) => {
+    if (d.hr == null && gapStart == null) gapStart = d.t;
+    if ((d.hr != null || i === pts.length - 1) && gapStart != null) { ctx.fillRect(X(gapStart), T, X(d.t) - X(gapStart), h - T - B); gapStart = null; }
+  });
+
+  ctx.lineJoin = "round";
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = css("--exp"); ctx.lineWidth = 1.5;
+  path(ctx, pts.map((d) => [X(d.t), d.exp == null ? null : Y(d.exp)]));
+  ctx.setLineDash([]); ctx.strokeStyle = css("--text"); ctx.lineWidth = 1.75;
+  path(ctx, pts.map((d) => [X(d.t), d.hr == null ? null : Y(d.hr)]));
+
+  // Alerts for this person as markers on the time axis
+  for (const a of S.alerts.filter((a) => a.person === S.sel && a.opened >= t0)) {
+    ctx.strokeStyle = { critical: css("--crit"), warning: css("--warn"), device: css("--device") }[a.severity];
+    ctx.beginPath(); ctx.moveTo(X(a.opened) + .5, T); ctx.lineTo(X(a.opened) + .5, h - B); ctx.stroke();
+  }
+}
+
+let _hatch;
+function hatch() {
+  if (_hatch) return _hatch;
+  _hatch = document.createElement("canvas"); _hatch.width = _hatch.height = 6;
+  const g = _hatch.getContext("2d"); g.strokeStyle = "#262b31"; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(0, 6); g.lineTo(6, 0); g.stroke();
+  return _hatch;
+}
+
+function mvChart(c, hist) {
+  const { ctx, w, h } = setup(c);
+  const { t0, pts } = window_(hist);
+  const L = 36, R = 8, max = Math.max(200, ...pts.map((d) => d.mv ?? 0));
+  const bw = Math.max(1, (w - L - R) / S.range - 0.5);
+  ctx.fillStyle = css("--faint"); ctx.font = `11px ${css("--mono")}`; ctx.textAlign = "right";
+  ctx.fillText(Math.round(max), L - 6, 10);
+  ctx.fillStyle = "#4a5560";
+  for (const d of pts) if (d.mv != null) {
+    const bh = Math.max(1, d.mv / max * (h - 4));
+    ctx.fillRect(L + (d.t - t0) / S.range * (w - L - R), h - bh, bw, bh);
+  }
+}
+
+// ---------------------------------------------------------------- keys
+document.addEventListener("keydown", (e) => {
+  if (!["ArrowUp", "ArrowDown"].includes(e.key) || e.target.tagName === "INPUT") return;
+  const ids = [...document.querySelectorAll(".person")].map((el) => el.dataset.id);
+  const i = ids.indexOf(S.sel) + (e.key === "ArrowDown" ? 1 : -1);
+  if (ids[i]) { S.sel = ids[i]; renderAll(); e.preventDefault(); }
+});
+window.addEventListener("resize", () => renderDetail());
+connect();
+</script>
+</body>
+</html>
