@@ -1,0 +1,50 @@
+# Task family: personalized heart-rate prediction with activity transfer.
+# One config controls an episode family. Swap channels/targets here when new
+# reference data exist (e.g. eda_wrist or temp_wrist as a target).
+benchmark_version: pilot-0
+challenge: build_investigate_transfer
+dataset: dalia
+processed_dir: data/processed/dalia
+
+# Channels the predictor may read. History windows include the target too.
+input_channels: [acc_wrist_enmo, acc_wrist_std, acc_chest_enmo, acc_chest_std, activity]
+# Extra channels documented but switched off for this task (enable to test multi-channel tasks).
+optional_channels: [eda_wrist, temp_wrist, resp_chest_std]
+target_channel: hr_ecg
+target_provenance: "ECG-derived heart rate from the chest RespiBAN (independent of wrist PPG)"
+
+# Window geometry on the 0.5 Hz grid.
+step_s: 2
+history_s: 60
+horizon_s: 120
+window_stride_s: 60
+# The predictor receives future covariates (activity-conditioned forecast).
+future_covariates: true
+
+# Activity split inside each target participant.
+familiar_activities: [sitting, driving, lunch, walking, working]
+transfer_activities: [stairs, table_soccer, cycling]
+# Exertion phase for phase-balanced MAE; everything else counts as rest/recovery.
+exertion_activities: [stairs, table_soccer, cycling, walking]
+# Fraction of familiar time held out (as contiguous chunks) for development feedback.
+dev_fraction: 0.3
+dev_chunk_s: 600
+guard_s: 180
+
+# Participant roles (pseudonymised in agent workspaces). S6 is excluded: its recording is truncated.
+excluded_subjects: [S6]
+reference_subjects: [S1, S4, S8, S12]
+dev_subjects: [S2, S3, S7, S10]
+heldout_subjects: [S5, S9, S11, S13, S14, S15]
+
+budgets:
+  max_turns: 40
+  wall_seconds: 2400
+  command_timeout_s: 120
+  max_feedback_calls: 3
+  predict_timeout_s: 120
+  memory_gb: 16
+  tool_output_chars: 6000
+
+primary_metric: phase_balanced_mae_bpm
+valid_hr_range: [25, 230]
