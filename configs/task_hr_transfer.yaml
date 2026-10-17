@@ -39,7 +39,7 @@ heldout_subjects: [S5, S9, S11, S13, S14, S15]
 
 budgets:
   max_turns: 40
-  wall_seconds: 1500
+  wall_seconds: 2400
   command_timeout_s: 120
   max_feedback_calls: 3
   predict_timeout_s: 120

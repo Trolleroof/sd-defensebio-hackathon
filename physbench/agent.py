@@ -177,8 +177,23 @@ class Tools:
         return "Submission accepted and frozen. The episode is over."
 
 
+def _with_cache_breakpoints(messages: list) -> list:
+    """Mark the system prompt and the newest message as cacheable (Anthropic prompt caching via OpenRouter).
+
+    Only changes billing; the content the model sees is identical.
+    """
+    out = [dict(m) for m in messages]
+    for i in (0, len(out) - 1):
+        m = out[i]
+        if isinstance(m.get("content"), str) and m["content"]:
+            m["content"] = [{"type": "text", "text": m["content"], "cache_control": {"type": "ephemeral"}}]
+    return out
+
+
 def _call_model(client, model: dict, messages: list, max_retries: int = 4) -> tuple[dict, float]:
     last = None
+    if model.get("prompt_cache"):
+        messages = _with_cache_breakpoints(messages)
     for attempt in range(max_retries):
         t0 = time.time()
         try:
@@ -209,6 +224,7 @@ def run_agent(cfg: TaskConfig, ep: Episode, model: dict, client, baseline_dev: d
     ]
     t_start = time.time()
     nudges = 0
+    time_warnings = [600, 180]  # seconds left at which to warn
     trace = trace_path.open("w")
 
     def log(ev):
@@ -222,6 +238,12 @@ def run_agent(cfg: TaskConfig, ep: Episode, model: dict, client, baseline_dev: d
             log({"type": "budget_exhausted", "reason": "wall_clock"})
             break
         remaining = b["max_turns"] - turn + 1
+        left_s = b["wall_seconds"] - (time.time() - t_start)
+        if time_warnings and left_s <= time_warnings[0]:
+            while time_warnings and left_s <= time_warnings[0]:
+                time_warnings.pop(0)
+            messages.append({"role": "user", "content": f"Time notice: about {max(0, int(left_s / 60))} min of wall clock left "
+                             f"({remaining} turns left). Finish REPORT.md and call submit before time runs out."})
         if remaining in (8, 3):
             messages.append({"role": "user", "content": f"Budget notice: {remaining} turns left, "
                              f"{max(0, int((b['wall_seconds'] - (time.time() - t_start)) / 60))} min wall clock left. "

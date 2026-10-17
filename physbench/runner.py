@@ -6,6 +6,7 @@ import datetime as dt
 import json
 import shutil
 import subprocess
+import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,6 +24,7 @@ from .scoring import bootstrap_ci, improvement, score, validate_predictions, wil
 from .workspace import build_episode, run_submission
 
 CRITERIA_DIR = ROOT / "configs" / "frozen"
+_BUILD_LOCK = threading.Lock()
 
 
 def openrouter_client():
@@ -106,11 +108,14 @@ def run_episode(cfg: TaskConfig, model: dict, judge_model: dict, subject: str, r
     out_dir = ROOT / "runs" / run_id / episode_id
     out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    ep = build_episode(cfg, subject, run_id, episode_id, criteria)
+    with _BUILD_LOCK:
+        ep = build_episode(cfg, subject, run_id, episode_id, criteria)
     task_md = (ep.ws / "TASK.md").read_text()
     baseline_dev = {k: _brief(v) for k, v in baselines["dev"].items()}
     state = run_agent(cfg, ep, model, client, baseline_dev, out_dir / "trace.jsonl")
     agent_wall = time.time() - t0
+    # Stop anything the agent left running (background jobs) before hidden evaluation.
+    subprocess.run(["pkill", "-KILL", "-u", ep.user], capture_output=True)
 
     # Snapshot the final submission (code + report) for inspection.
     snap = out_dir / "submission"
@@ -137,6 +142,11 @@ def run_episode(cfg: TaskConfig, model: dict, judge_model: dict, subject: str, r
     else:
         r["valid_execution"] = False
         r["validation_message"] = "no explicit submission"
+        # Informational only: score whatever was left in submission/ (never counts toward Pass).
+        ok, pred, info = run_submission(cfg, ep, w, "fallback")
+        if ok and validate_predictions(pred, len(w), w.target.shape[1], cfg.valid_hr_range)[0]:
+            fb = score(pred, w.target, exertion_mask(cfg, w.activity), w.activity, cfg.step_s)
+            r["unsubmitted_fallback_mae"] = fb["phase_balanced_mae_bpm"]
     r["hidden_exec"] = exec_info
     r["transfer_metrics"] = agent_metrics
     r["baselines_transfer"] = {k: _brief(v) for k, v in baselines["transfer"].items()}
@@ -180,6 +190,7 @@ def run_episode(cfg: TaskConfig, model: dict, judge_model: dict, subject: str, r
     r["total_wall_s"] = round(time.time() - t0, 1)
     (out_dir / "result.json").write_text(json.dumps(r, indent=1, default=str))
     (out_dir / "judge.json").write_text(json.dumps(r["judge"], indent=1, default=str))
+    subprocess.run(["pkill", "-KILL", "-u", ep.user], capture_output=True)
     shutil.rmtree(ep.sandbox_dir, ignore_errors=True)
     return r
 
@@ -391,7 +402,8 @@ def write_report(run_id: str) -> Path:
         js = (r.get("judge") or {}).get("judge_score")
         tick = lambda b: "✓" if b else "✗"  # noqa: E731
         cells = [r["model"], r["subject"], tick(r["submitted"]), tick(r["valid_execution"]),
-                 f"{r['agent_mae']:.2f}" if r.get("agent_mae") is not None else "–",
+                 f"{r['agent_mae']:.2f}" if r.get("agent_mae") is not None else
+                 (f"({r['unsubmitted_fallback_mae']:.2f} unsubmitted)" if r.get("unsubmitted_fallback_mae") is not None else "–"),
                  f"{r['anchor_mae']:.2f}",
                  f"{imp * 100:+.1f}%" if imp is not None else "–",
                  f"{js:.2f}" if js is not None else "–",

@@ -15,5 +15,6 @@ models:
     id: anthropic/claude-sonnet-5.5
     temperature: 0.2
     max_tokens: 8000
+    prompt_cache: true          # billing only; identical prompts (other providers cache automatically)
 judge:
   id: anthropic/claude-opus-5.5   # not a competitor

@@ -11,11 +11,16 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-from pathlib import Path
+import os
 
-from .config import ROOT, load_task, load_yaml
+# Episodes run in threads; multi-threaded BLAS called from several threads can deadlock.
+for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_v, "1")
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+
+from .config import ROOT, load_task, load_yaml  # noqa: E402
 
 
 def main(argv=None):
