@@ -20,6 +20,8 @@ Every person is labeled with where their data comes from: **LIVE** (Polar over B
 | Physiology | HR more than 20 bpm from expected for 30 s |
 | Sensor | No samples for 10 s, or skin contact lost. Marked "cleared" when the signal returns; it stays queued until the operator resolves it |
 
+**Map** shows where each person is and their status color. There is no GPS. Simulated people move around `--base` (default: downtown San Diego). Live and replayed people have no position until the operator clicks "Place on map"; their pins are square and can be dragged. Switch to satellite view with the layers button. Tiles come from OpenStreetMap and Esri, so the map needs internet.
+
 **Expected HR** comes from a first-order kinetic model driven by movement. Resting HR is taken from the first 20 readings, and gain and time constants are fixed defaults. The model is not fitted or validated. Swap in a reviewed predictor in `Kinetic.step`.
 
 Each run saves `samples.csv` (1 Hz per person) and `events.jsonl` (alerts and operator actions) under `dashboard/sessions/<timestamp>/`.

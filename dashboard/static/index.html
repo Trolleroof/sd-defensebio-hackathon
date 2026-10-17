@@ -6,6 +6,8 @@
 <title>Team Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root {
   --bg: #0d0f11;
@@ -72,7 +74,33 @@ section { min-height: 0; overflow: auto; }
 .status.ok { color: var(--faint); }
 
 /* detail */
+#center { display: flex; flex-direction: column; }
 #detail { padding: 0 28px 28px; }
+
+/* map */
+.map-head { display: flex; align-items: center; gap: 16px; padding: 10px 28px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.map-head .title { color: var(--text); font-size: 13px; font-weight: 500; }
+.map-head .hint { color: var(--warn); }
+.map-head .right { margin-left: auto; display: flex; gap: 8px; }
+#map { height: 340px; flex: 0 0 auto; background: #0f1215; border-bottom: 1px solid var(--line); }
+#map.placing { cursor: crosshair; }
+.leaflet-container { font-family: var(--sans); }
+.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.88) saturate(.6); }
+.leaflet-control-layers { background: var(--raised) !important; color: var(--text) !important; border: 1px solid var(--line) !important; }
+.leaflet-control-attribution { background: rgba(13,15,17,.8) !important; color: var(--faint) !important; font-size: 10px; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-bar a { background: var(--raised) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.pin-wrap { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pin { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(0,0,0,.4); flex: 0 0 auto; }
+.pin.deviation { background: var(--warn); }
+.pin.distress { background: var(--crit); width: 14px; height: 14px; }
+.pin.no-data, .pin.no-contact { background: var(--bg); border-color: var(--device); }
+.pin.placed { border-radius: 2px; }
+.pin-label { font-size: 12px; color: var(--text); background: rgba(13,15,17,.85); padding: 1px 5px; border-radius: 3px; }
+.sel-pin .pin { outline: 2px solid var(--text); outline-offset: 2px; }
+.sel-pin .pin-label { background: var(--text); color: var(--bg); }
+.key-dot::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+.key-dot.sq::before { border-radius: 1px; }
 .d-head { display: flex; align-items: baseline; gap: 12px; padding: 18px 0 4px; flex-wrap: wrap; }
 .d-head h2 { margin: 0; font-size: 22px; font-weight: 600; }
 .d-head .sub { color: var(--muted); }
@@ -138,7 +166,7 @@ section { min-height: 0; overflow: auto; }
 
 @media (max-width: 1100px) {
   main { grid-template-columns: 1fr; height: auto; }
-  #team { order: 1; } #side { order: 2; } #detail { order: 3; }
+  #team { order: 1; } #side { order: 2; } #center { order: 3; }
   #log { max-height: 240px; }
   #team, #side { border: 0; border-bottom: 1px solid var(--line); }
   #queue { max-height: none; }
@@ -148,6 +176,8 @@ section { min-height: 0; overflow: auto; }
 @media (max-width: 600px) {
   header { padding: 0 16px; } header .meta { display: none; }
   #detail { padding: 0 16px 24px; }
+  .map-head { padding: 10px 16px; }
+  #map { height: 280px; }
   .person, .alert, .ev, .col-head { padding-left: 16px; padding-right: 16px; }
 }
 </style>
@@ -165,7 +195,16 @@ section { min-height: 0; overflow: auto; }
     <div id="roster"></div>
   </section>
 
-  <section id="detail"></section>
+  <section id="center">
+    <div class="map-head">
+      <span class="title">Map</span>
+      <span class="key-dot">Simulated</span><span class="key-dot sq">Placed by operator</span><span>No GPS</span>
+      <span class="hint" id="mapHint"></span>
+      <div class="right"><span id="unplaced"></span><button class="btn" id="fitBtn">Fit team</button></div>
+    </div>
+    <div id="map"></div>
+    <div id="detail"></div>
+  </section>
 
   <section id="side">
     <div id="queue">
@@ -180,7 +219,7 @@ section { min-height: 0; overflow: auto; }
 </main>
 
 <script>
-const S = { people: new Map(), order: [], alerts: [], events: [], sel: null, range: 300, meta: {}, last: {} };
+const S = { people: new Map(), order: [], alerts: [], events: [], sel: null, range: 300, meta: {}, last: {}, placing: null };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -205,10 +244,11 @@ const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
 
 function onSnapshot(m) {
   S.meta = m; S.people.clear(); S.order = [];
-  for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = p.history.at(-1) || {}; }
+  for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = { ...(p.history.at(-1) || {}), loc: p.loc, loc_t: p.loc_t }; }
   S.alerts = m.alerts; S.events = m.events;
   if (!S.sel || !S.people.has(S.sel)) S.sel = S.order[0];
   $("#hSession").textContent = `Session ${m.session}`;
+  initMap(m.base);
   renderAll();
 }
 
@@ -216,7 +256,7 @@ function onTick(m) {
   for (const r of m.people) {
     const p = S.people.get(r.id);
     if (!p) continue;
-    p.history.push({ t: r.t, hr: r.hr, exp: r.exp, mv: r.mv, rmssd: r.rmssd });
+    p.history.push({ t: r.t, hr: r.hr, exp: r.exp, mv: r.mv, rmssd: r.rmssd, lat: r.lat, lon: r.lon });
     if (p.history.length > 600) p.history.shift();
     S.last[r.id] = r;
   }
@@ -226,7 +266,7 @@ function onTick(m) {
 }
 
 // ---------------------------------------------------------------- render
-function renderAll() { renderHeader(); renderRoster(); renderDetail(); renderQueue(); renderLog(); }
+function renderAll() { renderHeader(); renderRoster(); renderDetail(); renderMap(); renderQueue(); renderLog(); }
 
 function renderHeader() {
   const live = S.order.map((id) => S.people.get(id).source);
@@ -268,7 +308,7 @@ function renderDetail() {
     root.innerHTML = `
       <div class="d-head">
         <h2>${esc(p.name)}</h2><span class="sub">${esc(p.role)}</span><span class="tag ${p.source}">${p.source}</span>
-        <div class="actions"><button class="btn danger" id="markDistress">Mark distress</button></div>
+        <div class="actions">${p.source !== "SYNTHETIC" ? `<button class="btn" id="placeBtn">Place on map</button>` : ""}<button class="btn danger" id="markDistress">Mark distress</button></div>
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
@@ -289,9 +329,12 @@ function renderDetail() {
         <span>Device <b>${esc(p.device || "—")}</b></span>
         <span>Model <b>${esc(S.meta.model)}</b></span>
         <span>Last sample <b id="mAge">—</b></span>
+        <span>Location <b id="mLoc">—</b></span>
       </div>
       <p class="note">A difference from expected means check this person or the sensor. It is not a diagnosis.${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
     root.querySelector("#markDistress").onclick = () => send({ type: "distress", person: p.id });
+    const pb = root.querySelector("#placeBtn");
+    if (pb) pb.onclick = () => startPlacing(p.id);
     root.querySelectorAll(".range button").forEach((b) => b.onclick = () => { S.range = +b.dataset.r; renderDetail(); });
   }
   root.querySelectorAll(".range button").forEach((b) => b.classList.toggle("on", +b.dataset.r === S.range));
@@ -305,6 +348,9 @@ function renderDetail() {
   set("#mMv", r.mv == null ? "—" : `${fmt(r.mv)}<small>mG</small>`);
   set("#mQ", r.quality ?? "—", r.quality && r.quality !== "good" ? "device" : "");
   root.querySelector("#mAge").textContent = r.age == null ? "—" : `${fmt(r.age, 1)} s ago`;
+  root.querySelector("#mLoc").textContent = locText(r);
+  const pb = root.querySelector("#placeBtn");
+  if (pb) pb.textContent = S.placing === p.id ? "Click the map…" : r.loc ? "Move on map" : "Place on map";
   hrChart(root.querySelector("#hrChart"), p.history);
   mvChart(root.querySelector("#mvChart"), p.history);
 }
@@ -333,7 +379,7 @@ function renderQueue() {
 
 $("#alerts").addEventListener("click", (e) => {
   const who = e.target.closest(".who");
-  if (who) { S.sel = who.dataset.p; renderAll(); return; }
+  if (who) { S.sel = who.dataset.p; renderAll(); const m = markers.get(S.sel); if (m) map.panTo(m.getLatLng()); return; }
   const b = e.target.closest("button[data-a]");
   if (!b) return;
   const id = b.closest(".alert").dataset.id;
@@ -450,14 +496,97 @@ function mvChart(c, hist) {
   }
 }
 
+// ---------------------------------------------------------------- map
+let map, trail;
+const markers = new Map();
+
+function locText(r) {
+  if (!r.loc) return "none";
+  const when = r.loc_t ? ` · ${ago(Date.now() / 1000 + serverOffset - r.loc_t)} ago` : "";
+  return (r.loc === "placed" ? "placed by operator" : "simulated") + when;
+}
+
+function initMap(base) {
+  if (map || !window.L) { if (!window.L) $("#map").textContent = "Map library did not load (offline?)."; return; }
+  map = L.map("map", { zoomControl: true, attributionControl: true }).setView(base, 16);
+  const street = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, className: "tiles-dark",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+  const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: "Imagery &copy; Esri",
+  });
+  L.control.layers({ Map: street, Satellite: satellite }, null, { position: "topright" }).addTo(map);
+  trail = L.polyline([], { color: css("--muted"), weight: 2, opacity: .7, dashArray: "2 4" }).addTo(map);
+  map.on("click", (e) => {
+    if (!S.placing) return;
+    send({ type: "place", person: S.placing, lat: e.latlng.lat, lon: e.latlng.lng });
+    stopPlacing();
+  });
+  $("#fitBtn").onclick = fitTeam;
+}
+
+function fitTeam() {
+  const pts = [...markers.values()].map((m) => m.getLatLng());
+  if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 17 });
+}
+
+function startPlacing(id) {
+  S.placing = id;
+  $("#map").classList.add("placing");
+  $("#mapHint").textContent = `Click the map to place ${S.people.get(id).name}. Esc to cancel.`;
+  $("#map").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  renderDetail();
+}
+function stopPlacing() {
+  S.placing = null;
+  $("#map").classList.remove("placing");
+  $("#mapHint").textContent = "";
+  renderDetail();
+}
+
+function renderMap() {
+  if (!map) return;
+  const missing = [];
+  for (const id of S.order) {
+    const p = S.people.get(id), r = S.last[id] || {};
+    let m = markers.get(id);
+    if (r.lat == null || !r.loc) { missing.push(p.name); if (m) { m.remove(); markers.delete(id); } continue; }
+    const st = (r.status || "ok").replace(" ", "-");
+    const key = `${st}|${r.loc}|${id === S.sel}`;
+    if (!m) {
+      m = L.marker([r.lat, r.lon], { draggable: r.loc === "placed", keyboard: false }).addTo(map);
+      m.on("click", () => { S.sel = id; renderAll(); });
+      m.on("dragend", () => { const ll = m.getLatLng(); send({ type: "place", person: id, lat: ll.lat, lon: ll.lng }); });
+      markers.set(id, m);
+    } else if (!m.dragging?._draggable?._moving) {
+      m.setLatLng([r.lat, r.lon]);
+    }
+    if (m._key !== key) {
+      m._key = key;
+      m.setIcon(L.divIcon({
+        className: id === S.sel ? "sel-pin" : "", iconSize: null, iconAnchor: [8, 8],
+        html: `<div class="pin-wrap"><span class="pin ${st} ${r.loc}"></span><span class="pin-label">${esc(p.name)}</span></div>`,
+      }));
+      m.setZIndexOffset(id === S.sel ? 1000 : st === "distress" ? 500 : 0);
+      r.loc === "placed" ? m.dragging?.enable() : m.dragging?.disable();
+    }
+    m.getElement()?.setAttribute("title", `${p.name}: ${locText(r)}${st === "no-data" ? " (last known)" : ""}`);
+  }
+  $("#unplaced").textContent = missing.length ? `No location: ${missing.join(", ")}` : "";
+  const sel = S.people.get(S.sel);
+  trail.setLatLngs(sel ? sel.history.slice(-180).filter((d) => d.lat != null).map((d) => [d.lat, d.lon]) : []);
+}
+
 // ---------------------------------------------------------------- keys
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.placing) { stopPlacing(); return; }
   if (!["ArrowUp", "ArrowDown"].includes(e.key) || e.target.tagName === "INPUT") return;
   const ids = [...document.querySelectorAll(".person")].map((el) => el.dataset.id);
   const i = ids.indexOf(S.sel) + (e.key === "ArrowDown" ? 1 : -1);
   if (ids[i]) { S.sel = ids[i]; renderAll(); e.preventDefault(); }
 });
-window.addEventListener("resize", () => renderDetail());
+window.addEventListener("resize", () => { renderDetail(); map?.invalidateSize(); });
 connect();
 </script>
 </body>

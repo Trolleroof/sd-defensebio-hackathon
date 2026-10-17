@@ -15,6 +15,10 @@ Usage:
   python dashboard/server.py --live                   # add the Polar sensor as a live person
   python dashboard/server.py --live --synthetic 0     # live sensor only
   python dashboard/server.py --replay sensor/test1    # different recording
+  python dashboard/server.py --base 32.7157,-117.1611 # map center for simulated positions
+
+Locations are never GPS here: simulated people move around --base, and the operator can place
+LIVE/REPLAY people on the map by hand. Every position carries its source.
 """
 
 import argparse
@@ -81,6 +85,10 @@ class Person:
     early_hr: list = field(default_factory=list)
     dev_since: float | None = None
     history: deque = field(default_factory=lambda: deque(maxlen=int(HISTORY_S / TICK_S)))
+    lat: float | None = None
+    lon: float | None = None
+    loc: str | None = None            # "simulated" | "placed" (by the operator); None = no location
+    loc_t: float | None = None
 
     def add_hr(self, bpm: float, t: float | None = None):
         self.hr = bpm
@@ -138,6 +146,23 @@ class SyntheticSource:
         self.gain = self.rng.uniform(0.09, 0.15)
         self.hr = self.rest
         self.offset = self.rng.uniform(0, 300)
+        # Position in metres east/north of the base point; heading drifts, speed follows activity
+        self.e, self.n = self.rng.uniform(-150, 150), self.rng.uniform(-150, 150)
+        self.heading = self.rng.uniform(0, 2 * math.pi)
+
+    SPEED = {"rest": 0.0, "walk": 1.4, "run": 3.2}  # m/s
+
+    def move(self, act: str, base: tuple[float, float]):
+        self.heading += self.rng.gauss(0, 0.25)
+        if math.hypot(self.e, self.n) > 350:  # turn back toward the base
+            self.heading = math.atan2(-self.n, -self.e) + self.rng.gauss(0, 0.3)
+        v = self.SPEED[act]
+        self.e += v * math.cos(self.heading)
+        self.n += v * math.sin(self.heading)
+        lat0, lon0 = base
+        self.p.lat = lat0 + self.n / 111_320
+        self.p.lon = lon0 + self.e / (111_320 * math.cos(math.radians(lat0)))
+        self.p.loc, self.p.loc_t = "simulated", time.time()
 
     def activity(self, t: float) -> str:
         cycle = sum(d for _, d in self.PLAN)
@@ -163,6 +188,7 @@ class SyntheticSource:
                 team.raise_distress(self.p.id, "button")
 
             act = self.activity(t)
+            self.move(act, team.base)
             level = self.LEVEL[act] * self.rng.uniform(0.8, 1.2)
             for _ in range(52):
                 self.p.acc.append(1000 + self.rng.gauss(0, level))
@@ -278,7 +304,8 @@ class LiveSource:
 # ---------------------------------------------------------------- team, attention, actions
 
 class Team:
-    def __init__(self, session_dir: Path):
+    def __init__(self, session_dir: Path, base: tuple[float, float]):
+        self.base = base
         self.people: dict[str, Person] = {}
         self.alerts: dict[str, dict] = {}
         self.events: list[dict] = []
@@ -288,7 +315,7 @@ class Team:
         session_dir.mkdir(parents=True, exist_ok=True)
         self.samples = open(session_dir / "samples.csv", "w", newline="")
         self.samples_w = csv.writer(self.samples)
-        self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "quality", "status"])
+        self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "quality", "status", "lat", "lon", "loc_source"])
         self.events_f = open(session_dir / "events.jsonl", "a")
         self._next = 1
 
@@ -308,6 +335,14 @@ class Team:
         self.alerts[aid] = {"id": aid, "person": person, "kind": kind, "reason": reason, "severity": severity,
                             "state": "open", "opened": time.time(), "updated": time.time()}
         self.log("alert", person, reason, aid)
+
+    def place(self, person: str, lat: float, lon: float):
+        p = self.people[person]
+        if p.source == "SYNTHETIC" or not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return
+        first = p.loc is None
+        p.lat, p.lon, p.loc, p.loc_t = lat, lon, "placed", time.time()
+        self.log("action", person, f"{p.name} {'placed' if first else 'moved'} on map by operator")
 
     def raise_distress(self, person: str, how: str):
         label = "Distress button pressed" if how == "button" else "Distress marked by operator"
@@ -371,9 +406,12 @@ class Team:
             row = {"t": round(now, 1), "hr": p.hr if fresh else None, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
+            if p.loc:
+                row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
             p.history.append(row)
-            self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], q, st])
-            rows.append({"id": p.id, **row, "quality": q, "status": st,
+            self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], q, st,
+                                     row.get("lat"), row.get("lon"), p.loc])
+            rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
                          "age": round(now - p.last_sample, 1) if p.last_sample else None})
         self.samples.flush()
         return {"type": "tick", "t": now, "people": rows, "alerts": list(self.alerts.values())}
@@ -381,9 +419,9 @@ class Team:
     def snapshot(self) -> dict:
         return {
             "type": "snapshot", "t": time.time(), "started": self.started, "model": MODEL_VERSION,
-            "session": self.session_dir.name, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
+            "session": self.session_dir.name, "base": self.base, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
             "people": [{"id": p.id, "name": p.name, "role": p.role, "source": p.source, "device": p.device,
-                        "history": list(p.history)} for p in self.people.values()],
+                        "loc": p.loc, "loc_t": p.loc_t, "history": list(p.history)} for p in self.people.values()],
             "alerts": list(self.alerts.values()), "events": self.events[-200:],
         }
 
@@ -407,6 +445,8 @@ async def ws_handler(request):
             m = json.loads(msg.data)
             if m.get("type") == "action":
                 team.act(m["alert"], m["action"], m.get("note", "")[:200])
+            elif m.get("type") == "place" and m.get("person") in team.people:
+                team.place(m["person"], float(m["lat"]), float(m["lon"]))
             elif m.get("type") == "distress" and m.get("person") in team.people:
                 team.raise_distress(m["person"], "operator")
     finally:
@@ -430,7 +470,8 @@ async def broadcaster(app):
 
 
 def build(args) -> web.Application:
-    team = Team(ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"))
+    lat, lon = (float(x) for x in args.base.split(","))
+    team = Team(ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"), (lat, lon))
     sources = []
     if args.live:
         p = Person("live", args.live_name, "Wearer", "LIVE", device="Polar Verity Sense")
@@ -473,6 +514,7 @@ def main():
     p.add_argument("--replay", default=str(default_replay) if (default_replay.parent / "test4_hr.csv").exists() else None,
                    help="recording prefix to replay, e.g. sensor/test4 ('' to disable)")
     p.add_argument("--synthetic", type=int, default=5, help="number of simulated teammates (0-6)")
+    p.add_argument("--base", default="32.7157,-117.1611", help="map center as LAT,LON (default: San Diego)")
     p.add_argument("--port", type=int, default=8765)
     args = p.parse_args()
     web.run_app(build(args), host="127.0.0.1", port=args.port, print=lambda *_: print(f"Dashboard: http://127.0.0.1:{args.port}"))
