@@ -256,7 +256,8 @@ def freeze(cfg: TaskConfig, dev_run_id: str, margin: float, anchor: str, note: s
         raise SystemExit(f"{p} already frozen; refusing to overwrite.")
     dev = json.loads((ROOT / "runs" / dev_run_id / "baselines.json").read_text())
     res_path = ROOT / "runs" / dev_run_id / "results.json"
-    dev_results = json.loads(res_path.read_text()) if res_path.exists() else []
+    dev_results = json.loads(res_path.read_text()) if res_path.exists() else [
+        json.loads(p.read_text()) for p in sorted((ROOT / "runs" / dev_run_id).glob("*/result.json"))]
     calib = {
         "dev_run_id": dev_run_id,
         "dev_baselines_transfer_phase_balanced_mae": {s: {k: round(v["phase_balanced_mae_bpm"], 2) for k, v in d["transfer"].items()} for s, d in dev.items()},

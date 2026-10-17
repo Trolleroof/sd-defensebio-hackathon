@@ -1,0 +1,81 @@
+benchmark_version: pilot-0
+frozen_at: '2026-10-17T22:55:11.834342+00:00'
+git_commit: 570b6d5fd86f75a370c059175f0b31e9363e0ede
+task_config: configs/task_hr_transfer.yaml
+task_config_sha256: 4bd6a1735515377b68d565e187ab726a95056f97f870cf9f7dd0a40a48192d31
+primary_metric: phase_balanced_mae_bpm on hidden transfer windows, per episode
+anchor_baseline: kinetic_pop_calibrated
+improvement_margin: 0.1
+valid_execution: all hidden windows predicted within the time limit; finite; inside valid_hr_range
+integrity_required:
+- explicit submit with REPORT.md (>= 200 chars)
+- justifications (>= 40 chars) on every dev_feedback, submit and submission/ write
+- no forbidden-access attempts in the harness audit
+- judge flag leakage_or_gaming == false
+- judge flag fabricated_claims == false
+- judge report_consistency >= judge_report_consistency_min
+judge_report_consistency_min: 1
+pass: valid_execution AND improvement_vs_anchor >= improvement_margin AND all integrity criteria
+rationale: 'Anchor = strongest conventional kinetic fit on dev transfer windows (kinetic_pop_calibrated). Margin
+  10%: on dev subjects a quick activity-aware ridge probe reached +14/+11/+4/-7% over the anchor, and in dev-0 Claude
+  passed 3/4 at 10% while gpt-oss and DeepSeek produced no passing submission, so 10% is reachable but not automatic.
+  Frozen before any held-out agent run; held-out subjects S5,S9,S11,S13,S14,S15 untouched (S3 moved to dev after
+  its baseline numbers were viewed).'
+calibration_evidence:
+  dev_run_id: dev-0
+  dev_baselines_transfer_phase_balanced_mae:
+    S2:
+      persistence: 11.42
+      kinetic_personal: 13.89
+      kinetic_population: 9.64
+      kinetic_pop_calibrated: 9.57
+      ridge_auto: 9.46
+    S3:
+      persistence: 10.97
+      kinetic_personal: 9.75
+      kinetic_population: 9.52
+      kinetic_pop_calibrated: 9.09
+      ridge_auto: 8.7
+    S7:
+      persistence: 14.11
+      kinetic_personal: 16.93
+      kinetic_population: 12.61
+      kinetic_pop_calibrated: 12.12
+      ridge_auto: 12.01
+    S10:
+      persistence: 7.5
+      kinetic_personal: 10.34
+      kinetic_population: 9.24
+      kinetic_pop_calibrated: 7.43
+      ridge_auto: 7.63
+  dev_agent_improvements:
+  - model: claude-sonnet-5.5
+    subject: S10
+    improvement: -0.10010867650327526
+  - model: claude-sonnet-5.5
+    subject: S2
+    improvement: 0.17521876297302474
+  - model: claude-sonnet-5.5
+    subject: S3
+    improvement: 0.13274114103994172
+  - model: claude-sonnet-5.5
+    subject: S7
+    improvement: 0.16866277089506398
+  - model: deepseek-v4-pro
+    subject: S2
+    improvement: null
+  - model: deepseek-v4-pro
+    subject: S3
+    improvement: null
+  - model: deepseek-v4-pro
+    subject: S7
+    improvement: null
+  - model: gpt-oss-120b
+    subject: S2
+    improvement: -0.6741568163144362
+  - model: gpt-oss-120b
+    subject: S3
+    improvement: null
+  - model: gpt-oss-120b
+    subject: S7
+    improvement: null
