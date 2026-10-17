@@ -84,8 +84,10 @@ Return JSON exactly in this shape:
 
 def judge_episode(client, judge_model: dict, task_md: str, trace_path: Path, report: str, programmatic: dict) -> dict:
     prompt = build_prompt(task_md, condense_trace(trace_path), report, programmatic)
+    from .agent import _retry_after
     last = None
-    for attempt in range(4):
+    attempt, waited = 0, 0.0
+    while attempt < 4:
         try:
             t0 = time.time()
             resp = client.chat.completions.create(
@@ -107,5 +109,12 @@ def judge_episode(client, judge_model: dict, task_md: str, trace_path: Path, rep
             }
         except Exception as e:  # noqa: BLE001
             last = e
+            ra = _retry_after(e)
+            if ra is not None and waited < 1800:
+                pause = min(ra + 5, 180)
+                time.sleep(pause)
+                waited += pause
+                continue
+            attempt += 1
             time.sleep(5 * 2 ** attempt)
     return {"error": f"judge failed: {last}", "scores": None, "flags": None, "judge_score": None}

@@ -85,6 +85,7 @@ class EpisodeState:
     justifications: list = field(default_factory=list)
     audit_flags: list = field(default_factory=list)
     smoke_failures: int = 0
+    infra_error: str | None = None
 
 
 class Tools:
@@ -190,11 +191,24 @@ def _with_cache_breakpoints(messages: list) -> list:
     return out
 
 
-def _call_model(client, model: dict, messages: list, max_retries: int = 4) -> tuple[dict, float]:
+def _retry_after(e: Exception) -> float | None:
+    """Seconds to wait for capacity/rate errors (OpenRouter 402 in-flight budget, 429, 5xx); None = not retryable this way."""
+    status = getattr(e, "status_code", None)
+    text = str(e)
+    if status in (402, 429, 500, 502, 503, 504) or "in_flight_budget" in text or "rate limit" in text.lower():
+        m = re.search(r"Retry-After'?\"?:\s*'?\"?(\d+)", text)
+        return float(m.group(1)) if m else 30.0
+    return None
+
+
+def _call_model(client, model: dict, messages: list, max_retries: int = 4, max_wait_s: float = 1800) -> tuple[dict, float, float]:
+    """Returns (response, latency_s, seconds spent waiting on provider capacity)."""
     last = None
+    waited = 0.0
     if model.get("prompt_cache"):
         messages = _with_cache_breakpoints(messages)
-    for attempt in range(max_retries):
+    attempt = 0
+    while attempt < max_retries:
         t0 = time.time()
         try:
             kwargs = dict(model=model["id"], messages=messages, tools=TOOLS, tool_choice="auto",
@@ -206,11 +220,18 @@ def _call_model(client, model: dict, messages: list, max_retries: int = 4) -> tu
             d = resp.model_dump()
             if not d.get("choices"):
                 raise RuntimeError(f"empty choices: {str(d)[:300]}")
-            return d, time.time() - t0
+            return d, time.time() - t0, waited
         except Exception as e:  # noqa: BLE001
             last = e
+            ra = _retry_after(e)
+            if ra is not None and waited < max_wait_s:
+                # Provider capacity, not the model: wait without consuming an attempt.
+                time.sleep(min(ra + 5, 180))
+                waited += time.time() - t0
+                continue
+            attempt += 1
             time.sleep(min(60, 5 * 2 ** attempt))
-    raise RuntimeError(f"model call failed after {max_retries} attempts: {last}")
+    raise RuntimeError(f"model call failed after {max_retries} attempts (waited {waited:.0f}s for capacity): {last}")
 
 
 def run_agent(cfg: TaskConfig, ep: Episode, model: dict, client, baseline_dev: dict, trace_path: Path) -> EpisodeState:
@@ -249,10 +270,14 @@ def run_agent(cfg: TaskConfig, ep: Episode, model: dict, client, baseline_dev: d
                              f"{max(0, int((b['wall_seconds'] - (time.time() - t_start)) / 60))} min wall clock left. "
                              f"Dev-feedback calls left: {b['max_feedback_calls'] - state.feedback_used}. Make sure to submit."})
         try:
-            d, latency = _call_model(client, model, messages)
+            d, latency, waited = _call_model(client, model, messages)
         except RuntimeError as e:
             log({"type": "api_error", "turn": turn, "error": str(e)})
+            state.infra_error = str(e)[:500]
             break
+        if waited:
+            t_start += waited  # the budget clock pauses while the provider is out of capacity
+            log({"type": "capacity_wait", "turn": turn, "seconds": round(waited, 1)})
         msg = d["choices"][0]["message"]
         usage = d.get("usage") or {}
         log({"type": "llm", "turn": turn, "latency_s": round(latency, 2), "usage": usage, "provider": d.get("provider"),

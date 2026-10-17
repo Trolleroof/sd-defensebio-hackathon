@@ -129,7 +129,7 @@ def run_episode(cfg: TaskConfig, model: dict, judge_model: dict, subject: str, r
     w = ep.transfer
     r = {"episode_id": episode_id, "run_id": run_id, "model": slug, "model_id": model["id"], "subject": subject,
          "repeat": repeat, "submitted": state.submitted, "feedback_used": state.feedback_used,
-         "smoke_failures": state.smoke_failures}
+         "smoke_failures": state.smoke_failures, "infra_error": state.infra_error}
     agent_metrics, exec_info = None, None
     if state.submitted:
         ok, pred, exec_info = run_submission(cfg, ep, w, "hidden")
@@ -417,6 +417,8 @@ def write_report(run_id: str) -> Path:
             continue
         failed = [k for k, v in r["criteria"].items() if v is False and k not in ("pass",)]
         net = len(r["programmatic_integrity"]["network_attempt_flags"])
+        if r.get("infra_error"):
+            L.append(f"- **{r['model']} / {r['subject']}**: INFRASTRUCTURE ERROR (provider API), not a model failure: {r['infra_error'][:160]}")
         if failed or net:
             L.append(f"- **{r['model']} / {r['subject']}**: failed {', '.join(failed) or 'none'}"
                      + (f"; {net} network-attempt flag(s) (recorded, not an automatic fail)" if net else ""))
