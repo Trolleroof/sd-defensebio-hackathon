@@ -1,0 +1,19 @@
+# Model lineup for the pilot. Frozen before any held-out run; identical settings for every model.
+# All accessed through OpenRouter with the same tools, prompts, budgets and workspace.
+task_config: configs/task_hr_transfer.yaml
+repeats: 1
+models:
+  - name: gpt-oss-120b          # U.S. open-weight (OpenAI, Apache-2.0)
+    id: openai/gpt-oss-120b
+    temperature: 0.2
+    max_tokens: 8000
+  - name: deepseek-v4-pro       # Chinese frontier (DeepSeek)
+    id: deepseek/deepseek-v4-pro
+    temperature: 0.2
+    max_tokens: 8000
+  - name: claude-sonnet-5.5     # U.S. frontier reference (closed)
+    id: anthropic/claude-sonnet-5.5
+    temperature: 0.2
+    max_tokens: 8000
+judge:
+  id: anthropic/claude-opus-5.5   # not a competitor
