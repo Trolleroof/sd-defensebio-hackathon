@@ -118,7 +118,7 @@ Display **LIVE / REPLAY / SYNTHETIC** on the relevant views. Demonstrating an ac
 
 ### 1.7 Product build order and proof
 
-Planning estimates assume two people and working tools; they are not promises. The organizer’s [schedule reply](https://2026sddefense-dcs5018.slack.com/archives/C0C3TDMLM4Z/p1791957304789599) confirms building from noon Saturday October 17 to noon Sunday October 18, Sunday demos from noon, and judging/final selection at 2 p.m., local Pacific time. A separate thread confirms overnight access. A three-minute presentation remains our rehearsal format; no per-team limit was found.
+Planning estimates assume two people and working tools; they are not promises. The organizer’s [schedule reply](https://2026sddefense-dcs5018.slack.com/archives/C0C3TDMLM4Z/p1791957304789599) confirms building from noon Saturday October 17 to noon Sunday October 18, Sunday demos start at 12:02 p.m. sharp, and judging/final selection is at 2 p.m., local Pacific time. A separate thread confirms overnight access. A three-minute presentation remains our rehearsal format; no per-team limit was found.
 
 **Participation checks from Slack:** the [welcome announcement](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790225319014299) specified one project/proposal form per team by October 15 at 11:59 p.m. (written “PST” in the post). This is a past administrative deadline, not evidence of a final-code submission deadline. Verify existing team submission status with the organizers if unknown. Participation is in person, and outside hardware requires approval at registration. These do not prevent preparing the plan.
 
