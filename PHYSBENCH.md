@@ -12,8 +12,8 @@ First task: **heart rate from movement/activity, with activity transfer**, on PP
 
 | Phase | What the agent has | What it does |
 |---|---|---|
-| Build | Target participant's support data (familiar activities: sitting, driving, lunch, walking, working), 4 reference participants' full recordings, a fitted conventional baseline | Inspect, fit a predictor |
-| Investigate | ≤3 `dev_feedback` calls on held-out familiar-activity windows of the target; the reference cohort for self-validation on transfer activities | Revise with evidence |
+| Build | Target participant's support data (familiar activities: sitting, driving, lunch, walking, working), 4 reference participants with the transfer block removed, a fitted conventional baseline | Inspect, fit a predictor |
+| Investigate | ≤3 `dev_feedback` calls on held-out familiar-activity windows of the target. Reference files do not contain the transfer activities | Revise with evidence |
 | Transfer | `submit` | Hidden scoring on the target's stairs, table soccer and cycling segments plus recovery — activities absent from its support data |
 
 Prediction contract: `predict(history, future) -> (60,)` bpm. History = last 60 s with heart rate and
@@ -75,7 +75,8 @@ call, result, tokens and cost), `submission/` (final code + REPORT.md), `judge.j
 Enforced: per-episode Unix users and 700 workspaces; repository, labels and API key root-only;
 stripped environment; CPU/memory/file-size/time limits; leftover processes killed before scoring.
 Best-effort (the container cannot create network namespaces): dead proxy env vars, curl/wget not
-executable, a Python startup hook that blocks non-loopback sockets, and an audit of every command.
+executable, and a Python startup hook that blocks non-loopback sockets. Commands that mention hidden
+paths or the network are rejected before they run and fail the episode.
 
 ## Training interface (for Nikhil)
 

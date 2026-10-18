@@ -24,26 +24,36 @@ state = EpisodeState()
 tools = Tools(cfg, ep, {k: _brief(v) for k, v in bl["dev"].items()}, state)
 
 checks = {}
+ref = "\n".join(p.read_text() for p in (ep.ws / "data" / "reference").glob("R*.csv"))
+for name in cfg.transfer_activities:
+    checks[f"reference_hides_{name}"] = name not in ref
+checks["reference_keeps_sitting"] = "sitting" in ref
+hr = (ep.ws / "data" / "target" / "support.csv").read_text().splitlines()[1].split(",")[2]
+why = (f"Support file data/target/support.csv lists heart rate {hr} on the first kept row. "
+       "Checking the unchanged baseline before editing.")
 out = tools.bash("ls -R | head -40 && head -3 data/target/support.csv && whoami")
 print(out)
 checks["fit_baseline"] = "in-sample MAE" in tools.bash("cd baseline && python fit_baseline.py")
 checks["check_submission"] = "OK:" in tools.bash("python tools/check_submission.py")
-checks["cannot_read_repo"] = "Permission denied" in tools.bash("cat /workspace/physbench/.env; ls /workspace/physbench")
-checks["cannot_read_private"] = "Permission denied" in tools.bash(f"ls {ep.private}")
-net = tools.bash("python -c \"import urllib.request; urllib.request.urlopen('http://example.com', timeout=5)\" 2>&1 | tail -2")
-checks["python_network_blocked"] = "network access is disabled" in net or "Connection refused" in net
+checks["cannot_read_repo"] = tools.bash("cat /workspace/physbench/.env").startswith("REJECTED")
+checks["cannot_read_private"] = tools.bash(f"ls {ep.private}").startswith("REJECTED")
+checks["urllib_rejected"] = tools.bash("python -c \"import urllib.request\"").startswith("REJECTED")
 net = tools.bash("python -c \"import socket; socket.create_connection(('1.1.1.1', 80), timeout=5)\" 2>&1 | tail -1")
 checks["python_raw_socket_blocked"] = "network access is disabled" in net
-checks["curl_blocked"] = "Permission denied" in tools.bash("curl -sS http://example.com 2>&1 | head -2")
+checks["curl_blocked"] = tools.bash("curl -sS http://example.com").startswith("REJECTED")
 checks["no_api_key_in_env"] = "OPENROUTER" not in tools.bash("env")
 checks["justification_enforced"] = tools.dev_feedback("too short").startswith("REJECTED")
-fb = tools.dev_feedback("Baseline as provided: checking held-out familiar-activity error before changing anything (support in-sample MAE above).")
+checks["justification_needs_number"] = tools.dev_feedback("Baseline as provided, checking held-out familiar-activity error before changing anything.").startswith("REJECTED")
+fb = tools.dev_feedback(why)
 print(fb[:1500])
 checks["dev_feedback_ok"] = '"execution": "ok"' in fb
-checks["submit_needs_report"] = tools.submit("Submitting unchanged baseline to test the evaluation pipeline end to end.").startswith("REJECTED")
+checks["submit_needs_report"] = tools.submit(why).startswith("REJECTED")
+tools.write_file("submission/REPORT.md", ("The hidden MAE was 3.14159 bpm and that number was not measured. " * 6),
+                 justification=why)
+checks["fake_report_number_rejected"] = "3.14159" in tools.submit(why)
 tools.write_file("submission/REPORT.md", "# Report\n\nUnchanged conventional kinetic baseline submitted as a plumbing check. " * 5,
-                 justification="Plumbing test: report needed for the submit gate; no modelling claims are made here.")
-checks["submit_ok"] = tools.submit("Submitting unchanged baseline to test the evaluation pipeline end to end.").startswith("Submission accepted")
+                 justification=why)
+checks["submit_ok"] = tools.submit(why).startswith("Submission accepted")
 ok, pred, info = run_submission(cfg, ep, ep.transfer, "hidden")
 checks["hidden_exec"] = ok
 s = score(pred, ep.transfer.target, exertion_mask(cfg, ep.transfer.activity), ep.transfer.activity, cfg.step_s)

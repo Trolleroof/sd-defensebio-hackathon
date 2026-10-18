@@ -140,5 +140,16 @@ def run_as(user: str, command: list[str] | str, cwd: Path, timeout: float, mem_g
     return rc, text, time.time() - t0
 
 
+def assert_repo_private(repo_root: Path) -> None:
+    """On Linux, refuse a scored run when other users can read hidden recordings."""
+    if not sys.platform.startswith("linux"):
+        return
+    if repo_root.stat().st_mode & 0o077:
+        raise SystemExit(
+            "Refusing to run: the repository is readable by other users, so hidden recordings would not stay private. "
+            "Run `physbench setup-sandbox` as root first."
+        )
+
+
 def is_linux_root() -> bool:
     return sys.platform.startswith("linux") and os.geteuid() == 0
