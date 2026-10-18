@@ -179,6 +179,8 @@ class Person:
     def quality(self, now: float) -> str:
         if not self.connected or now - self.last_sample > STALE_S:
             return "no data"
+        if (self.id == "live" or self.id.startswith("mesh_")) and now - self.hr_t > STALE_S:
+            return "no data"
         if self.contact is False:
             return "no contact"
         if len(self.ppi_seen) >= 8 and sum(self.ppi_seen) / len(self.ppi_seen) > 0.5:

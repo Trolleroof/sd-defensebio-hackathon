@@ -25,10 +25,12 @@ def test_motion_uses_recent_samples_and_exposes_axes():
 
 
 def test_heart_rate_expires_while_imu_keeps_reporting():
-    person = Person("wearer", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+    person = Person("live", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
     team = Team(None, (0, 0))
     team.add(person)
     person.add_hr(80)
     person.hr_t -= 11
     person.add_imu((0, 0, 1000), (0, 0, 0), 26)
-    assert team.tick()["people"][0]["hr"] is None
+    row = team.tick()["people"][0]
+    assert row["hr"] is None
+    assert row["quality"] == "no data"
