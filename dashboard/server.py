@@ -116,6 +116,7 @@ class Person:
     calibration_yaw_sum: float = 0.0
     calibration_dt: float = 0.0
     calibration_reference: tuple | None = None
+    calibration_gyro_reference: tuple | None = None
     accel_bias: tuple | None = None
     yaw_bias: float = 0.0
     velocity_n: float = 0.0
@@ -162,6 +163,7 @@ class Person:
         self.calibration_acc_sum = (0.0, 0.0)
         self.calibration_yaw_sum = self.calibration_dt = 0.0
         self.calibration_reference = self.accel_bias = None
+        self.calibration_gyro_reference = None
         self.yaw_bias = 0.0
         self.velocity_n = self.velocity_e = 0.0
         self.still_since_ms = None
@@ -182,8 +184,9 @@ class Person:
                 self.calibration_start_t = None
 
         if self.accel_bias is None:
+            # shortcut: stable gyro readings are treated as zero-rate bias; validate against real motion on hardware.
             stationary = (calibration_continuous and delta == 0 and 8.8 < math.sqrt(sum(a * a for a in acc)) < 10.8
-                          and math.sqrt(sum(g * g for g in gyro)) < 0.08
+                          and (self.calibration_gyro_reference is None or math.dist(gyro, self.calibration_gyro_reference) < 0.08)
                           and (self.calibration_reference is None or math.dist(acc, self.calibration_reference) < 0.25))
             if not stationary:
                 self.calibration_start_ms = None
@@ -192,11 +195,13 @@ class Person:
                 self.calibration_acc_sum = (0.0, 0.0)
                 self.calibration_yaw_sum = self.calibration_dt = 0.0
                 self.calibration_reference = None
+                self.calibration_gyro_reference = None
                 return
             if self.calibration_start_ms is None:
                 self.calibration_start_ms = uptime_ms
                 self.calibration_start_t = self.imu_t or time.time()
                 self.calibration_reference = acc
+                self.calibration_gyro_reference = gyro
             self.calibration_samples += 1
             self.calibration_acc_sum = (self.calibration_acc_sum[0] + acc[0], self.calibration_acc_sum[1] + acc[1])
             self.calibration_yaw_sum += yaw_delta
