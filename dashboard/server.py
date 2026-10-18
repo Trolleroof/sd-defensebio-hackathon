@@ -465,14 +465,16 @@ class MeshApiSource:
                         self.seen[node_id] = marker
                         p.last_sample = entry["received_at"]
                         bpm = data.get("hr_bpm")
-                        if isinstance(bpm, (int, float)) and bpm > 0:
+                        if type(bpm) in (int, float) and math.isfinite(bpm) and bpm > 0:
                             p.add_hr(bpm, entry["received_at"])
                         else:
                             p.hr = None
                         acc, gyro = data.get("accel_m_s2"), data.get("gyro_rad_s")
-                        if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(isinstance(v, (int, float)) for v in acc + gyro):
-                            p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
-                            if isinstance(data.get("steps"), int) and 0 <= data["steps"] < 65536 and isinstance(data.get("uptime_ms"), int) and data["uptime_ms"] >= 0 and isinstance(data.get("yaw_delta_rad"), (int, float)) and math.isfinite(data["yaw_delta_rad"]):
+                        if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(type(v) in (int, float) and math.isfinite(v) for v in acc + gyro):
+                            temp = data.get("imu_temp_c")
+                            p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro),
+                                      temp if type(temp) in (int, float) and math.isfinite(temp) else None)
+                            if type(data.get("steps")) is int and 0 <= data["steps"] < 65536 and type(data.get("uptime_ms")) is int and data["uptime_ms"] >= 0 and type(data.get("yaw_delta_rad")) in (int, float) and math.isfinite(data["yaw_delta_rad"]):
                                 p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"])
                     last_error = None
                 except Exception as error:
