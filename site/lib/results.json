@@ -2,10 +2,10 @@
   "protocol": "physiology-compact-coding-v1",
   "date": "2026-10-18",
   "suite_sha256": "45e8f3811f5d07a6ba5c05bc83b2351c0289df3648fb807793b1561d0a6d29d8",
-  "episodes": 81,
-  "valid": 33,
-  "reviews": 74,
-  "review_target": 81,
+  "episodes": 90,
+  "valid": 34,
+  "reviews": 83,
+  "review_target": 90,
   "status": "Episodes complete; judge coverage incomplete",
   "models": [
     {
@@ -39,30 +39,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 1084.8655179628852,
+          "elo": 1105.806634618336,
           "valid": 2,
           "mean_loss": 29.34090994515198,
           "original_elo": 1071.8073080894694
         },
         "heat": {
-          "elo": 1037.783607803257,
+          "elo": 1056.0095175854249,
           "valid": 2,
           "mean_loss": 0.18428612372642345,
           "original_elo": 1008.7928295465117
         },
         "pulse": {
-          "elo": 981.2055760771841,
+          "elo": 986.8443460535674,
           "valid": 1,
           "mean_loss": 10.014156740055713,
           "original_elo": 971.4599191872695
         }
       },
-      "overall_elo": 1093.1349746103629,
+      "overall_elo": 1133.033509170549,
       "overall_matches": {
-        "wins": 23,
+        "wins": 28,
         "draws": 13,
-        "losses": 15,
-        "skipped": 21
+        "losses": 16,
+        "skipped": 24
       }
     },
     {
@@ -96,30 +96,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 995.8314701270617,
+          "elo": 1014.5070454438849,
           "valid": 1,
           "mean_loss": 29.34090994515198,
           "original_elo": 984.0517688487953
         },
         "heat": {
-          "elo": 1164.3744927724488,
+          "elo": 1180.701734701625,
           "valid": 3,
           "mean_loss": 0.18203695199757072,
           "original_elo": 1137.9066557854983
         },
         "pulse": {
-          "elo": 1112.45905539197,
+          "elo": 1141.198986484891,
           "valid": 2,
           "mean_loss": 10.013290341057608,
           "original_elo": 1091.1041254004747
         }
       },
-      "overall_elo": 1194.437204846171,
+      "overall_elo": 1200.2254380657873,
       "overall_matches": {
-        "wins": 33,
+        "wins": 39,
         "draws": 13,
         "losses": 8,
-        "skipped": 18
+        "skipped": 21
       }
     },
     {
@@ -153,30 +153,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 1096.5956180473427,
+          "elo": 1112.3641698454521,
           "valid": 2,
           "mean_loss": 29.34090994515198,
           "original_elo": 1075.387827184115
         },
         "heat": {
-          "elo": 1159.2853679966852,
+          "elo": 1188.513288315519,
           "valid": 3,
           "mean_loss": 0.18203695199757072,
           "original_elo": 1130.0388543564854
         },
         "pulse": {
-          "elo": 1154.2486035181,
+          "elo": 1141.4986702009307,
           "valid": 3,
           "mean_loss": 10.014156740055713,
           "original_elo": 1134.4074966520882
         }
       },
-      "overall_elo": 1226.3259116622767,
+      "overall_elo": 1268.3539740618214,
       "overall_matches": {
-        "wins": 46,
-        "draws": 14,
+        "wins": 53,
+        "draws": 15,
         "losses": 6,
-        "skipped": 6
+        "skipped": 7
       }
     },
     {
@@ -210,30 +210,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 1169.7437431194373,
+          "elo": 1195.6630417262243,
           "valid": 3,
           "mean_loss": 29.34090994515198,
           "original_elo": 1148.197443085095
         },
         "heat": {
-          "elo": 1145.57074261241,
+          "elo": 1155.6455435635419,
           "valid": 3,
           "mean_loss": 0.18292125961901728,
           "original_elo": 1118.3121532603004
         },
         "pulse": {
-          "elo": 1066.4282451515485,
+          "elo": 1076.0381101015607,
           "valid": 2,
           "mean_loss": 10.014156740055713,
           "original_elo": 1049.4907406485586
         }
       },
-      "overall_elo": 1189.0138606168452,
+      "overall_elo": 1238.875648176643,
       "overall_matches": {
-        "wins": 42,
-        "draws": 18,
+        "wins": 49,
+        "draws": 19,
         "losses": 5,
-        "skipped": 7
+        "skipped": 8
       }
     },
     {
@@ -267,30 +267,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 888.9329117613862,
+          "elo": 890.8438959604056,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "heat": {
-          "elo": 861.1190546092893,
+          "elo": 867.2932998599206,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "pulse": {
-          "elo": 880.41426256402,
+          "elo": 871.6129125793785,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         }
       },
-      "overall_elo": 765.8155669045525,
+      "overall_elo": 757.0815620963805,
       "overall_matches": {
         "wins": 0,
         "draws": 0,
-        "losses": 33,
-        "skipped": 39
+        "losses": 34,
+        "skipped": 47
       }
     },
     {
@@ -324,30 +324,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 1099.7027730626944,
+          "elo": 1112.5390496106872,
           "valid": 2,
           "mean_loss": 29.34090994515198,
           "original_elo": 1065.0370207528392
         },
         "heat": {
-          "elo": 954.658000969761,
+          "elo": 976.9345859971248,
           "valid": 1,
           "mean_loss": 0.18428612372642345,
           "original_elo": 945.8595648541028
         },
         "pulse": {
-          "elo": 1056.4873545814278,
+          "elo": 1053.1200103641302,
           "valid": 1,
           "mean_loss": 10.012423942059504,
           "original_elo": 1036.9006928266283
         }
       },
-      "overall_elo": 1060.74649792083,
+      "overall_elo": 1077.0485489423406,
       "overall_matches": {
-        "wins": 21,
+        "wins": 25,
         "draws": 10,
-        "losses": 15,
-        "skipped": 26
+        "losses": 16,
+        "skipped": 30
       }
     },
     {
@@ -381,30 +381,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 891.2699215654279,
+          "elo": 892.018462243158,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "heat": {
-          "elo": 958.765894334433,
+          "elo": 972.2912666953371,
           "valid": 1,
           "mean_loss": 0.18428612372642345,
           "original_elo": 949.0005167524441
         },
         "pulse": {
-          "elo": 982.6054142628574,
+          "elo": 975.4319063348466,
           "valid": 1,
           "mean_loss": 10.014156740055713,
           "original_elo": 968.3826310040871
         }
       },
-      "overall_elo": 934.1619953798861,
+      "overall_elo": 929.8477058375307,
       "overall_matches": {
-        "wins": 8,
-        "draws": 6,
+        "wins": 9,
+        "draws": 7,
         "losses": 25,
-        "skipped": 33
+        "skipped": 40
       }
     },
     {
@@ -438,30 +438,30 @@
       },
       "tasks": {
         "load": {
-          "elo": 886.0103528215789,
+          "elo": 891.6768056587495,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "heat": {
-          "elo": 859.3862457374274,
+          "elo": 869.0963151935081,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "pulse": {
-          "elo": 882.9421873566178,
+          "elo": 875.0068687190336,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         }
       },
-      "overall_elo": 763.4684273202519,
+      "overall_elo": 767.3455223182717,
       "overall_matches": {
         "wins": 0,
         "draws": 0,
-        "losses": 33,
-        "skipped": 39
+        "losses": 34,
+        "skipped": 47
       }
     },
     {
@@ -495,37 +495,97 @@
       },
       "tasks": {
         "load": {
-          "elo": 887.0476915321858,
+          "elo": 889.1833802628369,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "heat": {
-          "elo": 859.0565931642893,
+          "elo": 867.3635680858263,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         },
         "pulse": {
-          "elo": 883.2093010962756,
+          "elo": 880.4670997964971,
           "valid": 0,
           "mean_loss": null,
           "original_elo": null
         }
       },
-      "overall_elo": 772.8955607388243,
+      "overall_elo": 765.111932956799,
       "overall_matches": {
         "wins": 0,
         "draws": 0,
-        "losses": 33,
-        "skipped": 39
+        "losses": 34,
+        "skipped": 47
+      },
+      "self_hosted": true,
+      "competitor": "Granite 4.0 Micro (base)"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO",
+      "effort": "step 28",
+      "competitor": "Granite 4.0 Micro + GRPO (step 28)",
+      "suite_elo": null,
+      "valid": 1,
+      "episodes": 9,
+      "reviews": 9,
+      "criteria": {
+        "evidence": {
+          "mean": 1.5,
+          "count": 2
+        },
+        "experiment": {
+          "mean": 1.0,
+          "count": 2
+        },
+        "feedback": {
+          "mean": 1.5,
+          "count": 2
+        },
+        "repro": {
+          "mean": 0.5,
+          "count": 2
+        },
+        "selection": {
+          "mean": 3.0,
+          "count": 1
+        }
+      },
+      "tasks": {
+        "load": {
+          "elo": 895.3975146302656,
+          "valid": 0,
+          "mean_loss": null,
+          "original_elo": null
+        },
+        "heat": {
+          "elo": 866.150880002172,
+          "valid": 0,
+          "mean_loss": null,
+          "original_elo": null
+        },
+        "pulse": {
+          "elo": 998.7810893651642,
+          "valid": 1,
+          "mean_loss": 10.014156740055713,
+          "original_elo": null
+        }
+      },
+      "overall_elo": 863.0761583738771,
+      "overall_matches": {
+        "wins": 5,
+        "draws": 3,
+        "losses": 30,
+        "skipped": 43
       },
       "self_hosted": true
     }
   ],
   "failure_groups": {
-    "Response/tool protocol": 38,
-    "Other execution failure": 10
+    "Response/tool protocol": 45,
+    "Other execution failure": 11
   },
   "accounting": {
     "provider_reported_usd": 1.661328615,
@@ -1181,7 +1241,7 @@
       "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "heat",
       "seed": 0,
       "execution_valid": false,
@@ -1190,7 +1250,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "heat",
       "seed": 1,
       "execution_valid": false,
@@ -1199,7 +1259,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "heat",
       "seed": 2,
       "execution_valid": false,
@@ -1208,7 +1268,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "load",
       "seed": 0,
       "execution_valid": false,
@@ -1217,7 +1277,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "load",
       "seed": 1,
       "execution_valid": false,
@@ -1226,7 +1286,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "load",
       "seed": 2,
       "execution_valid": false,
@@ -1235,7 +1295,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "pulse",
       "seed": 0,
       "execution_valid": false,
@@ -1244,7 +1304,7 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "pulse",
       "seed": 1,
       "execution_valid": false,
@@ -1253,13 +1313,94 @@
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
     },
     {
-      "model": "Granite 4.0 Micro Base",
+      "model": "Granite 4.0 Micro (base)",
       "task": "pulse",
       "seed": 2,
       "execution_valid": false,
       "primary_loss": null,
       "interval_score_90": null,
       "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "heat",
+      "seed": 0,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "heat",
+      "seed": 1,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "heat",
+      "seed": 2,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "load",
+      "seed": 0,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Neither experiment produced a valid development artifact"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "load",
+      "seed": 1,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "load",
+      "seed": 2,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "pulse",
+      "seed": 0,
+      "execution_valid": true,
+      "primary_loss": 10.014156740055713,
+      "interval_score_90": null,
+      "failure_reason": null
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "pulse",
+      "seed": 1,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
+    },
+    {
+      "model": "Granite 4.0 Micro + GRPO (step 28)",
+      "task": "pulse",
+      "seed": 2,
+      "execution_valid": false,
+      "primary_loss": null,
+      "interval_score_90": null,
+      "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
     }
   ],
   "rating_policy": {
@@ -1282,8 +1423,8 @@
       2
     ],
     "ranking": "All participants retain numeric Elo, including those with zero valid attempts.",
-    "scheduled_matches": 324,
-    "scored_matches": 210,
+    "scheduled_matches": 405,
+    "scored_matches": 248,
     "audit": "/results/pooled-task-elo-v1.json"
   }
 }

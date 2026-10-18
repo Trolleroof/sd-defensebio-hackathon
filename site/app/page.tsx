@@ -12,7 +12,7 @@ export default function Home() {
         <p className="research-kicker">DefenseBio / Research</p>
         <h1>soliderphys-bench</h1>
         <p className="research-deck">Evaluating coding agents on physiological model development.</p>
-        <div className="research-byline"><time dateTime="2026-10-18">October 18, 2026</time><span aria-hidden="true">·</span><span>9 models, 3 tasks, 81 episodes</span></div>
+        <div className="research-byline"><time dateTime="2026-10-18">October 18, 2026</time><span aria-hidden="true">·</span><span>10 models, 3 tasks, 90 episodes</span></div>
         <nav className="research-links" aria-label="Research resources"><Link href="/blog/physbench/">Read the report <span>↗</span></Link><a href={SPEC}>Methodology <span>↗</span></a><a href="/results/compact-coding-v1.json">Data <span>↓</span></a></nav>
       </header>
 
@@ -26,7 +26,7 @@ export default function Home() {
         <h2 id="evaluation-heading">The evaluation</h2>
         <p>Agents train two predictors, evaluate on development data, and select one for hidden replay. Person-balanced error determines prediction Elo; a separate judge assesses the experiment decisions.</p>
         <div className="research-task-list">{TASKS.map((task, i) => <Link key={task.id} href={`/tasks/#${task.id}`}><span className="research-task-number">0{i + 1}</span><span><strong>{task.name}</strong><small>{task.data}</small></span><span aria-hidden="true">↗</span></Link>)}</div>
-        <details className="research-notes"><summary>Scope and coverage</summary><p>This retrospective pilot produced 33 valid predictors from 81 attempts, with 74 of 81 process reviews available. Failed attempts remain in the matched outcomes. Pulse ECG references are provisional; fixed cohorts and three agent seeds do not establish population-level ranking confidence.</p></details>
+        <details className="research-notes"><summary>Scope and coverage</summary><p>This retrospective pilot produced 34 valid predictors from 90 attempts, with 83 of 90 process reviews available. Failed attempts remain in the matched outcomes. Pulse ECG references are provisional; fixed cohorts and three agent seeds do not establish population-level ranking confidence.</p></details>
       </section>
     </div>
   );

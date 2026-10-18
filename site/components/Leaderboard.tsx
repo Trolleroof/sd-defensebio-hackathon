@@ -84,7 +84,7 @@ export function Leaderboard() {
           })}
         </div>
         <div className="ranking-axis" aria-hidden="true">{[0, .25, .5, .75, 1].map(t => <span key={t}>{process ? (t * scale).toFixed(0) : metric === "validity" ? `${t * scale}%` : (t * scale).toLocaleString("en-US", {maximumFractionDigits: task === "heat" && metric === "mae" ? 2 : 1})}</span>)}</div>
-        <p className="figure-note">{chartDescription} No confidence intervals estimated. Granite 4.0 Micro is the untuned base model, self-hosted on RunPod; its 9 episodes were scored with the same suite and judge configuration.</p>
+        <p className="figure-note">{chartDescription} No confidence intervals estimated. Both Granite 4.0 Micro rows are self-hosted on RunPod: the untuned base model and a GRPO-tuned checkpoint (step 28). They ran the same suite and judge configuration.</p>
       </figure>
 
       <details className="score-details"><summary>View exact scores and coverage</summary>
@@ -94,7 +94,7 @@ export function Leaderboard() {
           </table>
         </div>
       </details>
-      <div className="board-source"><span>9 models · 3 trials per task · 18 Oct 2026</span><a href="/results/pooled-task-elo-v1.json" download>Match audit ↗</a><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
+      <div className="board-source"><span>10 models · 3 trials per task · 18 Oct 2026</span><a href="/results/pooled-task-elo-v1.json" download>Match audit ↗</a><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
     </div>
   );
 }
