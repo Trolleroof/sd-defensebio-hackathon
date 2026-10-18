@@ -1,0 +1,14 @@
+# Keep local data, runs and virtualenvs out of Beam uploads (scorer .remote() syncs the working dir).
+.git/
+.venv*/
+.research-data/
+.research-runs/
+.benchmark-runs/
+.heat-runs/
+.load-runs/
+__pycache__/
+*.pyc
+sources/
+firmware/
+sensor/
+dashboard/

@@ -158,7 +158,7 @@ This two-node demo does not establish medical accuracy, injury detection, reliab
 | 2.2 Agent research workspace | ✅ Core implemented | Editing, execution, evidence, feedback, acquisition, reversion, submission and budgets work; execution hardening remains. |
 | 2.3 Build → Investigate → Transfer → Sustain | ✅ Synthetic implementation | Four stages run in one campaign; full real-data coverage remains open. |
 | 2.4 Virtual participants and reference answers | 🟡 Partial | PPG-DaLiA-grounded generator and adapters exist; physiology and session transfer are unvalidated. |
-| 2.5 RL environments and post-training | 🟡 Partial | Actions, observations, transitions and trajectories exist; reward/trainer/weight updates do not. |
+| 2.5 RL environments and post-training | 🟡 Partial | `research_env/rl/` reset/step env, frozen reward v1 and trajectory export; pulse/heat/load task pools; Beam backend (mock-tested only) and verl GRPO/RunPod glue (not run). See [contract](docs/RL_ENV_CONTRACT.md). No GPU run, live Beam run or weight update yet. |
 | 2.6 Decision records and experiment history | ✅ Core implemented | Justifications, outcomes, code snapshots and evidence are recorded. |
 | 2.7 Scoring | 🟡 Partial | Prediction, uncertainty, retention, reliability and Elo work; calibrated judging/agreement remain open. |
 | 2.8 Meaningful difficulty and saturation | ⬜ Not established | Conventional baselines solve current synthetic cases. |
@@ -389,14 +389,14 @@ Confirm actual sensor outputs and reference availability, audit compatible publi
 
 ### 2.11 Fine-tuning — reserved for Nikhil
 
-**Owner: Nikhil. Decision: open.** Environment construction, base-model comparisons, trajectory capture, and reward-interface design can progress before selecting a learning recipe.
+**Owner: Nikhil. Method decided October 17, 2026: GRPO; other recipe decisions open.** Environment construction, base-model comparisons, trajectory capture, and reward-interface design can progress before selecting a learning recipe.
 
 | Decision | Status |
 | --- | --- |
 | U.S. open-weight checkpoint, license, and comparator versions | Nikhil to choose |
 | Training data, teacher/example-generation method, and data permissions | Nikhil to choose |
-| Supervised training, RL, or sequence | Nikhil to choose |
-| Reward combination, compute budget, optimizer, and hyperparameters | Nikhil to choose |
+| Supervised training, RL, or sequence | **GRPO** (RL). Outcome reward from executed predictions on held-out training-pool people; an SFT warm-start is added only if the base-model pilot shows too little within-group reward variance |
+| Reward combination, compute budget, optimizer, and hyperparameters | Nikhil to choose. Planned infrastructure: RunPod GPUs for trainer and rollout inference; Beam sandboxes for agent execution and a separate trusted scorer |
 | Training success criteria and checkpoint selection | Define before final evaluation |
 
 Training/evaluation model weights and the episode's physiological predictor are different artifacts. Do not claim a fine-tune, improved benchmark score, sufficient training corpus, or U.S.–China result until measured. A potential initial demonstration is one executable model-building campaign with inspectable decisions and hidden-recording results; full population validation extends beyond the hackathon.
