@@ -8,3 +8,4 @@ runs/
 
 *.py[cod]
 .benchmark-runs/
+.heat-runs/
