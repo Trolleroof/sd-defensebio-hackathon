@@ -1,5 +1,7 @@
 # DefenseBio: sensors, SoliderPhys-Bench and structural campaigns
 
+The active frontier-model comparison uses the versioned [compact physiology coding benchmark](benchmarks/compact-coding-v1/README.md): three measured-data tasks, nine episodes per model, and a [RunPod checkpoint evaluation guide](benchmarks/compact-coding-v1/RUNPOD.md). This protocol differs from the older runners listed below.
+
 The shared project contains these connected implementations:
 
 - [Sensor capture](sensor/): live Polar Verity Sense BLE streaming.

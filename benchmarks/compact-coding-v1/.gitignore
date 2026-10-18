@@ -1,0 +1,8 @@
+.venv*/
+.leaderboard-data/
+.leaderboard-runs/
+.research-data/
+__pycache__/
+*.py[cod]
+.env
+.env.*

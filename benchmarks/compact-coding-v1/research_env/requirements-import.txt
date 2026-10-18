@@ -1,0 +1,4 @@
+# Trusted offline preparation only; not needed in participant image.
+openpyxl==3.1.5
+et-xmlfile==2.0.0
+xlrd==2.0.2

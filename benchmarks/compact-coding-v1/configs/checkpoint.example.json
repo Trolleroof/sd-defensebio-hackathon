@@ -1,0 +1,22 @@
+{
+  "competitor": "REPLACE_WITH_CHECKPOINT_LABEL",
+  "model": "REPLACE_WITH_SERVED_MODEL_NAME",
+  "slug": "replace-with-checkpoint-slug",
+  "provider": "self-hosted RunPod",
+  "endpoint": "http://127.0.0.1:8000/v1/chat/completions",
+  "prompt": "Solve the supplied research task independently under the compact coding protocol.",
+  "decoding": {"max_tokens": 1536},
+  "seed_mode": "send",
+  "pricing_ceiling": {"prompt": "0", "completion": "0"},
+  "request_timeout_s": 600,
+  "checkpoint": {
+    "manifest_sha256": "REPLACE_WITH_SHA256_OF_CHECKPOINT_FILE_MANIFEST",
+    "base_model_revision": "REPLACE_WITH_IMMUTABLE_BASE_REVISION",
+    "tokenizer_revision": "REPLACE_WITH_IMMUTABLE_TOKENIZER_REVISION",
+    "chat_template_sha256": "REPLACE_WITH_CHAT_TEMPLATE_SHA256",
+    "dtype": "REPLACE_WITH_ACTUAL_DTYPE",
+    "quantization": "REPLACE_WITH_ACTUAL_QUANTIZATION_OR_none",
+    "serving_image_digest": "REPLACE_WITH_GPU_SERVING_IMAGE_DIGEST",
+    "effort_support": "REPLACE_WITH_NATIVE_REASONING_SETTING_OR_explicitly_unsupported"
+  }
+}
