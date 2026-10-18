@@ -398,6 +398,10 @@ class MeshSource:
     def take(self, line: str):
         try:
             data = json.loads(line)
+            if not isinstance(data, dict):
+                return
+            self.out.write(json.dumps({"t": time.time(), **data}) + "\n")
+            self.out.flush()
             if data.get("type") != "telemetry":
                 return
             p = self.people.get(data.get("node_id"))
@@ -412,10 +416,8 @@ class MeshSource:
                 p.hr = None
             acc = data.get("accel_m_s2")
             gyro = data.get("gyro_rad_s")
-            if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3:
+            if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(isinstance(v, (int, float)) for v in acc + gyro):
                 p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
-            self.out.write(json.dumps({"t": time.time(), **data}) + "\n")
-            self.out.flush()
         except (ValueError, TypeError, KeyError):
             return
 
