@@ -1,6 +1,7 @@
 """Model-independent JSON action protocol; the provider receives public observations only."""
 import json
 from .workspace import read, write
+from .contract import predictor_contract, agent_data
 
 
 class AgentSession:
@@ -40,9 +41,12 @@ class AgentSession:
                          'forecast_times_s': [r['time_s'] for r in s['rows'] if r['time_s'] > 0]}
                         for s in w.ep['sessions'] if s['role'] in ('development', 'test')]
             brief = read(w.visible / 'brief.json')
-        return {'brief': brief, 'recordings': recordings,
+            # Existing saved episodes also receive the current public interface.
+            brief['predictor_contract'] = predictor_contract()
+        return agent_data({'brief': brief, 'recordings': recordings,
                 'requests': requests, 'remaining': controller['remaining'],
-                'history': controller['events'], 'current_code': self.state['code'],
+                'history': [{k: v for k, v in event.items() if k != 'public_snapshot'}
+                            for event in controller['events']], 'current_code': self.state['code'],
                 'candidate_ids': list(self.state['candidates']),
                 'steps_remaining': max(0, self.max_steps-self.state['steps']),
                 'terminated': controller['submitted'] or self.state['exhausted'],
@@ -52,7 +56,7 @@ class AgentSession:
                 'protocol': {'edit': ['code', 'decision'], 'acquire': ['session_id', 'decision'],
                              'evaluate': ['decision'], 'revert': ['candidate_id', 'decision'],
                              'submit': ['decision'],
-                             **({'checkpoint': ['decision']} if hasattr(w, 'checkpoint_code') else {})}}
+                             **({'checkpoint': ['decision']} if hasattr(w, 'checkpoint_code') else {})}})
 
     def act(self, action):
         self.state = read(self.path)

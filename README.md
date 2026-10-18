@@ -76,3 +76,7 @@ Campaign reports now include provisional prediction Elo and export a separate un
 ```sh
 python3 -m benchmark rate .benchmark-runs/linked-demo/report.json .benchmark-runs/linked-demo/ratings.json
 ```
+
+## Real-statistics campaign pilot
+
+The PPG-DaLiA-grounded synthetic generator and four-stage campaign pilot are described in [the generator and fidelity report](docs/SYNTHETIC_DALIA.md) and [the development results](docs/DALIA_CAMPAIGN_RESULTS.md). These small development results do not establish physiological validity, clinical performance, untouched-participant transfer, or training benefit; the pilot did not update model weights.

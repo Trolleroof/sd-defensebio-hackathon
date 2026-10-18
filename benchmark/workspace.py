@@ -5,6 +5,7 @@ import math
 import os
 import tempfile
 from pathlib import Path
+from .contract import predictor_contract, agent_data
 
 
 def read(path):
@@ -104,7 +105,7 @@ class Workspace:
                                                'error': 'submission interrupted before final scoring'})
         if interrupted:
             self._save()
-            write(self.visible/'history.json', self.state['events'])
+            write(self.visible/'history.json', agent_data(self.state['events']))
 
     @classmethod
     def create(cls, episode, control_dir, workspace):
@@ -123,16 +124,17 @@ class Workspace:
         public = {'schema_version': 1, 'episode_id': episode['id'], 'origin': episode['origin'],
                   'task': 'Forecast recovery after cutoff 0; future condition is rest.',
                   'interval_level': .9, 'budgets': episode['budgets'],
+                  'predictor_contract': predictor_contract(),
                   'provenance': episode.get('provenance', {}),
                   'acquisition_menu': [{'id': s['id'], 'cost': s['cost'], 'description': s['description']}
                                        for s in episode['sessions'] if s['role'] == 'acquisition']}
-        write(visible / 'brief.json', public)
-        write(visible / 'support.json', [s for s in episode['sessions'] if s['role'] == 'support'])
+        write(visible / 'brief.json', agent_data(public))
+        write(visible / 'support.json', agent_data([s for s in episode['sessions'] if s['role'] == 'support']))
         requests = [{'id': s['id'], 'role': s['role'],
                      'history': [r for r in s['rows'] if r['time_s'] <= 0],
                      'forecast_times_s': [r['time_s'] for r in s['rows'] if r['time_s'] > 0]}
                     for s in episode['sessions'] if s['role'] in ('development', 'test')]
-        write(visible / 'requests.json', requests)
+        write(visible / 'requests.json', agent_data(requests))
         (visible / 'predictor.py').write_text('def predict(history, forecast_times_s):\n    raise NotImplementedError("Invent your predictor here")\n')
         return obj
 
@@ -155,7 +157,7 @@ class Workspace:
     def _finish(self, event, result):
         event['status'], event['result'] = 'completed', result
         self._save()
-        write(self.visible / 'history.json', self.state['events'])
+        write(self.visible / 'history.json', agent_data(self.state['events']))
         return result
 
     def acquire(self, session_id, decision):
@@ -171,7 +173,7 @@ class Workspace:
         self.state['acquired'].append(session_id)
         self._save()
         # IDs are data, never filesystem paths.
-        write(self.visible / f'acquisition-{len(self.state["acquired"])}.json', session)
+        write(self.visible / f'acquisition-{len(self.state["acquired"])}.json', agent_data(session))
         return self._finish(event, {'recording': session_id, 'remaining': self.state['remaining'].copy()})
 
     def evaluate(self, forecasts, decision):
@@ -220,6 +222,7 @@ class Workspace:
                      'forecast_times_s': [r['time_s'] for r in s['rows'] if r['time_s'] > 0]}
                     for s in self.ep['sessions'] if s['role'] == role]
         from .executor import execute
+        support, requests = agent_data(support), agent_data(requests)
         if executor is execute:
             return executor(code, support, requests, forbidden_paths=[str(self.root)])
         return executor(code, support, requests)

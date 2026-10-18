@@ -150,6 +150,28 @@ This two-node demo does not establish medical accuracy, injury detection, reliab
 
 ## 2. Phase 2 — physiology research workspace, benchmark, and post-training environments
 
+### Implementation status and next milestone — October 17, 2026
+
+| Phase 2 item | Status | Evidence and remaining limit |
+| --- | --- | --- |
+| 2.1 Research goal and task design | ✅ Defined | Four task families and evaluation boundaries are specified. |
+| 2.2 Agent research workspace | ✅ Core implemented | Editing, execution, evidence, feedback, acquisition, reversion, submission and budgets work; execution hardening remains. |
+| 2.3 Build → Investigate → Transfer → Sustain | ✅ Synthetic implementation | Four stages run in one campaign; full real-data coverage remains open. |
+| 2.4 Virtual participants and reference answers | 🟡 Partial | PPG-DaLiA-grounded generator and adapters exist; physiology and session transfer are unvalidated. |
+| 2.5 RL environments and post-training | 🟡 Partial | Actions, observations, transitions and trajectories exist; reward/trainer/weight updates do not. |
+| 2.6 Decision records and experiment history | ✅ Core implemented | Justifications, outcomes, code snapshots and evidence are recorded. |
+| 2.7 Scoring | 🟡 Partial | Prediction, uncertainty, retention, reliability and Elo work; calibrated judging/agreement remain open. |
+| 2.8 Meaningful difficulty and saturation | ⬜ Not established | Conventional baselines solve current synthetic cases. |
+| 2.9 Competitors, splits and evaluation controls | 🟡 Partial | Comparisons and split controls exist; repeated held-out comparison remains. |
+| 2.10 Extensibility and first campaign | 🟡 Partial | Synthetic campaign works; validated real-recording campaign remains. |
+| 2.11 Fine-tuning | ⬜ Not started | No recipe, training run, trained checkpoint or measured gain. |
+
+**Completed prototype milestone:** persistent research workspace, executable evaluation, four-stage synthetic campaigns, conventional comparisons and Elo reporting. The latest development pilot completed three Luna 6 campaigns, 15 conventional campaigns and 108 frozen-source real-development evaluations. Luna scored 5.401 bpm synthetic MAE and provisional Elo 1007.1 (third of six); pooled AR scored 4.701 bpm. Real-development replay did not show a synthetic-calibration advantage. See [pilot results](docs/DALIA_CAMPAIGN_RESULTS.md).
+
+**Disclaimer:** these are small development experiments, not evidence of physiological validity, clinical performance, generalization to untouched participants, or training benefit. Final-test participants remained untouched. The 15 Elo matches derive from three synthetic recordings; the nine real replay combinations reuse three development recordings. Full-trace LLM judging and judge-agreement audits remain unfinished. No LLM weights were trained.
+
+**Next milestone:** a validated training environment with challenging cases, a usable reward interface, repeated agent comparisons and measured transfer to untouched cases.
+
 ### 2.1 Purpose and research grounding
 
 **The LLM acts as a physiology researcher: it plans experiments, writes executable predictors, uses feedback, and improves models across changing scenarios.** Phase 1 supplies the physical device, dashboard, and operator workflow. Phase 2 tests and eventually trains the research capability behind personalized modeling.

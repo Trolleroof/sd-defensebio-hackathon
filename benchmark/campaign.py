@@ -2,6 +2,7 @@
 import copy
 from pathlib import Path
 from .workspace import Workspace, read, write
+from .contract import predictor_contract, agent_data
 
 
 STAGES = ('Build', 'Investigate', 'Transfer', 'Sustain')
@@ -61,12 +62,14 @@ class CampaignWorkspace(Workspace):
                  'stage': STAGES[stage], 'stage_index': stage, 'stage_count': 4,
                  'task': self.ep['campaign']['briefs'][stage],
                  'interval_level': .9, 'budgets': self.ep['budgets'],
+                 'predictor_contract': predictor_contract(campaign=True),
                  'context_fields': self.ep['campaign']['context_fields'],
+                 'task_profile': self.ep['campaign'].get('task_profile', 'structural-recovery-v1'),
                  'acquisition_menu': [{'id': s['id'], 'cost': s['cost'], 'description': s['description']}
                                       for s in released if s['role'] == 'acquisition' and s['id'] not in state['acquired']],
                  'checkpoint_rule': 'Checkpoint locks this round and releases the next. Final submit is available only in Sustain. Private checkpoint scores never return as feedback.'}
-        return {'brief': brief, 'recordings': self._support(),
-                'requests': [self._request(s) for s in released if s['role'] == 'development']}
+        return agent_data({'brief': brief, 'recordings': self._support(),
+                'requests': [self._request(s) for s in released if s['role'] == 'development']})
 
     def _publish(self):
         observation = self.public_observation()
@@ -97,10 +100,11 @@ class CampaignWorkspace(Workspace):
         sessions = [s for s in self.ep['sessions'] if s['role'] == role and
                     (role == 'test' or s['release_stage'] <= stage)]
         requests = [self._request(s) for s in sessions]
+        support, requests = agent_data(self._support()), agent_data(requests)
         from .executor import execute
         if executor is execute:
-            return executor(code, self._support(), requests, forbidden_paths=[str(self.root)])
-        return executor(code, self._support(), requests)
+            return executor(code, support, requests, forbidden_paths=[str(self.root)])
+        return executor(code, support, requests)
 
     def _score_role(self, forecasts, role):
         from .workspace import score
