@@ -3,7 +3,7 @@ import { modelFamily } from "@/lib/model-family";
 
 const LOGOS = {
   anthropic: "claude", google: "gemini", openai: "openai",
-  moonshot: "kimi", deepseek: "deepseek", xai: "grok",
+  moonshot: "kimi", deepseek: "deepseek", xai: "grok", ibm: "granite",
 };
 
 export function ModelLogo({ model }: { model: string }) {
