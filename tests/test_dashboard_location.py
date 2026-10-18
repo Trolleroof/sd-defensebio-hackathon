@@ -3,6 +3,7 @@ from contextlib import suppress
 import math
 import time
 import unittest
+from unittest.mock import patch
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -11,6 +12,40 @@ from dashboard.server import MeshApiSource, Person, Team, ws_handler
 
 
 class DashboardLocationTest(unittest.TestCase):
+    def test_activity_baselines_and_sustained_alert(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+        team.add(person)
+        now = [1000.0]
+
+        def sample(acceleration, rotation, heart_rate):
+            for z in acceleration:
+                person.add_imu((0, 0, z), (rotation, 0, 0), 25)
+            person.add_hr(heart_rate)
+            row = team.tick()["people"][0]
+            now[0] += 1
+            return row
+
+        with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
+            for _ in range(52):
+                row = sample((1000, 1000), 2, 70)
+            self.assertEqual((row["activity"], row["baselines"]["still"], row["exp"]), ("still", 70, 70))
+            for _ in range(52):
+                row = sample((850, 1150), 40, 95)
+            self.assertEqual((row["activity"], row["baselines"]["walking"], row["exp"]), ("walking", 95, 95))
+            for _ in range(52):
+                row = sample((600, 1400), 100, 125)
+            self.assertEqual((row["activity"], row["baselines"]["running"], row["exp"]), ("running", 125, 125))
+            for _ in range(31):
+                row = sample((600, 1400), 100, 155)
+            self.assertEqual(row["status"], "deviation")
+            self.assertEqual(len([a for a in team.alerts.values() if a["kind"] == "deviation"]), 1)
+            self.assertEqual(person.activity_baselines["running"], 125)
+            for _ in range(3):
+                row = sample((1000, 1000), 2, 70)
+            self.assertIsNone(row["exp"])
+            self.assertEqual(row["status"], "ok")
+
     def test_origin_steps_turn_and_correction(self):
         team = Team(None, (32.7157, -117.1611))
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)

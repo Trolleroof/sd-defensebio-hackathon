@@ -353,17 +353,19 @@ function renderDetail() {
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
-        <div class="metric"><div class="k">Expected</div><div class="v" id="mExp"></div></div>
+        <div class="metric"><div class="k">${p.imu ? "Activity baseline" : "Expected"}</div><div class="v" id="mExp"></div></div>
         <div class="metric"><div class="k">Difference</div><div class="v" id="mDev"></div></div>
+        ${p.imu ? `<div class="metric"><div class="k">Activity</div><div class="v" id="mActivity"></div></div>` : ""}
         <div class="metric"><div class="k">RMSSD</div><div class="v" id="mRmssd"></div></div>
         <div class="metric"><div class="k">Movement</div><div class="v" id="mMv"></div></div>
         <div class="metric"><div class="k">Rotation</div><div class="v" id="mRot"></div></div>
         <div class="metric"><div class="k">IMU temp (chip)</div><div class="v" id="mTemp"></div></div>
         <div class="metric"><div class="k">Signal</div><div class="v" id="mQ"></div></div>
       </div>
+      ${p.imu ? `<p class="note" id="baselineDetail"></p>` : ""}
       <p class="note" id="motionDetail"></p>
       <div class="chart-head">
-        <span class="title">Heart rate</span><span class="key">Measured</span><span class="key exp">Expected</span><span class="key gap">No data</span>
+        <span class="title">Heart rate</span><span class="key">Measured</span><span class="key exp">${p.imu ? "Activity baseline" : "Expected"}</span><span class="key gap">No data</span>
         <div class="range">${[120, 300, 600].map((s) => `<button data-r="${s}">${s / 60} min</button>`).join("")}</div>
       </div>
       <canvas id="hrChart"></canvas>
@@ -395,6 +397,11 @@ function renderDetail() {
   set("#mHr", `${fmt(r.hr)}<small>bpm</small>`, r.status === "distress" ? "crit" : "");
   set("#mExp", `${fmt(r.exp)}<small>bpm</small>`);
   set("#mDev", dev == null ? "—" : `${dev > 0 ? "+" : ""}${fmt(dev)}<small>bpm</small>`, dev != null && Math.abs(dev) > S.meta.deviation_bpm ? "warn" : "");
+  if (p.imu) {
+    set("#mActivity", r.activity ? r.activity[0].toUpperCase() + r.activity.slice(1) : "Unknown");
+    root.querySelector("#baselineDetail").textContent = ["still", "walking", "running"].map((a) =>
+      `${a}: ${r.baselines?.[a] == null ? a === r.activity ? `learning (${r.baseline_samples || 0}/20 readings after 30 s stable)` : "not learned" : `${fmt(r.baselines[a])} bpm`}`).join(" · ");
+  }
   set("#mRmssd", `${fmt(r.rmssd)}<small>ms</small>`);
   set("#mMv", r.mv == null ? "—" : `${fmt(r.mv)}<small>mG</small>`);
   set("#mRot", r.rot == null ? "—" : `${fmt(r.rot)}<small>°/s</small>`);

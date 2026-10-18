@@ -47,7 +47,7 @@ HISTORY_S = 600          # seconds of history kept per person and sent on connec
 STALE_S = 10             # no samples for this long -> "no data"
 DEVIATION_BPM = 20       # |measured - expected| above this ...
 DEVIATION_HOLD_S = 30    # ... for this long -> attention item
-MODEL_VERSION = "kinetic-v0 (not validated)"
+MODEL_VERSION = "activity baselines for IMU; kinetic-v0 otherwise (not validated)"
 
 
 # ---------------------------------------------------------------- per-person state
@@ -91,6 +91,11 @@ class Person:
     model: Kinetic = field(default_factory=Kinetic)
     early_hr: list = field(default_factory=list)
     dev_since: float | None = None
+    activity: str | None = None
+    activity_since: float = 0.0
+    activity_hr_t: float = 0.0
+    activity_samples: dict = field(default_factory=lambda: {"still": [], "walking": [], "running": []})
+    activity_baselines: dict = field(default_factory=dict)
     history: deque = field(default_factory=lambda: deque(maxlen=int(HISTORY_S / TICK_S)))
     lat: float | None = None
     lon: float | None = None
@@ -169,6 +174,18 @@ class Person:
         """Mean angular speed over the last 2 s, dps."""
         samples = [value for t, value in self.gyro if time.time() - t <= 2]
         return statistics.fmean(samples) if samples else None
+
+    def motion_activity(self, now: float, movement: float | None) -> str | None:
+        if not self.imu_fresh(now) or movement is None:
+            return None
+        rotation = self.rotation()
+        if movement < 35 and rotation is not None and rotation < 25:
+            return "still"
+        if movement >= 250 or (movement >= 150 and rotation is not None and rotation >= 80):
+            return "running"
+        if movement >= 35:
+            return "walking"
+        return None
 
     def rmssd(self) -> float | None:
         rr = list(self.rr)[-30:]
@@ -504,7 +521,7 @@ class Team:
             session_dir.mkdir(parents=True, exist_ok=True)
             self.samples = open(session_dir / "samples.csv", "w", newline="")
             self.samples_w = csv.writer(self.samples)
-            self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "rot_dps", "imu_temp_c", "quality", "status", "lat", "lon", "loc_source"])
+            self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "rot_dps", "imu_temp_c", "quality", "status", "lat", "lon", "loc_source", "activity"])
             self.events_f = open(session_dir / "events.jsonl", "a")
         self._next = 1
 
@@ -579,10 +596,25 @@ class Team:
         for p in self.people.values():
             mv = p.movement()
             fresh = now - p.last_sample <= STALE_S and p.connected
-            exp = p.model.step(mv, TICK_S) if fresh else p.model.state
-            dev = None
             hr_fresh = fresh and now - p.hr_t <= STALE_S
-            if hr_fresh and p.hr is not None and exp is not None:
+            q = p.quality(now)
+            activity = p.motion_activity(now, mv) if fresh and p.imu else None
+            if p.imu:
+                if activity != p.activity:
+                    p.activity, p.activity_since, p.dev_since = activity, now, None
+                stable_s = now - p.activity_since
+                if activity and stable_s >= 30 and q == "good" and hr_fresh and p.hr is not None and p.hr_t != p.activity_hr_t and activity not in p.activity_baselines:
+                    p.activity_hr_t = p.hr_t
+                    samples = p.activity_samples[activity]
+                    samples.append(p.hr)
+                    if len(samples) == 20:
+                        # shortcut: first stable 20 readings set the baseline; validate activity thresholds and HR range on hardware.
+                        p.activity_baselines[activity] = statistics.median(samples)
+                exp = p.activity_baselines.get(activity) if activity and stable_s >= 30 else None
+            else:
+                exp = p.model.step(mv, TICK_S) if fresh else p.model.state
+            dev = None
+            if q == "good" and hr_fresh and p.hr is not None and exp is not None:
                 dev = p.hr - exp
                 if abs(dev) > DEVIATION_BPM:
                     p.dev_since = p.dev_since or now
@@ -590,7 +622,6 @@ class Team:
                     p.dev_since = None
             else:
                 p.dev_since = None
-            q = p.quality(now)
             if q == "no data" and p.last_sample:
                 self.open_alert(p.id, "stale", "No data from sensor", "device")
             elif q == "no contact":
@@ -602,11 +633,15 @@ class Team:
                     self.log("system", p.id, f"{p.name}: data resumed" if a["kind"] == "stale" else f"{p.name}: contact restored", a["id"])
             if p.dev_since and now - p.dev_since >= DEVIATION_HOLD_S:
                 word = "above" if dev > 0 else "below"
-                self.open_alert(p.id, "deviation", f"HR {abs(dev):.0f} bpm {word} expected for {DEVIATION_HOLD_S}+ s", "warning")
+                reference = f"{activity} baseline" if p.imu else "expected"
+                self.open_alert(p.id, "deviation", f"HR {abs(dev):.0f} bpm {word} {reference} for {DEVIATION_HOLD_S}+ s", "warning")
             st = self.status(p, now, dev)
             row = {"t": round(now, 1), "hr": p.hr if hr_fresh else None, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
+            if p.imu:
+                row.update(activity=activity, baselines={k: round(v, 1) for k, v in p.activity_baselines.items()},
+                           baseline_samples=len(p.activity_samples[activity]) if activity else 0)
             if p.acc and now - p.acc[-1][0] <= 2:
                 row["acc_xyz"] = [round(v) for v in p.acc_xyz]
                 row["acc_mag"] = round(p.acc[-1][1])
@@ -620,7 +655,7 @@ class Team:
             p.history.append(row)
             if self.samples_w:
                 self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
-                                         row.get("lat"), row.get("lon"), p.loc])
+                                         row.get("lat"), row.get("lon"), p.loc, activity])
             rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
                          "heading": round(p.heading) if p.heading_set else None,
                          "loc_quality": "low" if p.loc == "estimated" and p.heading_set else "uncalibrated" if p.loc == "estimated" else None,
