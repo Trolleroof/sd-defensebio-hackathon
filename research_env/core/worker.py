@@ -38,6 +38,12 @@ def execute(workspace, command, *, timeout_s, cpus=8, memory_gb=32,
     tree_hashes(root)  # Reject symlinks, including indirect private-file access.
     if not command or any(not isinstance(x, str) for x in command):
         raise ValueError('Command must be a nonempty argv list')
+    if backend == 'beam':
+        # Remote Beam sandbox (network blocked, public mount only); limits are not
+        # capped by this host. See research_env/beam/sandbox.py.
+        from research_env.beam.sandbox import execute_beam
+        return execute_beam(root, command, timeout_s=timeout_s, cpus=cpus, memory_gb=memory_gb,
+                            image=image, on_tick=on_tick, requests=requests)
     actual_cpus = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else (os.cpu_count() or 1)
     actual_memory = 32.
     if sys.platform == 'darwin':
