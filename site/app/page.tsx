@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Leaderboard } from "@/components/Leaderboard";
+import { TaskComparison } from "@/components/TaskComparison";
 import { TASKS } from "@/lib/data";
 
 const SPEC = "https://github.com/Trolleroof/sd-defensebio-hackathon/blob/main/benchmarks/compact-coding-v1/SPEC.md";
@@ -18,6 +19,7 @@ export default function Home() {
       <section className="research-results" id="leaderboard" aria-labelledby="results-heading">
         <div className="research-section-title"><h2 id="results-heading">Results</h2><Link href="/blog/physbench/#methodology">Evaluation protocol ↗</Link></div>
         <Leaderboard />
+        <TaskComparison />
       </section>
 
       <section className="research-context" aria-labelledby="evaluation-heading">

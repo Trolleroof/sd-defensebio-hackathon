@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { RESULTS } from "@/lib/data";
+import { modelFamily } from "@/lib/model-family";
 
 const VIEWS = ["suite", "pulse", "heat", "load", "process"] as const;
 type View = (typeof VIEWS)[number];
@@ -13,14 +14,6 @@ const LABELS = { suite: "Overall", pulse: "Pulse", heat: "Heat", load: "Load", p
 const CRITERION_LABELS = { evidence: "Evidence use", experiment: "Experiment choice", feedback: "Feedback integration", repro: "Reproducibility", selection: "Final selection" };
 const UNITS = { pulse: "bpm", heat: "°C", load: "W" };
 
-function family(model: string) {
-  if (model.startsWith("Claude")) return "anthropic";
-  if (model.startsWith("Gemini")) return "google";
-  if (model.startsWith("GPT")) return "openai";
-  if (model.startsWith("Kimi")) return "moonshot";
-  if (model.startsWith("DeepSeek")) return "deepseek";
-  return "xai";
-}
 
 export function Leaderboard() {
   const [view, setView] = useState<View>("suite");
@@ -82,7 +75,7 @@ export function Leaderboard() {
           {rows.map(row => {
             const v = value(row);
             const count = process ? `${row.criteria[criterion].count} observed · ${row.reviews}/9 reviewed` : `${task ? row.tasks[task].valid : row.valid}/${denominator} valid`;
-            return <div className={`ranking-row family-${family(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
+            return <div className={`ranking-row family-${modelFamily(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
               <div className="ranking-label"><span className="provider-glyph" aria-hidden="true">{row.model.startsWith("Claude") ? "A" : row.model.startsWith("Gemini") ? "G" : row.model.startsWith("GPT") ? "O" : row.model.charAt(0)}</span><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unranked" : format(v)}</span></div>
               <div className="ranking-track" aria-hidden="true">{v !== null && <div className="ranking-fill" style={{ "--bar-width": `${v / scale * 100}%` } as CSSProperties} />}</div>
               <div className="ranking-evidence">{count}</div>
