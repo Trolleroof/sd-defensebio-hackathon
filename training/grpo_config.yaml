@@ -1,0 +1,79 @@
+# GRPO post-training config (physiology-rl, contract v1).
+# EVERY numeric value below is a PLACEHOLDER owned by Nikhil (PLAN.md §2.11). Nothing here is a
+# tuned or recommended setting; replace before any paid run. Env vars override (see config.py).
+schema: physiology-grpo-config-v1
+
+model:
+  # >>> PLACEHOLDER: base model not chosen yet. Any Hugging Face model id or local path. <<<
+  # The launcher refuses to start a non-dry run while this still equals the placeholder.
+  base_model: "CHOOSE_BASE_MODEL__any/hf-model-id"
+  trust_remote_code: false
+  # Tool-call format the chat template emits; must match vLLM --tool-call-parser and verl
+  # actor_rollout_ref.rollout.multi_turn.format (e.g. hermes, qwen3_coder, gpt-oss).
+  tool_call_format: hermes
+
+env:
+  # Paths are on the env orchestrator host (RunPod pod or a CPU box reachable from it).
+  prepared_roots:
+    pulse: /workspace/data/prepared/pulse
+  run_root: /workspace/runs/rl
+  backend: beam            # docker | beam (beam backend is owned by the beam builder)
+  image: null
+  reward_version: physiology-reward-v1
+  max_turns: 40            # identical for every episode of a group (contract)
+  history_chars: 60000
+  profile: fast            # training rollouts use the fast profile (contract table)
+
+tasks:
+  families: [pulse]
+  pool_seed: 0
+  outer_split: agent_training   # agent_final_evaluation is always refused
+  dev_outer_split: agent_development
+
+grpo:
+  group_size: 8              # G episodes per TaskSpec
+  tasks_per_batch: 4         # TaskSpecs per optimizer step -> G * tasks_per_batch episodes
+  env_seed_policy: shared    # shared: same env seed for all G episodes of a group
+  norm_adv_by_std: true      # verl algorithm.norm_adv_by_std_in_grpo
+  adv_epsilon: 1.0e-6
+  max_concurrent_episodes: 16
+
+generation:
+  max_tokens_per_turn: 2048
+  temperature: 1.0
+  top_p: 1.0
+  max_prompt_tokens: 8192        # verl data.max_prompt_length
+  max_response_tokens: 32768     # verl data.max_response_length (all turns, incl. masked tool tokens)
+
+optim:
+  learning_rate: 1.0e-6
+  ppo_mini_batch_size: 8
+  ppo_epochs: 1
+  clip_ratio: 0.2
+  use_kl_loss: true
+  kl_loss_coef: 0.001
+  kl_loss_type: low_var_kl
+  entropy_coeff: 0.0
+  loss_agg_mode: token-mean
+
+trainer:
+  framework: verl
+  total_training_steps: 100
+  save_freq: 10
+  test_freq: 10
+  resume_mode: auto
+  checkpoint_dir: /workspace/checkpoints
+  project_name: physiology-grpo
+  experiment_name: placeholder
+  logger: [console]
+  nnodes: 1
+  n_gpus_per_node: 8
+  rollout_tensor_parallel: 1
+  rollout_gpu_memory_utilization: 0.5
+  agent_loop_workers: 8
+
+rollout_client:            # standalone rollout.py path (OpenAI-compatible vLLM server)
+  base_url: http://localhost:8000/v1
+  api_key_env: VLLM_API_KEY  # name of env var; value never stored here
+  request_timeout_s: 600
+  output_dir: /workspace/trajectories

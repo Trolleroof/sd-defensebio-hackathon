@@ -21,8 +21,9 @@ Usage:
   python dashboard/server.py --mesh-api http://127.0.0.1:8766/api/nodes --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=206EF1316838 --replay= --synthetic 0
   python dashboard/server.py --base 32.7157,-117.1611 # map center for simulated positions
 
-Locations are never GPS here: simulated people move around --base, and the operator can place
-LIVE/REPLAY people on the map by hand. Every position carries its source.
+Mesh locations start at the browser-provided command origin and advance as low-confidence
+step-and-turn estimates. The operator can correct locations on the map. Every position
+carries its source.
 """
 
 import argparse
@@ -79,10 +80,12 @@ class Person:
     source: str                       # LIVE | REPLAY | SYNTHETIC
     device: str = ""
     hr: float | None = None
+    hr_t: float = 0.0
     last_sample: float = 0.0          # wall time of the last sample from the device
     connected: bool = False
     contact: bool | None = None       # skin contact flag, when the sensor reports it
-    acc: deque = field(default_factory=lambda: deque(maxlen=52 * 2))   # recent |a| in mG
+    acc: deque = field(default_factory=lambda: deque(maxlen=52 * 2))   # (time, |a| in mG)
+    acc_xyz: tuple | None = None
     rr: deque = field(default_factory=lambda: deque(maxlen=60))         # recent good intervals, ms
     ppi_seen: deque = field(default_factory=lambda: deque(maxlen=20))   # 1 = rejected
     model: Kinetic = field(default_factory=Kinetic)
@@ -91,15 +94,21 @@ class Person:
     history: deque = field(default_factory=lambda: deque(maxlen=int(HISTORY_S / TICK_S)))
     lat: float | None = None
     lon: float | None = None
-    loc: str | None = None            # "simulated" | "placed" (by the operator); None = no location
+    loc: str | None = None            # "simulated" | "origin" | "estimated" | "corrected"; None = no location
     loc_t: float | None = None
+    heading: float = 0.0             # degrees clockwise from north; north until calibrated
+    heading_set: bool = False
+    steps_seen: int | None = None
+    uptime_seen: int | None = None
     imu: bool = False                 # has a gyroscope/IMU source
-    gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # recent |w| in dps
+    gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # (time, |w| in dps)
+    gyro_xyz: tuple | None = None
     imu_temp: float | None = None     # IMU die temperature, °C (not body temperature)
     imu_t: float = 0.0                # wall time of the last IMU sample
 
     def add_hr(self, bpm: float, t: float | None = None):
         self.hr = bpm
+        self.hr_t = t or time.time()
         self.last_sample = t or time.time()
         if self.model.rest is None:
             self.early_hr.append(bpm)
@@ -107,19 +116,39 @@ class Person:
                 self.model.rest = statistics.quantiles(self.early_hr, n=5)[0]
 
     def add_acc(self, x: float, y: float, z: float):
-        self.acc.append(math.sqrt(x * x + y * y + z * z))
+        self.acc_xyz = (x, y, z)
+        self.acc.append((time.time(), math.sqrt(x * x + y * y + z * z)))
         self.last_sample = time.time()
 
     def add_imu(self, acc: tuple, gyro: tuple, temp: float | None):
         """One LSM6DSOX sample: acc in mG, gyro in dps, die temperature in °C."""
         self.add_acc(*acc)
-        self.gyro.append(math.sqrt(sum(g * g for g in gyro)))
+        self.gyro_xyz = gyro
+        self.gyro.append((time.time(), math.sqrt(sum(g * g for g in gyro))))
         if temp is not None:
             self.imu_temp = temp
         self.imu_t = self.last_sample
 
+    def advance(self, steps: int, uptime_ms: int, yaw_delta: float):
+        """Move by accelerometer pedometer steps, rotating heading with the mounted IMU."""
+        continuous = self.uptime_seen is not None and 0 < uptime_ms - self.uptime_seen <= 5000
+        if continuous:
+            self.heading = (self.heading - math.degrees(yaw_delta)) % 360
+        delta = (steps - self.steps_seen) % 65536 if continuous and self.steps_seen is not None else 0
+        self.steps_seen, self.uptime_seen = steps, uptime_ms
+        if not self.loc or not 0 < delta <= 10:
+            return
+        # shortcut: fixed 0.7 m stride and level, forward-facing mount; calibrate stride and orientation on hardware.
+        distance = delta * 0.7
+        north = distance * math.cos(math.radians(self.heading))
+        east = distance * math.sin(math.radians(self.heading))
+        self.lat += math.degrees(north / 6371000)
+        self.lon += math.degrees(east / (6371000 * max(0.01, math.cos(math.radians(self.lat)))))
+        self.lon = (self.lon + 180) % 360 - 180
+        self.loc, self.loc_t = "estimated", time.time()
+
     def imu_fresh(self, now: float | None = None) -> bool:
-        return self.imu and (now or time.time()) - self.imu_t <= STALE_S
+        return self.imu and (now or time.time()) - self.imu_t <= 2
 
     def add_ppi(self, ppi: float, blocker: int, contact: int):
         self.contact = bool(contact)
@@ -133,11 +162,13 @@ class Person:
         self.last_sample = time.time()
 
     def movement(self) -> float | None:
-        return statistics.pstdev(self.acc) if len(self.acc) > 5 else None
+        samples = [value for t, value in self.acc if time.time() - t <= 2]
+        return statistics.pstdev(samples) if len(samples) >= 2 else None
 
     def rotation(self) -> float | None:
-        """Mean angular speed over the last ~2 s, dps."""
-        return statistics.fmean(self.gyro) if len(self.gyro) > 5 else None
+        """Mean angular speed over the last 2 s, dps."""
+        samples = [value for t, value in self.gyro if time.time() - t <= 2]
+        return statistics.fmean(samples) if samples else None
 
     def rmssd(self) -> float | None:
         rr = list(self.rr)[-30:]
@@ -147,6 +178,8 @@ class Person:
 
     def quality(self, now: float) -> str:
         if not self.connected or now - self.last_sample > STALE_S:
+            return "no data"
+        if (self.id == "live" or self.id.startswith("mesh_")) and now - self.hr_t > STALE_S:
             return "no data"
         if self.contact is False:
             return "no contact"
@@ -278,6 +311,7 @@ class LiveSource:
 
     def __init__(self, person: Person, address: str | None):
         self.p, self.address = person, address
+        self.ble_t = 0.0
 
     async def run(self, team):
         sys.path.insert(0, str(ROOT.parent / "sensor"))
@@ -287,10 +321,13 @@ class LiveSource:
         def on_hr(_, data):
             bpm, rr = ps.parse_hr(data)
             if bpm:
+                self.ble_t = time.time()
                 self.p.add_hr(bpm)
 
         def on_pmd(_, data):
             kind, samples = ps.decode_pmd(data)
+            if samples:
+                self.ble_t = time.time()
             if kind == ps.PMD_ACC and not self.p.imu_fresh():  # the IMU, when present, supplies movement
                 for x, y, z in samples:
                     self.p.add_acc(x, y, z)
@@ -307,15 +344,26 @@ class LiveSource:
                 self.p.device = f"{dev.name} {dev.address}"
                 team.log("system", self.p.id, f"Connecting to {dev.name}")
                 async with BleakClient(dev) as client:
+                    self.ble_t = time.time()
                     await client.start_notify(ps.HR_MEASUREMENT, on_hr)
-                    await client.start_notify(ps.PMD_DATA, on_pmd)
-                    for k in (ps.PMD_ACC, ps.PMD_PPI):
-                        await client.write_gatt_char(ps.PMD_CONTROL, ps.START_CMD[k], response=True)
-                        await asyncio.sleep(0.5)
+                    try:
+                        await client.start_notify(ps.PMD_CONTROL, lambda *_: None)
+                        await client.start_notify(ps.PMD_DATA, on_pmd)
+                        for k in (ps.PMD_ACC, ps.PMD_PPI):
+                            try:
+                                await client.write_gatt_char(ps.PMD_CONTROL, ps.START_CMD[k], response=True)
+                                await asyncio.sleep(0.5)
+                            except Exception as error:
+                                team.log("system", self.p.id, f"Optional Polar stream {k} unavailable: {error}")
+                    except Exception as error:
+                        team.log("system", self.p.id, f"Optional Polar motion streams unavailable: {error}")
                     self.p.connected = True
                     team.log("system", self.p.id, "Sensor connected")
                     while client.is_connected:
                         await asyncio.sleep(0.5)
+                        if time.time() - self.ble_t > STALE_S:
+                            team.log("system", self.p.id, "No Polar notifications; reconnecting")
+                            break
             except (Exception, SystemExit) as e:  # find_device raises SystemExit when nothing is found
                 self.p.connected = False
                 msg = f"Sensor unavailable: {e}"
@@ -417,13 +465,17 @@ class MeshApiSource:
                         self.seen[node_id] = marker
                         p.last_sample = entry["received_at"]
                         bpm = data.get("hr_bpm")
-                        if isinstance(bpm, (int, float)) and bpm > 0:
+                        if type(bpm) in (int, float) and math.isfinite(bpm) and bpm > 0:
                             p.add_hr(bpm, entry["received_at"])
                         else:
                             p.hr = None
                         acc, gyro = data.get("accel_m_s2"), data.get("gyro_rad_s")
-                        if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(isinstance(v, (int, float)) for v in acc + gyro):
-                            p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
+                        if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(type(v) in (int, float) and math.isfinite(v) for v in acc + gyro):
+                            temp = data.get("imu_temp_c")
+                            p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro),
+                                      temp if type(temp) in (int, float) and math.isfinite(temp) else None)
+                            if type(data.get("steps")) is int and 0 <= data["steps"] < 65536 and type(data.get("uptime_ms")) is int and data["uptime_ms"] >= 0 and type(data.get("yaw_delta_rad")) in (int, float) and math.isfinite(data["yaw_delta_rad"]):
+                                p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"])
                     last_error = None
                 except Exception as error:
                     for p in self.people.values():
@@ -439,6 +491,8 @@ class MeshApiSource:
 class Team:
     def __init__(self, session_dir: Path | None, base: tuple[float, float]):
         self.base = base
+        self.origin: tuple[float, float] | None = None
+        self.origin_source: str | None = None
         self.people: dict[str, Person] = {}
         self.alerts: dict[str, dict] = {}
         self.events: list[dict] = []
@@ -474,11 +528,21 @@ class Team:
 
     def place(self, person: str, lat: float, lon: float):
         p = self.people[person]
-        if p.source == "SYNTHETIC" or not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        if p.source == "SYNTHETIC" or not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
             return
         first = p.loc is None
-        p.lat, p.lon, p.loc, p.loc_t = lat, lon, "placed", time.time()
+        p.lat, p.lon, p.loc, p.loc_t = lat, lon, "corrected", time.time()
         self.log("action", person, f"{p.name} {'placed' if first else 'moved'} on map by operator")
+
+    def set_origin(self, lat: float, lon: float, source: str):
+        if source not in ("browser", "manual") or not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
+            return
+        self.origin, self.origin_source = (lat, lon), source
+        self.base = self.origin
+        for p in self.people.values():
+            if p.id.startswith("mesh_") and p.loc is None:
+                p.lat, p.lon, p.loc, p.loc_t = lat, lon, "origin", time.time()
+        self.log("action", None, f"Command origin set from {source}")
 
     def raise_distress(self, person: str, how: str):
         label = "Distress button pressed" if how == "button" else "Distress marked by operator"
@@ -517,7 +581,8 @@ class Team:
             fresh = now - p.last_sample <= STALE_S and p.connected
             exp = p.model.step(mv, TICK_S) if fresh else p.model.state
             dev = None
-            if fresh and p.hr is not None and exp is not None:
+            hr_fresh = fresh and now - p.hr_t <= STALE_S
+            if hr_fresh and p.hr is not None and exp is not None:
                 dev = p.hr - exp
                 if abs(dev) > DEVIATION_BPM:
                     p.dev_since = p.dev_since or now
@@ -539,12 +604,16 @@ class Team:
                 word = "above" if dev > 0 else "below"
                 self.open_alert(p.id, "deviation", f"HR {abs(dev):.0f} bpm {word} expected for {DEVIATION_HOLD_S}+ s", "warning")
             st = self.status(p, now, dev)
-            row = {"t": round(now, 1), "hr": p.hr if fresh else None, "exp": round(exp, 1) if exp else None,
+            row = {"t": round(now, 1), "hr": p.hr if hr_fresh else None, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
+            if p.acc and now - p.acc[-1][0] <= 2:
+                row["acc_xyz"] = [round(v) for v in p.acc_xyz]
+                row["acc_mag"] = round(p.acc[-1][1])
             if p.imu_fresh(now):
                 rot = p.rotation()
                 row.update(rot=round(rot) if rot is not None else None,
+                           gyro_xyz=[round(v, 1) for v in p.gyro_xyz] if p.gyro_xyz else None,
                            temp=round(p.imu_temp, 1) if p.imu_temp is not None else None)
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
@@ -553,17 +622,23 @@ class Team:
                 self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
                                          row.get("lat"), row.get("lon"), p.loc])
             rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
+                         "heading": round(p.heading) if p.heading_set else None,
+                         "loc_quality": "low" if p.loc == "estimated" and p.heading_set else "uncalibrated" if p.loc == "estimated" else None,
                          "age": round(now - p.last_sample, 1) if p.last_sample else None})
         if self.samples:
             self.samples.flush()
-        return {"type": "tick", "t": now, "people": rows, "alerts": list(self.alerts.values())}
+        return {"type": "tick", "t": now, "people": rows, "alerts": list(self.alerts.values()),
+                "origin": self.origin, "origin_source": self.origin_source}
 
     def snapshot(self) -> dict:
         return {
             "type": "snapshot", "t": time.time(), "started": self.started, "model": MODEL_VERSION,
-            "session": self.session_dir.name if self.session_dir else None, "base": self.base, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
+            "session": self.session_dir.name if self.session_dir else None, "base": self.base, "origin": self.origin,
+            "origin_source": self.origin_source, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
             "people": [{"id": p.id, "name": p.name, "role": p.role, "source": p.source, "device": p.device, "imu": p.imu,
-                        "loc": p.loc, "loc_t": p.loc_t, "history": list(p.history)} for p in self.people.values()],
+                        "loc": p.loc, "loc_t": p.loc_t, "loc_quality": "low" if p.loc == "estimated" and p.heading_set else "uncalibrated" if p.loc == "estimated" else None,
+                        "heading": p.heading if p.heading_set else None,
+                        "history": list(p.history)} for p in self.people.values()],
             "alerts": list(self.alerts.values()), "events": self.events[-200:],
         }
 
@@ -587,8 +662,20 @@ async def ws_handler(request):
             m = json.loads(msg.data)
             if m.get("type") == "action":
                 team.act(m["alert"], m["action"], m.get("note", "")[:200])
-            elif m.get("type") == "place" and m.get("person") in team.people:
-                team.place(m["person"], float(m["lat"]), float(m["lon"]))
+            elif m.get("type") in ("place", "origin", "heading"):
+                try:
+                    if m["type"] == "place" and m.get("person") in team.people:
+                        team.place(m["person"], float(m["lat"]), float(m["lon"]))
+                    elif m["type"] == "origin":
+                        team.set_origin(float(m["lat"]), float(m["lon"]), m.get("source"))
+                    elif m["type"] == "heading" and m.get("person") in team.people and m["person"].startswith("mesh_"):
+                        heading = float(m["degrees"])
+                        if math.isfinite(heading) and 0 <= heading < 360:
+                            p = team.people[m["person"]]
+                            p.heading, p.heading_set = heading, True
+                            team.log("action", p.id, f"{p.name} heading calibrated to {heading:.0f}°")
+                except (KeyError, TypeError, ValueError):
+                    continue
             elif m.get("type") == "distress" and m.get("person") in team.people:
                 team.raise_distress(m["person"], "operator")
     finally:

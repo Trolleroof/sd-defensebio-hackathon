@@ -1,0 +1,4 @@
+# verl agent loop registry (actor_rollout_ref.rollout.agent.agent_loop_config_path).
+# Format per verl v0.9.1 verl/trainer/config/rollout/rollout.yaml: list of {name, _target_}.
+- name: physiology_env_agent
+  _target_: training.verl_agent_loop.PhysiologyEnvAgentLoop

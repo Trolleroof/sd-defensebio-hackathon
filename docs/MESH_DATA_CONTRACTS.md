@@ -12,7 +12,8 @@ Source of truth: `firmware/imu_mesh/imu_mesh.ino` (1, 2), `dashboard/mesh_api.py
 
 | What | Who | Period |
 |---|---|---|
-| Telemetry packet | each wearable, IMU found | 1000 ms |
+| IMU read | each wearable, IMU found | ~20 ms |
+| Telemetry packet | each wearable, IMU found | 200 ms |
 | Telemetry packet (`sensor_ok: false`) | each wearable, no IMU | 5000 ms |
 | `sensor_status` line | each wearable (own USB only) | 5000 ms |
 | `mesh_status` line | root | 5000 ms |
@@ -24,12 +25,12 @@ Topology: star. Both wearables join the root directly (tree, max layer 2, root t
 
 ## 1. Mesh packet (wearable → root)
 
-ESP-WIFI-MESH `MESH_PROTO_BIN`, `MESH_TOS_P2P`, sent to the parent's address. Packed C struct, little-endian, **57 bytes**, no padding.
+ESP-WIFI-MESH `MESH_PROTO_BIN`, `MESH_TOS_P2P`, sent to the parent's address. Packed C struct, little-endian, **61 bytes**, no padding.
 
 | Offset | Size | Type | Field | Meaning |
 |---:|---:|---|---|---|
 | 0 | 4 | `uint32` | `magic` | `0x494D5531` ("IMU1") |
-| 4 | 1 | `uint8` | `schema_version` | `1` |
+| 4 | 1 | `uint8` | `schema_version` | `2` |
 | 5 | 1 | `uint8` | `hop_count` | relay count, source sends 0 |
 | 6 | 1 | `uint8` | `sample_valid` | 1 if IMU fields hold a sample, else 0 |
 | 7 | 1 | `uint8` | `wake` | LSM6DSOX shake/wake flag, 0 or 1 |
@@ -38,12 +39,13 @@ ESP-WIFI-MESH `MESH_PROTO_BIN`, `MESH_TOS_P2P`, sent to the parent's address. Pa
 | 16 | 6 | `uint8[6]` | `node_mac` | source Wi-Fi STA MAC |
 | 22 | 12 | `float32[3]` | `accel_m_s2` | x, y, z in m/s² |
 | 34 | 12 | `float32[3]` | `gyro_rad_s` | x, y, z in rad/s |
-| 46 | 4 | `float32` | `imu_temp_c` | IMU die temperature, °C (not body temperature) |
-| 50 | 4 | `uint32` | `steps` | LSM6DSOX pedometer count since boot |
-| 54 | 2 | `int16` | `hr_bpm` | heart rate, -1 when invalid |
-| 56 | 1 | `uint8` | `hr_valid` | 1 if `hr_bpm` is a fresh Polar reading |
+| 46 | 4 | `float32` | `yaw_delta_rad` | integrated device Z rotation since previous packet |
+| 50 | 4 | `float32` | `imu_temp_c` | IMU die temperature, °C (not body temperature) |
+| 54 | 4 | `uint32` | `steps` | LSM6DSOX 16-bit pedometer count since boot, wraps at 65536 |
+| 58 | 2 | `int16` | `hr_bpm` | heart rate, -1 when invalid |
+| 60 | 1 | `uint8` | `hr_valid` | 1 if `hr_bpm` is a fresh Polar reading |
 
-Root drops a packet unless all hold: size is exactly 57, `magic` matches, `schema_version == 1`, `hop_count <= 1`, and `sample_valid`, `wake`, `hr_valid` are each 0 or 1. When `sample_valid` is 0, the IMU fields are zero and must be ignored. Any layout change must bump `schema_version`.
+Root drops a packet unless all hold: size is exactly 61, `magic` matches, `schema_version == 2`, `hop_count <= 1`, and `sample_valid`, `wake`, `hr_valid` are each 0 or 1. When `sample_valid` is 0, the IMU fields are zero and must be ignored. Any layout change must bump `schema_version`.
 
 ## 2. Serial lines (root USB, 115200 baud)
 
@@ -52,7 +54,7 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 ### `telemetry`: one per accepted mesh packet
 
 ```json
-{"schema_version":1,"type":"telemetry","node_id":"206EF1316838","sequence":89,"uptime_ms":95694,"received_ms":107679,"hop_count":0,"sensor_ok":true,"accel_m_s2":[0.144,0.294,9.977],"gyro_rad_s":[0.016,-0.003,-0.418],"imu_temp_c":19.88,"steps":0,"wake":false,"hr_bpm":72}
+{"schema_version":2,"type":"telemetry","node_id":"206EF1316838","sequence":89,"uptime_ms":95694,"received_ms":107679,"hop_count":0,"sensor_ok":true,"accel_m_s2":[0.144,0.294,9.977],"gyro_rad_s":[0.016,-0.003,-0.418],"yaw_delta_rad":-0.12,"imu_temp_c":19.88,"steps":0,"wake":false,"hr_bpm":72}
 ```
 
 | Field | Type | Meaning |
@@ -67,6 +69,7 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 | `sensor_ok` | bool | packet `sample_valid` |
 | `accel_m_s2` | [float, float, float] or null | 3 decimals; null when `sensor_ok` is false |
 | `gyro_rad_s` | [float, float, float] or null | 3 decimals; null when `sensor_ok` is false |
+| `yaw_delta_rad` | float or null | device Z rotation accumulated at ~20 ms reads since the previous packet; null when `sensor_ok` is false |
 | `imu_temp_c` | float or null | 2 decimals; null when `sensor_ok` is false |
 | `steps` | int or null | null when `sensor_ok` is false |
 | `wake` | bool or null | null when `sensor_ok` is false |
@@ -88,6 +91,8 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 | `mesh_child_disconnected` | none | root | a wearable left |
 | `sensor_status` | `imu_ok: bool`, `parent_connected: bool` | wearable | every 5 s |
 | `polar_connected` | `id: string` (8 hex chars) | wearable | HR notifications subscribed |
+| `polar_notifications_stale` | none | wearable | no HR notification for 10 s; BLE client reconnects |
+| `polar_disconnected` | none | wearable | BLE client disconnected |
 
 Wearable-only lines appear on that wearable's own USB port, never on the root's.
 
@@ -126,4 +131,5 @@ Wearable-only lines appear on that wearable's own USB port, never on the root's.
 - Processes `latest` only when `(uptime_ms, sequence)` changed since the last poll.
 - Uses `hr_bpm` only when it is a number > 0; otherwise HR is cleared.
 - Uses IMU only when `sensor_ok` is true and both vectors are 3 numbers. Converts accel to mG (`× 1000 / 9.80665`) and gyro to dps (`× 180 / π`).
-- Movement and rotation need more than 5 samples. At 1 Hz that takes 6 s after a node appears, and the 104-sample window covers about 104 s.
+- Advances estimated map position from pedometer step changes and `yaw_delta_rad` after the browser sets the command origin. The operator sets initial heading; heading assumes a level, forward-facing mount.
+- Movement uses the variation in acceleration magnitude over the latest 2 s (at least 2 samples); rotation uses the mean angular speed over that window. The latest X/Y/Z acceleration and gyro rates are also sent to the browser. Values disappear when IMU samples stop.

@@ -62,6 +62,8 @@ def to_signed(value: int, bits: int) -> int:
 
 def parse_hr(data: bytearray) -> tuple[int, list[float]]:
     """Standard BLE Heart Rate Measurement -> (bpm, [rr_ms...])."""
+    if not data or len(data) < (3 if data[0] & 0x01 else 2):
+        return 0, []
     flags = data[0]
     i = 1
     if flags & 0x01:
@@ -69,6 +71,8 @@ def parse_hr(data: bytearray) -> tuple[int, list[float]]:
     else:
         hr = data[i]; i += 1
     if flags & 0x08:  # energy expended present
+        if len(data) < i + 2:
+            return hr, []
         i += 2
     rr = []
     if flags & 0x10:
@@ -118,6 +122,8 @@ def decode_ppi(payload: bytes) -> list[list[int]]:
 
 
 def decode_pmd(data: bytearray) -> tuple[int, list[list[int]]]:
+    if len(data) < 10:
+        return data[0] if data else 0, []
     kind, frame_type = data[0], data[9]
     payload = bytes(data[10:])
     if kind == PMD_PPI:
@@ -255,8 +261,6 @@ async def scan():
 
 
 async def run(args):
-    dev = await find_device(args.address)
-    print(f"Connecting to {dev.name} ({dev.address})…")
     stats = Stats()
 
     writers = {}
@@ -323,38 +327,45 @@ async def run(args):
         if len(data) >= 4 and data[0] == 0xF0 and data[3] != 0:
             print(f"[warn] PMD op {data[1]:#x} for stream {data[2]} failed with status {data[3]}")
 
-    async with BleakClient(dev) as client:
-        try:
-            stats.battery = (await client.read_gatt_char(BATTERY_LEVEL))[0]
-        except Exception:
-            pass
+    try:
+        while True:
+            try:
+                dev = await find_device(args.address)
+                print(f"Connecting to {dev.name} ({dev.address})…")
+                async with BleakClient(dev) as client:
+                    try:
+                        stats.battery = (await client.read_gatt_char(BATTERY_LEVEL))[0]
+                    except Exception:
+                        pass
 
-        await client.start_notify(HR_MEASUREMENT, on_hr)
+                    await client.start_notify(HR_MEASUREMENT, on_hr)
+                    pmd_kinds = [k for k, on in ((PMD_PPG, args.ppg), (PMD_ACC, not args.no_acc), (PMD_PPI, not args.no_ppi)) if on]
+                    if pmd_kinds:
+                        try:
+                            await client.start_notify(PMD_CONTROL, on_ctrl)
+                            await client.start_notify(PMD_DATA, on_pmd)
+                            for k in pmd_kinds:
+                                try:
+                                    await client.write_gatt_char(PMD_CONTROL, START_CMD[k], response=True)
+                                    await asyncio.sleep(0.5)
+                                except Exception as error:
+                                    print(f"Optional PMD stream {k} unavailable: {error}")
+                        except Exception as error:
+                            print(f"Optional PMD service unavailable: {error}")
 
-        pmd_kinds = [k for k, on in ((PMD_PPG, args.ppg), (PMD_ACC, not args.no_acc), (PMD_PPI, not args.no_ppi)) if on]
-        if pmd_kinds:
-            await client.start_notify(PMD_CONTROL, on_ctrl)
-            await client.start_notify(PMD_DATA, on_pmd)
-            for k in pmd_kinds:
-                await client.write_gatt_char(PMD_CONTROL, START_CMD[k], response=True)
-                await asyncio.sleep(0.5)
-
-        try:
-            with Live(render(stats, dev.name), refresh_per_second=4, screen=False) as live:
-                while client.is_connected:
-                    await asyncio.sleep(0.25)
-                    live.update(render(stats, dev.name))
-                    for f in files:
-                        f.flush()
-            print("Sensor disconnected.")
-        finally:
-            for k in pmd_kinds:
-                try:
-                    await client.write_gatt_char(PMD_CONTROL, STOP(k), response=True)
-                except Exception:
-                    pass
-            for f in files:
-                f.close()
+                    with Live(render(stats, dev.name), refresh_per_second=4, screen=False) as live:
+                        while client.is_connected:
+                            await asyncio.sleep(0.25)
+                            live.update(render(stats, dev.name))
+                            for f in files:
+                                f.flush()
+                print("Sensor disconnected; reconnecting.")
+            except (Exception, SystemExit) as error:
+                print(f"Sensor unavailable: {error}; reconnecting.")
+            await asyncio.sleep(3)
+    finally:
+        for f in files:
+            f.close()
 
 
 def main():

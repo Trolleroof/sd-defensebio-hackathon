@@ -12,6 +12,7 @@ The temperature is the chip's own die temperature. It follows the board and the 
 not skin or core body temperature.
 """
 
+import math
 import struct
 
 I2C_ADDR = 0x6A            # 0x6B with SA0 high (Adafruit default is 0x6A)
@@ -47,6 +48,6 @@ def parse_line(line: str):
         v = [float(x) for x in line.split(",")]
     except ValueError:
         return None
-    if len(v) != 7:
+    if len(v) != 7 or not all(math.isfinite(x) for x in v):
         return None
     return tuple(v[0:3]), tuple(v[3:6]), v[6]
