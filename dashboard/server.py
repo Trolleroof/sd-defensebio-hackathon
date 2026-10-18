@@ -2,7 +2,8 @@
 """Operator dashboard gateway: streams team physiology to the browser over a WebSocket.
 
 Sources (each person is labeled with where their data comes from):
-  LIVE       a Polar Verity Sense over BLE (reuses the decoders in sensor/polar_stream.py)
+  LIVE       a Polar Verity Sense over BLE (reuses the decoders in sensor/polar_stream.py),
+             and/or an LSM6DSOX IMU streamed over USB serial (sensor/lsm6dsox.py)
   REPLAY     a recorded session from sensor/<prefix>_{hr,ppi,acc}.csv, looped in real time
   SYNTHETIC  simulated teammates so the multi-person views have something to show
 
@@ -15,6 +16,7 @@ Usage:
   python dashboard/server.py --live                   # add the Polar sensor as a live person
   python dashboard/server.py --live --synthetic 0     # live sensor only
   python dashboard/server.py --replay sensor/test1    # different recording
+  python dashboard/server.py --imu /dev/cu.usbmodem1101   # add the LSM6DSOX (gyro, accel, die temp)
   python dashboard/server.py --base 32.7157,-117.1611 # map center for simulated positions
 
 Locations are never GPS here: simulated people move around --base, and the operator can place
@@ -89,6 +91,10 @@ class Person:
     lon: float | None = None
     loc: str | None = None            # "simulated" | "placed" (by the operator); None = no location
     loc_t: float | None = None
+    imu: bool = False                 # has a gyroscope/IMU source
+    gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # recent |w| in dps
+    imu_temp: float | None = None     # IMU die temperature, °C (not body temperature)
+    imu_t: float = 0.0                # wall time of the last IMU sample
 
     def add_hr(self, bpm: float, t: float | None = None):
         self.hr = bpm
@@ -101,6 +107,17 @@ class Person:
     def add_acc(self, x: float, y: float, z: float):
         self.acc.append(math.sqrt(x * x + y * y + z * z))
         self.last_sample = time.time()
+
+    def add_imu(self, acc: tuple, gyro: tuple, temp: float | None):
+        """One LSM6DSOX sample: acc in mG, gyro in dps, die temperature in °C."""
+        self.add_acc(*acc)
+        self.gyro.append(math.sqrt(sum(g * g for g in gyro)))
+        if temp is not None:
+            self.imu_temp = temp
+        self.imu_t = self.last_sample
+
+    def imu_fresh(self, now: float | None = None) -> bool:
+        return self.imu and (now or time.time()) - self.imu_t <= STALE_S
 
     def add_ppi(self, ppi: float, blocker: int, contact: int):
         self.contact = bool(contact)
@@ -115,6 +132,10 @@ class Person:
 
     def movement(self) -> float | None:
         return statistics.pstdev(self.acc) if len(self.acc) > 5 else None
+
+    def rotation(self) -> float | None:
+        """Mean angular speed over the last ~2 s, dps."""
+        return statistics.fmean(self.gyro) if len(self.gyro) > 5 else None
 
     def rmssd(self) -> float | None:
         rr = list(self.rr)[-30:]
@@ -142,6 +163,7 @@ class SyntheticSource:
 
     def __init__(self, person: Person, seed: int, script: str | None = None):
         self.p, self.rng, self.script = person, random.Random(seed), script
+        self.p.imu = True  # simulated IMU: gyro and die temperature
         self.rest = self.rng.uniform(56, 72)
         self.gain = self.rng.uniform(0.09, 0.15)
         self.hr = self.rest
@@ -149,8 +171,10 @@ class SyntheticSource:
         # Position in metres east/north of the base point; heading drifts, speed follows activity
         self.e, self.n = self.rng.uniform(-150, 150), self.rng.uniform(-150, 150)
         self.heading = self.rng.uniform(0, 2 * math.pi)
+        self.die_t = self.rng.uniform(29, 31)
 
     SPEED = {"rest": 0.0, "walk": 1.4, "run": 3.2}  # m/s
+    ROT = {"rest": 3, "walk": 45, "run": 130}        # typical mean |w| of a torso-worn IMU, dps
 
     def move(self, act: str, base: tuple[float, float]):
         self.heading += self.rng.gauss(0, 0.25)
@@ -190,8 +214,11 @@ class SyntheticSource:
             act = self.activity(t)
             self.move(act, team.base)
             level = self.LEVEL[act] * self.rng.uniform(0.8, 1.2)
+            self.die_t += (29.5 + 0.006 * level - self.die_t) / 120 + self.rng.gauss(0, 0.02)
+            rot = self.ROT[act] * self.rng.uniform(0.8, 1.2)
             for _ in range(52):
-                self.p.acc.append(1000 + self.rng.gauss(0, level))
+                a = 1000 + self.rng.gauss(0, level)
+                self.p.add_imu((0.0, 0.0, a), tuple(abs(self.rng.gauss(rot, rot * 0.3)) / math.sqrt(3) for _ in range(3)), self.die_t)
             target = self.rest + self.gain * level + extra
             self.hr += (target - self.hr) / (25 if target > self.hr else 55) + self.rng.gauss(0, 0.6)
             self.p.add_hr(round(self.hr))
@@ -262,7 +289,7 @@ class LiveSource:
 
         def on_pmd(_, data):
             kind, samples = ps.decode_pmd(data)
-            if kind == ps.PMD_ACC:
+            if kind == ps.PMD_ACC and not self.p.imu_fresh():  # the IMU, when present, supplies movement
                 for x, y, z in samples:
                     self.p.add_acc(x, y, z)
             elif kind == ps.PMD_PPI:
@@ -301,6 +328,66 @@ class LiveSource:
             await asyncio.sleep(3)
 
 
+class ImuSource:
+    """LSM6DSOX lines from a microcontroller over USB serial, or a saved log replayed at 52 Hz.
+
+    Every line is saved to the session as imu_<person>.csv. With a serial port the source
+    reconnects when the board is unplugged.
+    """
+
+    def __init__(self, person: Person, target: str, session_dir: Path, owns_connection: bool, baud: int = 115200):
+        self.p, self.target, self.baud, self.owns = person, target, baud, owns_connection
+        self.n = 0  # lines logged
+        self.p.imu = True
+        sys.path.insert(0, str(ROOT.parent / "sensor"))
+        from lsm6dsox import parse_line
+        self.parse = parse_line
+        self.out = open(session_dir / f"imu_{person.id}.csv", "w")
+        self.out.write("t,ax_mg,ay_mg,az_mg,gx_dps,gy_dps,gz_dps,temp_c\n")
+
+    def take(self, line: str):
+        s = self.parse(line)
+        if s is None:
+            return
+        acc, gyro, temp = s
+        self.p.add_imu(acc, gyro, temp)
+        if self.owns:
+            self.p.connected = True
+        self.out.write(f"{time.time():.3f},{line.strip()}\n")
+        self.n += 1
+        if self.n % 52 == 0:
+            self.out.flush()
+
+    async def run(self, team):
+        if Path(self.target).is_file():
+            lines = [l for l in Path(self.target).read_text().splitlines() if l and not l.startswith(("#", "t,"))]
+            lines = [l.split(",", 1)[1] if l.count(",") == 7 else l for l in lines]  # accept saved imu_*.csv
+            while True:
+                for l in lines:
+                    self.take(l)
+                    await asyncio.sleep(1 / 52)
+        import serial
+        last_error = None
+        while True:
+            try:
+                port = await asyncio.to_thread(serial.Serial, self.target, self.baud, timeout=1)
+                team.log("system", self.p.id, f"IMU connected on {self.target}")
+                last_error = None
+                with port:
+                    while True:
+                        raw = await asyncio.to_thread(port.readline)
+                        if raw:
+                            self.take(raw.decode(errors="ignore"))
+            except Exception as e:
+                if self.owns:
+                    self.p.connected = False
+                msg = f"IMU unavailable: {e}"
+                if msg != last_error:
+                    team.log("system", self.p.id, msg)
+                last_error = msg
+                await asyncio.sleep(3)
+
+
 # ---------------------------------------------------------------- team, attention, actions
 
 class Team:
@@ -315,7 +402,7 @@ class Team:
         session_dir.mkdir(parents=True, exist_ok=True)
         self.samples = open(session_dir / "samples.csv", "w", newline="")
         self.samples_w = csv.writer(self.samples)
-        self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "quality", "status", "lat", "lon", "loc_source"])
+        self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "rot_dps", "imu_temp_c", "quality", "status", "lat", "lon", "loc_source"])
         self.events_f = open(session_dir / "events.jsonl", "a")
         self._next = 1
 
@@ -406,10 +493,14 @@ class Team:
             row = {"t": round(now, 1), "hr": p.hr if fresh else None, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
+            if p.imu_fresh(now):
+                rot = p.rotation()
+                row.update(rot=round(rot) if rot is not None else None,
+                           temp=round(p.imu_temp, 1) if p.imu_temp is not None else None)
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
             p.history.append(row)
-            self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], q, st,
+            self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
                                      row.get("lat"), row.get("lon"), p.loc])
             rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
                          "age": round(now - p.last_sample, 1) if p.last_sample else None})
@@ -420,7 +511,7 @@ class Team:
         return {
             "type": "snapshot", "t": time.time(), "started": self.started, "model": MODEL_VERSION,
             "session": self.session_dir.name, "base": self.base, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
-            "people": [{"id": p.id, "name": p.name, "role": p.role, "source": p.source, "device": p.device,
+            "people": [{"id": p.id, "name": p.name, "role": p.role, "source": p.source, "device": p.device, "imu": p.imu,
                         "loc": p.loc, "loc_t": p.loc_t, "history": list(p.history)} for p in self.people.values()],
             "alerts": list(self.alerts.values()), "events": self.events[-200:],
         }
@@ -480,6 +571,15 @@ def build(args) -> web.Application:
         prefix = Path(args.replay)
         p = Person("replay", "Recorded session", "Wearer", "REPLAY", device=f"{prefix.name} (Polar Verity Sense)")
         team.add(p); sources.append(ReplaySource(p, prefix))
+    if args.imu:
+        if "live" in team.people:  # same wearer as the Polar: one person, two devices
+            p, owns = team.people["live"], False
+            p.device += " + LSM6DSOX"
+        else:
+            src = "REPLAY" if Path(args.imu).is_file() else "LIVE"
+            p, owns = Person("imu", args.live_name, "Wearer", src, device=f"LSM6DSOX ({Path(args.imu).name})"), True
+            team.add(p)
+        sources.append(ImuSource(p, args.imu, team.session_dir, owns))
     roster = [("Alvarez", "Rifleman", "elevated"), ("Chen", "Medic", None), ("Okafor", "Radio", "distress"),
               ("Patel", "Team lead", "dropout"), ("Brooks", "Rifleman", None), ("Novak", "Grenadier", None)]
     for i, (name, role, script) in enumerate(roster[:args.synthetic]):
@@ -509,6 +609,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--live", action="store_true", help="stream a Polar Verity Sense as a live person")
     p.add_argument("--live-name", default="Live wearer")
+    p.add_argument("--imu", help="LSM6DSOX serial port (e.g. /dev/cu.usbmodem1101) or a saved imu_*.csv to replay")
     p.add_argument("--address", help="BLE address of the sensor (default: first 'Polar…' found)")
     default_replay = ROOT.parent / "sensor" / "test4"
     p.add_argument("--replay", default=str(default_replay) if (default_replay.parent / "test4_hr.csv").exists() else None,

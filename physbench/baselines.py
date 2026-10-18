@@ -2,7 +2,7 @@
 
 - persistence:            hold the last observed heart rate
 - kinetic_personal:       first-order kinetics fitted on the target's support data only
-- kinetic_population:     same model fitted on the reference cohort (all activities)
+- kinetic_population:     same model fitted on reference recordings with the transfer block removed
 - kinetic_pop_calibrated: population dynamics; personal offset and gain refitted on support
 - ridge_auto:             automatic per-horizon ridge on history + future-covariate features,
                           trained on reference cohort + support (an ordinary fitting workflow, no LLM)
@@ -20,7 +20,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .config import TaskConfig
-from .episodes import Split, Windows, full_windows, support_windows
+from .episodes import Split, Windows, reference_visible_windows, support_windows
 
 _spec = importlib.util.spec_from_file_location(
     "pb_kinetic", Path(__file__).parent / "workspace_template" / "baseline" / "kinetic.py")
@@ -40,7 +40,7 @@ def _hr0(w: Windows) -> np.ndarray:
 def _reference(cfg_path: str, subjects: tuple[str, ...]):
     from .config import load_task
     cfg = load_task(cfg_path)
-    return Windows.concat([full_windows(cfg, s) for s in subjects])
+    return Windows.concat([reference_visible_windows(cfg, s) for s in subjects])
 
 
 def reference_windows(cfg: TaskConfig) -> Windows:

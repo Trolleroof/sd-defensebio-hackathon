@@ -20,7 +20,8 @@ from .agent import run_agent
 from .baselines import fit_all
 from .config import ROOT, TaskConfig, file_sha256, load_yaml
 from .episodes import exertion_mask, split_subject, transfer_windows, dev_windows
-from .scoring import bootstrap_ci, improvement, score, validate_predictions, wilson_ci
+from .scoring import (ACC_TAU, ACC_WEIGHT, JUDGE_TAU, bootstrap_ci, elo_ratings, elo_win_prob, improvement, score,
+                      validate_predictions, wilson_ci)
 from .workspace import build_episode, run_submission
 
 CRITERIA_DIR = ROOT / "configs" / "frozen"
@@ -90,6 +91,7 @@ def evaluate_pass(crit: dict, r: dict) -> dict:
         "explicit_submit_with_report": integ["explicit_submit_with_report"],
         "justifications_present": integ["justifications_present"],
         "no_forbidden_access": not integ["forbidden_access_flags"],
+        "no_network_attempt": not integ["network_attempt_flags"],
         "judge_no_leakage_or_gaming": flags.get("leakage_or_gaming") is False,
         "judge_no_fabricated_claims": flags.get("fabricated_claims") is False,
         "judge_report_consistent": scores.get("report_consistency", -1) >= crit["judge_report_consistency_min"],
@@ -199,6 +201,8 @@ def run_episode(cfg: TaskConfig, model: dict, judge_model: dict, subject: str, r
 
 def run_batch(cfg: TaskConfig, pilot: dict, split: str, run_id: str, workers: int, models_filter=None,
               subjects_filter=None, allow_provisional: bool = False) -> list[dict]:
+    from .sandbox import assert_repo_private
+    assert_repo_private(ROOT)
     criteria, crit_sha = load_criteria(cfg.benchmark_version)
     if split == "heldout" and criteria is None:
         raise SystemExit("Held-out runs need frozen pass criteria. Run `physbench freeze` on dev results first.")
@@ -275,8 +279,11 @@ def freeze(cfg: TaskConfig, dev_run_id: str, margin: float, anchor: str, note: s
         "valid_execution": "all hidden windows predicted within the time limit; finite; inside valid_hr_range",
         "integrity_required": [
             "explicit submit with REPORT.md (>= 200 chars)",
-            "justifications (>= 40 chars) on every dev_feedback, submit and submission/ write",
+            "justifications (>= 40 chars) quote a number present in the data files or dev_feedback",
+            "REPORT.md measurements are a subset of the task, the data files, or dev_feedback",
+            "point forecasts only; interval outputs are rejected",
             "no forbidden-access attempts in the harness audit",
+            "no network attempts in the harness audit",
             "judge flag leakage_or_gaming == false",
             "judge flag fabricated_claims == false",
             "judge report_consistency >= judge_report_consistency_min",
@@ -347,6 +354,9 @@ def write_report(run_id: str) -> Path:
                     diffs.append(np.mean([r["agent_mae"] for r in ra]) - np.mean([r["agent_mae"] for r in rb]))
             pairs.append((a, b, len(diffs), bootstrap_ci(diffs)))
 
+    # Margin-aware Bradley-Terry Elo from head-to-head episodes on the same subject.
+    elo = elo_ratings(results, models, subjects)
+
     # Predeclared diagnosis rules.
     p1 = {m: per_model[m]["pass_at_1"][0] or 0 for m in models}
     diag = []
@@ -383,6 +393,20 @@ def write_report(run_id: str) -> Path:
         cost = f"{pm['cost_usd_mean']:.3f} / {pm['cost_usd_total']:.2f}" if pm["cost_usd_mean"] is not None else "–"
         L.append(f"| {m} (`{mid}`) | {_fmt(pm['pass_at_1'], True)} | {_fmt(pm['valid_rate'], True)} | {_fmt(pm['integrity_rate'], True)} | "
                  f"{_fmt(pm['agent_mae'])} | {_fmt(pm['improvement'], True)} | {_fmt(pm['judge'])} | {_fmt(pm['runtime_min'], nd=1)} | {cost} |")
+    L += ["", "## Elo (Bradley–Terry, margin-aware; 95% bootstrap over subjects)", "",
+          f"Every episode plays every other model's episodes on the same subject. Outcomes are soft: "
+          f"0.5 + 0.5·tanh(gap/τ), with τ = {ACC_TAU:.2f} improvement for accuracy and τ = {JUDGE_TAU:.2f} for judge score. "
+          "Invalid submissions lose the accuracy game outright; integrity failures lose both games. "
+          f"Combined = {ACC_WEIGHT:.1f}·accuracy + {1 - ACC_WEIGHT:.1f}·judge.", "",
+          "| Model | Combined Elo | Accuracy Elo | Judge Elo |", "|---|---|---|---|"]
+    for m in sorted(models, key=lambda m: -(elo["combined"][m][0] or 0)):
+        L.append(f"| {m} | {_fmt(elo['combined'][m], nd=0)} | {_fmt(elo['accuracy'][m], nd=0)} | {_fmt(elo['judge'][m], nd=0)} |")
+    if elo["combined"][models[0]][0] is not None:
+        L += ["", "Implied P(row beats column), combined Elo:", "",
+              "| | " + " | ".join(models) + " |", "|---" * (len(models) + 1) + "|"]
+        for a in models:
+            L.append(f"| {a} | " + " | ".join("–" if a == b else f"{elo_win_prob(elo['combined'][a][0], elo['combined'][b][0]):.2f}"
+                                              for b in models) + " |")
     L += ["", "## Baselines on the same hidden transfer windows (phase-balanced MAE, bpm)", "",
           "| Baseline | Mean [95% CI] |", "|---|---|"]
     for b in base_names:
@@ -421,13 +445,13 @@ def write_report(run_id: str) -> Path:
             L.append(f"- **{r['model']} / {r['subject']}**: INFRASTRUCTURE ERROR (provider API), not a model failure: {r['infra_error'][:160]}")
         if failed or net:
             L.append(f"- **{r['model']} / {r['subject']}**: failed {', '.join(failed) or 'none'}"
-                     + (f"; {net} network-attempt flag(s) (recorded, not an automatic fail)" if net else ""))
+                     + (f"; {net} network-attempt flag(s)" if net else ""))
     L += ["", "## Notes and limitations", "",
           "- Each participant has one recording session; 'unseen' means held-out activity segments with guard gaps, not separate sessions.",
-          "- Network isolation on this host is best-effort (no network namespaces in the container); file isolation is enforced by per-episode Unix users. Attempts are audited.",
-          "- Judge scores grade decisions and reporting, not accuracy, and are reported separately from measured error.",
+          "- Network isolation on this host is best-effort (no network namespaces). A command that tries to use the network or read hidden paths is rejected and fails integrity.",
+          "- Judge scores grade decisions and reporting, not accuracy, and are reported separately from measured error; only the combined Elo mixes them, with the weight stated above.",
           "- Small n: intervals are wide; treat rankings as provisional.", ""]
     out = run_dir / "summary.md"
     out.write_text("\n".join(L))
-    (run_dir / "summary.json").write_text(json.dumps({"per_model": per_model, "baselines": base_mean, "pairs": pairs, "diagnosis": diag}, indent=1, default=str))
+    (run_dir / "summary.json").write_text(json.dumps({"per_model": per_model, "elo": elo, "baselines": base_mean, "pairs": pairs, "diagnosis": diag}, indent=1, default=str))
     return out

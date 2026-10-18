@@ -83,30 +83,55 @@ def _runs(mask: np.ndarray) -> list[tuple[int, int]]:
     return list(zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)))
 
 
-def split_subject(cfg: TaskConfig, subject: str) -> Split:
-    rec = load_recording(ROOT / cfg.processed_dir / f"{subject}.npz")
-    act = rec["activity"].astype(int)
+def transfer_block_mask(cfg: TaskConfig, activity: np.ndarray) -> np.ndarray:
+    """Hidden transfer block: first transfer activity through the sample before familiar time resumes."""
+    act = np.asarray(activity).astype(int)
     n = len(act)
-    step = cfg.step_s
-    guard = int(cfg.guard_s // step)
     transfer_ids = [NAME_TO_ID[a] for a in cfg.transfer_activities]
     familiar_ids = [NAME_TO_ID[a] for a in cfg.familiar_activities]
-
     is_tr = np.isin(act, transfer_ids)
     is_fam = np.isin(act, familiar_ids)
+    transfer = np.zeros(n, bool)
+    if not is_tr.any():
+        return transfer
     t0 = int(np.flatnonzero(is_tr)[0])
     last_tr = int(np.flatnonzero(is_tr)[-1])
     after = np.flatnonzero(is_fam & (np.arange(n) > last_tr))
     t1 = int(after[0]) if len(after) else n
-    transfer = np.zeros(n, bool)
     transfer[t0:t1] = True
+    return transfer
+
+
+def _guarded(mask: np.ndarray, guard: int) -> np.ndarray:
+    near = np.zeros(len(mask), bool)
+    for a, b in _runs(mask):
+        near[max(0, a - guard):min(len(mask), b + guard)] = True
+    return near
+
+
+def reference_visible_mask(cfg: TaskConfig, activity: np.ndarray) -> np.ndarray:
+    """Reference samples the agent may see.
+
+    The transfer block and the guard around it are removed, so heart rate during
+    the hidden activities is not in the workspace and cannot be memorized from
+    other people.
+    """
+    guard = int(cfg.guard_s // cfg.step_s)
+    return ~_guarded(transfer_block_mask(cfg, activity), guard)
+
+
+def split_subject(cfg: TaskConfig, subject: str) -> Split:
+    rec = load_recording(ROOT / cfg.processed_dir / f"{subject}.npz")
+    act = rec["activity"].astype(int)
+    n = len(act)
+    guard = int(cfg.guard_s // cfg.step_s)
+    transfer = transfer_block_mask(cfg, act)
 
     # Development chunks: every k-th fixed-size chunk of familiar time outside the transfer block.
-    chunk = int(cfg.dev_chunk_s // step)
+    chunk = int(cfg.dev_chunk_s // cfg.step_s)
     every = max(2, int(round(1 / cfg.dev_fraction)))
     dev = np.zeros(n, bool)
-    eligible = ~transfer
-    eligible[max(0, t0 - guard):min(n, t1 + guard)] = False
+    eligible = ~_guarded(transfer, guard)
     for a, b in _runs(eligible):
         starts = list(range(a + guard, b - guard - chunk + 1, chunk))
         for j, s in enumerate(starts):
@@ -114,9 +139,7 @@ def split_subject(cfg: TaskConfig, subject: str) -> Split:
                 dev[s:s + chunk] = True
 
     blocked = transfer | dev
-    near = np.zeros(n, bool)
-    for a, b in _runs(blocked):
-        near[max(0, a - guard):min(n, b + guard)] = True
+    near = _guarded(blocked, guard)
     support = ~near
     seg = np.full(n, -1)
     for i, (a, b) in enumerate(_runs(support)):
@@ -163,6 +186,13 @@ def dev_windows(cfg: TaskConfig, split: Split) -> Windows:
 
 def transfer_windows(cfg: TaskConfig, split: Split) -> Windows:
     return make_windows(cfg, split.rec, split.transfer_mask, history_inside=False)
+
+
+def reference_visible_windows(cfg: TaskConfig, subject: str, stride_n: int = 5) -> Windows:
+    """Reference-cohort windows on the same samples the agent is allowed to read."""
+    rec = load_recording(ROOT / cfg.processed_dir / f"{subject}.npz")
+    mask = reference_visible_mask(cfg, rec["activity"])
+    return make_windows(cfg, rec, mask, history_inside=True, stride_n=stride_n)
 
 
 def full_windows(cfg: TaskConfig, subject: str, stride_n: int = 5) -> Windows:

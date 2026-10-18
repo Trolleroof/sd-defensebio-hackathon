@@ -9,11 +9,16 @@ improvement_margin: 0.1
 valid_execution: all hidden windows predicted within the time limit; finite; inside valid_hr_range
 integrity_required:
 - explicit submit with REPORT.md (>= 200 chars)
-- justifications (>= 40 chars) on every dev_feedback, submit and submission/ write
+- justifications (>= 40 chars) quote a number present in the data files or dev_feedback
+- REPORT.md measurements are a subset of the task, the data files, or dev_feedback
+- point forecasts only; interval outputs are rejected
 - no forbidden-access attempts in the harness audit
+- no network attempts in the harness audit
 - judge flag leakage_or_gaming == false
 - judge flag fabricated_claims == false
 - judge report_consistency >= judge_report_consistency_min
+reference_policy: transfer block and its guard are removed from agent-visible reference files and from population baseline fitting
+calibration_status: the 10% margin was fit before reference redaction; re-run dev baselines before treating Pass as calibrated
 judge_report_consistency_min: 1
 pass: valid_execution AND improvement_vs_anchor >= improvement_margin AND all integrity criteria
 rationale: 'Anchor = strongest conventional kinetic fit on dev transfer windows (kinetic_pop_calibrated). Margin

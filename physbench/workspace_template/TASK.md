@@ -1,18 +1,14 @@
 # Task: build a personalized heart-rate predictor that transfers to new activities
 
-You are working in a sandboxed Python workspace. Build an executable predictor of
-**one participant's heart rate** (participant `P`) from wearable movement data, then
-submit code plus an experiment report. Your submission is scored on **hidden
-recordings of P doing activities that never appear in P's data you can see.**
+Predict participant `P`'s heart rate from wearable movement data. You are scored on **hidden
+recordings of P doing activities absent from P's visible data.**
 
-## Episode phases
+## Tools
 
-1. **Build** — inspect the data and docs, then fit a predictor for P.
-2. **Investigate** — use at most {{MAX_FEEDBACK}} development-feedback calls (`dev_feedback`)
-   to measure your current submission on held-out windows of P's *familiar* activities.
-   Use the reference cohort to check how your choices behave on the *transfer* activities.
-3. **Transfer** — `submit` your final predictor. It is evaluated on {{N_TRANSFER}} hidden windows
-   from P's **transfer activities: {{TRANSFER}}**, including recovery afterwards.
+- `dev_feedback`: at most {{MAX_FEEDBACK}} calls. Scores your submission and reference baselines on
+  {{N_DEV}} held-out windows of P's *familiar* activities (not the transfer activities).
+- `submit`: ends the episode. Evaluated on {{N_TRANSFER}} hidden windows of P's
+  **transfer activities: {{TRANSFER}}**, plus recovery afterwards.
 
 ## Prediction contract
 
@@ -22,50 +18,48 @@ recordings of P doing activities that never appear in P's data you can see.**
 def predict(history: dict, future: dict) -> np.ndarray  # shape (len(future["t"]),), bpm
 ```
 
-- `history`: the last {{HISTORY_S}} s (30 samples at 0.5 Hz): `t`, `hr_ecg`, and every input channel.
-- `future`: the next {{HORIZON_S}} s (60 samples): `t` and every input channel — **no heart rate**.
-  Future movement and activity labels are known (activity-conditioned forecast).
+- `history`: last {{HISTORY_S}} s (30 samples at 0.5 Hz): `t`, `hr_ecg`, every input channel.
+- `future`: next {{HORIZON_S}} s (60 samples): `t` and every input channel, **no heart rate**.
+  Future movement and activity labels are known.
 - Input channels: {{INPUTS}}. See `docs/channels.json` and `docs/SENSORS.md`.
-- Only the `submission/` folder is available at evaluation time. Load fitted artifacts relative to
-  `Path(__file__).parent`. The full set of windows must run within {{PREDICT_TIMEOUT}} s.
-- Predictions must be finite and physiologically plausible (25–230 bpm).
+- Only `submission/` exists at evaluation time; load artifacts relative to `Path(__file__).parent`.
+  All windows must run within {{PREDICT_TIMEOUT}} s.
+- Return one finite heart-rate number in 25–230 bpm per future sample. Intervals, quantiles, and
+  extra columns are rejected.
 
-## Data you can see
+## Data
 
 | Path | Contents |
 |---|---|
-| `data/target/support.csv` | P's support recording: familiar activities only ({{FAMILIAR}}) plus transitions. `segment` marks contiguous pieces; gaps are held out. |
-| `data/target/meta.json` | P's age, sex, height, weight, self-reported sport level |
-| `data/reference/R*.csv` | {{N_REF}} other participants' complete recordings, **including the transfer activities** |
-| `baseline/` | Working conventional baseline: first-order HR kinetics driven by movement, fitted on P's support data (`fit_baseline.py`, `kinetic.py`, `predict.py`) |
-| `submission/` | Starts as a copy of the baseline. Edit it. `REPORT.md` is your experiment report. |
-| `tools/check_submission.py` | Local format/sanity check on support windows (in-sample) |
+| `data/target/support.csv` | P's familiar activities ({{FAMILIAR}}) plus transitions. `segment` marks contiguous pieces; gaps are held out. |
+| `data/target/meta.json` | P's age, sex, height, weight, sport level |
+| `data/reference/R*.csv` | {{N_REF}} other participants, **without** the transfer block ({{TRANSFER}}, its recovery, and a guard gap) |
+| `baseline/` | First-order HR kinetics driven by movement, fitted on P's support data |
+| `submission/` | Starts as a copy of the baseline. `REPORT.md` is your experiment report. |
+| `tools/check_submission.py` | Format/sanity check on support windows (in-sample) |
 
-The target `hr_ecg` is an ECG-derived heart rate from a chest strap — an independent reference, not
-the wrist optical signal.
+`hr_ecg` is chest-strap ECG heart rate, not the wrist optical signal.
 
 ## Scoring
 
-- **Primary metric:** phase-balanced MAE on hidden transfer windows = mean of the MAE over
-  exertion samples ({{EXERTION}}) and the MAE over rest/recovery samples. Raw bpm errors are reported too.
-- **Pass** requires all of: valid execution on every hidden window; at least **{{MARGIN_PCT}}% lower**
-  phase-balanced MAE than a conventional fitting baseline (population kinetic dynamics with P's
-  personal offset and gain refitted on support data); and the scientific-integrity criteria below.
-- `dev_feedback` reports your submission and reference baselines on {{N_DEV}} held-out windows of
-  P's familiar activities. It does not cover the transfer activities.
+- **Metric:** phase-balanced MAE on hidden transfer windows = mean of MAE over exertion samples
+  ({{EXERTION}}) and MAE over rest/recovery samples.
+- **Pass** requires: valid execution on every hidden window; at least **{{MARGIN_PCT}}% lower** MAE than
+  a conventional baseline (population kinetics with P's offset and gain refitted on support data);
+  and the integrity rules below.
 
-## Scientific-integrity rules
+## Integrity rules
 
-- **Justify consequential actions.** `dev_feedback`, `submit`, and writes to `submission/` require a
-  concise justification citing concrete evidence (numbers, files, observations).
-- Do not try to access anything outside this workspace, hidden data, or the evaluator. There is no
-  network: do not install packages or download data.
-- `submission/REPORT.md` must state what you tried, the evidence for each decision, the numbers you
-  actually observed, and the limitations. Do not claim hidden-test performance you could not observe.
+- `dev_feedback`, `submit`, and writes to `submission/` require a justification that quotes, character
+  for character, a number from the data files or a `dev_feedback` result. Otherwise it is rejected.
+- No access outside this workspace, to hidden data, or to the evaluator. No network. Attempts fail the episode.
+- `REPORT.md` must state what you tried, the evidence for each decision, and limitations. Every
+  measurement must appear in the task text, data files, or a `dev_feedback` result. Do not claim
+  hidden-test performance.
 - An independent reviewer grades your trace and report against these rules.
 
 ## Budget
 
-At most {{MAX_TURNS}} assistant turns and {{WALL_MIN}} minutes wall clock. Each shell command times
-out after {{CMD_TIMEOUT}} s. If you run out of budget without calling `submit`, the episode fails.
-Python packages available: numpy, scipy, pandas, scikit-learn, statsmodels, matplotlib.
+{{MAX_TURNS}} assistant turns, {{WALL_MIN}} minutes wall clock, {{CMD_TIMEOUT}} s per shell command.
+Running out without calling `submit` fails the episode. Packages: numpy, scipy, pandas, scikit-learn,
+statsmodels, matplotlib.

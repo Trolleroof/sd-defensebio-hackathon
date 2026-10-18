@@ -16,7 +16,9 @@ from . import sandbox
 from .baselines import kinetic
 from .config import ROOT, TaskConfig
 from .data.dalia import ACTIVITY_NAMES, CHANNELS, load_recording
-from .episodes import Split, Windows, dev_windows, split_subject, support_windows, transfer_windows
+from .episodes import (
+    Split, Windows, dev_windows, reference_visible_mask, split_subject, support_windows, transfer_windows,
+)
 
 TEMPLATE = Path(__file__).parent / "workspace_template"
 
@@ -108,13 +110,15 @@ def build_episode(cfg: TaskConfig, subject: str, run_id: str, episode_id: str, c
     pub = {k: meta[k] for k in ("age", "gender", "height_cm", "weight_kg", "sport_level")}
     (tdir / "meta.json").write_text(json.dumps({"participant": "P", **pub}, indent=2))
 
-    # Reference cohort: complete recordings, pseudonymised.
+    # Reference cohort, pseudonymised. Same transfer block the target hides, plus its guard,
+    # so the agent cannot memorize heart rate during the scored activities from other people.
     rdir = ws / "data" / "reference"
     rdir.mkdir(parents=True)
     rng = np.random.default_rng(int(hashlib.sha256(episode_id.encode()).hexdigest()[:8], 16))
     for i, s in enumerate(rng.permutation(cfg.reference_subjects)):
         rec = load_recording(ROOT / cfg.processed_dir / f"{s}.npz")
-        _frame(cfg, rec, np.ones(len(rec["t"]), bool), np.zeros(len(rec["t"]), int)).to_csv(
+        visible = reference_visible_mask(cfg, rec["activity"])
+        _frame(cfg, rec, visible, np.zeros(len(rec["t"]), int)).to_csv(
             rdir / f"R{i + 1}.csv", index=False, float_format="%.5g")
         m = json.loads((ROOT / cfg.processed_dir / f"{s}.json").read_text())
         (rdir / f"R{i + 1}_meta.json").write_text(json.dumps({k: m[k] for k in pub}, indent=2))
