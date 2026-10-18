@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { JudgeVerdicts } from "@/components/JudgeVerdicts";
 import { Leaderboard } from "@/components/Leaderboard";
 import { TaskComparison } from "@/components/TaskComparison";
 import { TASKS } from "@/lib/data";
@@ -20,6 +21,7 @@ export default function Home() {
         <div className="research-section-title"><h2 id="results-heading">Results</h2><Link href="/blog/physbench/#methodology">Evaluation protocol ↗</Link></div>
         <Leaderboard />
         <TaskComparison />
+        <JudgeVerdicts />
       </section>
 
       <section className="research-context" aria-labelledby="evaluation-heading">

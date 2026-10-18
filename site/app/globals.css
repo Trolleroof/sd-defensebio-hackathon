@@ -461,3 +461,35 @@ button:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visib
  .trace-criterion-heading { flex-wrap: wrap; gap: 5px; }
  .trace-inspector-header h2 { font-size: 24px; }
 }
+
+.judge-verdicts { padding-top: 38px; margin-top: 38px; border-top: 1px solid var(--line); scroll-margin-top: 85px; }
+.judge-verdicts-deck, .prose .judge-verdicts-deck { color: var(--muted); font-size: 12px; line-height: 1.8; margin: -7px 0 23px; }
+.judge-criterion-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+.judge-summary-item > div:first-child { display: flex; flex-direction: column; gap: 8px; }
+.judge-summary-item > div:first-child > span { font-size: 11px; color: var(--muted); }
+.judge-summary-item strong { font: 20px var(--mono); color: var(--bone); }
+.judge-summary-item small { font: 11px var(--mono); color: var(--faint); }
+.judge-summary-track { margin: 12px 0 7px; height: 4px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.judge-summary-track > span { display: block; height: 100%; background: var(--olive); }
+.judge-summary-count { font: 9px var(--mono); color: var(--faint); }
+.judge-evidence-scope, .prose .judge-evidence-scope { margin: 17px 0 24px; font-size: 11px; line-height: 1.8; color: var(--faint); }
+.judge-findings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.judge-finding { min-width: 0; padding: 24px; }
+.judge-finding:nth-child(even) { border-left: 1px solid var(--line); }
+.judge-finding:nth-child(n+3) { border-top: 1px solid var(--line); }
+.judge-finding-model { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--faint); }
+.judge-finding-model .model-logo { width: 16px; height: 16px; }
+.judge-finding h3, .prose .judge-finding h3 { margin: 17px 0 10px; font: 400 21px/1.3 Georgia, serif; }
+.judge-finding > p, .prose .judge-finding > p { font-size: 12px; line-height: 1.8; color: var(--muted); margin: 0 0 21px; }
+.judge-verdict-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: var(--faint); font: 10px var(--mono); }
+.judge-verdict-label span { color: var(--olive); }
+.judge-finding blockquote { margin: 11px 0 19px; padding: 0 0 0 12px; border-left: 2px solid var(--olive-dim); color: var(--bone); font-size: 12px; line-height: 1.8; }
+.judge-finding > a { font-size: 11px; color: var(--olive); }
+.prose .judge-verdicts .research-section-title h2 { margin: 0; font: 400 26px Georgia, serif; }
+@media (max-width: 700px) {
+ .judge-criterion-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+ .judge-findings { grid-template-columns: 1fr; }
+ .judge-finding { padding: 20px; }
+ .judge-finding:nth-child(even) { border-left: 0; }
+ .judge-finding + .judge-finding { border-top: 1px solid var(--line); }
+}
