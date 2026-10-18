@@ -19,7 +19,7 @@ Source of truth: `firmware/imu_mesh/imu_mesh.ino` (1, 2), `dashboard/mesh_api.py
 | `mesh_status` line | root | 5000 ms |
 | API poll | dashboard | 100 ms |
 | Node marked offline | API | no telemetry for > 10 s |
-| HR marked missing | wearable | no Polar notification for 5 s |
+| HR marked missing | wearable | no Polar notification for 5 s, or wired SparkFun has no valid finger reading |
 
 Topology: star. Both wearables join the root directly (tree, max layer 2, root takes 2 children), so `hop_count` is always 0.
 
@@ -43,7 +43,7 @@ ESP-WIFI-MESH `MESH_PROTO_BIN`, `MESH_TOS_P2P`, sent to the parent's address. Pa
 | 50 | 4 | `float32` | `imu_temp_c` | IMU die temperature, °C (not body temperature) |
 | 54 | 4 | `uint32` | `steps` | LSM6DSOX 16-bit pedometer count since boot, wraps at 65536 |
 | 58 | 2 | `int16` | `hr_bpm` | heart rate, -1 when invalid |
-| 60 | 1 | `uint8` | `hr_valid` | 1 if `hr_bpm` is a fresh Polar reading |
+| 60 | 1 | `uint8` | `hr_valid` | 1 if `hr_bpm` is a fresh reading from the selected heart-rate source |
 
 Root drops a packet unless all hold: size is exactly 61, `magic` matches, `schema_version == 2`, `hop_count <= 1`, and `sample_valid`, `wake`, `hr_valid` are each 0 or 1. When `sample_valid` is 0, the IMU fields are zero and must be ignored. Any layout change must bump `schema_version`.
 
@@ -93,6 +93,7 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 | `polar_connected` | `id: string` (8 hex chars) | wearable | HR notifications subscribed |
 | `polar_notifications_stale` | none | wearable | no HR notification for 10 s; BLE client reconnects |
 | `polar_disconnected` | none | wearable | BLE client disconnected |
+| `sparkfun_hr_status` | `ready: bool`, `error: int` | wearable with wired-SparkFun build | result of sensor hub setup; `ready: false` leaves HR missing |
 
 Wearable-only lines appear on that wearable's own USB port, never on the root's.
 

@@ -1,15 +1,38 @@
 # Nano ESP32 IMU mesh prototype
 
-Two wearable Nano ESP32 boards sample their LSM6DSOX and Polar Verity Sense and send packets through ESP-WIFI-MESH to a Nano USB serial root. A fourth Nano runs `../mesh_router/mesh_router.ino` as the local Wi-Fi access point required by this SDK's mesh configuration. The root prints one JSON telemetry record per received sample.
+Two wearable Nano ESP32 boards sample their LSM6DSOX and either a Polar Verity Sense or a wired SparkFun SEN-15219 pulse oximeter and heart rate sensor. They send packets through ESP-WIFI-MESH to a Nano USB serial root. A fourth Nano runs `../mesh_router/mesh_router.ino` as the local Wi-Fi access point required by this SDK's mesh configuration. The root prints one JSON telemetry record per received sample.
+
+## Optional wired heart-rate sensor
+
+Wire the **SparkFun SEN-15219** to a **wearable Nano ESP32**, sharing the IMU's I²C bus. Use 3.3 V logic throughout. A Qwiic-to-header cable or adapter carries the first four connections; the SparkFun board still needs separate `RESET` and `MFIO` wires.
+
+| SparkFun SEN-15219 | Nano ESP32 | Existing IMU connection |
+| --- | --- | --- |
+| `3V3` | `3V3` | share 3.3 V |
+| `GND` | `GND` | share ground |
+| `SDA` | `A4 / SDA` | share SDA |
+| `SCL` | `A5 / SCL` | share SCL |
+| `RESET` | `D4` | separate control wire |
+| `MFIO` | `D5` | separate control wire |
+
+The SparkFun hub is at I²C address `0x55`; the IMU is at `0x6A` or `0x6B`. Do not connect the sensor to 5 V or leave `RESET`/`MFIO` unconnected. The optical sensor needs light, steady finger contact; verify usable readings in that placement before putting it on a moving wearer.
+
+Pin references: [SparkFun hookup and required control pins](https://learn.sparkfun.com/tutorials/sparkfun-pulse-oximeter-and-heart-rate-monitor-hookup-guide/hardware-hookup), [Nano ESP32 A4/A5 and 3V3 pinout](https://docs.arduino.cc/resources/pinouts/ABX00083-full-pinout.pdf).
+
+Install **SparkFun Bio Sensor Hub Library** (tested with 1.1.0). Compile that wearable with `compiler.cpp.extra_flags=-DHR_SOURCE_SPARKFUN=1`. This build reads heart rate from the wired sensor and never starts the Polar BLE task. The default build uses Polar when a `POLAR_ID` is set. The mesh packet still sends only heart rate from either source; SpO₂ is not yet in the packet or dashboard. If the wired sensor fails or loses finger contact, heart rate is missing rather than silently switching to Polar.
+
+```sh
+arduino-cli compile -b arduino:esp32:nano_nora firmware/imu_mesh --build-property compiler.cpp.extra_flags=-DHR_SOURCE_SPARKFUN=1
+```
 
 ## Flash and run
 
 1. Flash the router sketch to the AP Nano and power it.
 2. Compile `imu_mesh.ino` with `compiler.cpp.extra_flags=-DNODE_ROLE=1` for the root Nano.
-3. Compile the sensor sketch separately for each wearable with `compiler.cpp.extra_flags=-DPOLAR_ID=0x12345678`, replacing the example hex ID with the trailing Polar ID in that wearer's advertised name. The default build has BLE disabled until an ID is assigned.
-3. Select **Arduino Nano ESP32** in Arduino IDE. Install **Adafruit LSM6DS**, **Adafruit Unified Sensor**, and **Adafruit BusIO**.
-4. Connect the root Nano to the laptop over USB and open its serial monitor at **115200 baud**. Power the root, then the first wearable, then the second.
-5. Keep the mesh ID, channel, and password identical on all three boards. The prototype uses a fixed demo password in the sketch.
+3. Compile each Polar wearable with `compiler.cpp.extra_flags=-DPOLAR_ID=0x12345678`, replacing the example hex ID with the trailing Polar ID in that wearer's advertised name. Compile each wired-SparkFun wearable with `compiler.cpp.extra_flags=-DHR_SOURCE_SPARKFUN=1` instead. The default build has BLE disabled until a Polar ID is assigned.
+4. Select **Arduino Nano ESP32** in Arduino IDE. Install **Adafruit LSM6DS**, **Adafruit Unified Sensor**, and **Adafruit BusIO**; install the SparkFun Bio Sensor Hub Library for the wired variant.
+5. Connect the root Nano to the laptop over USB and open its serial monitor at **115200 baud**. Power the root, then the first wearable, then the second.
+6. Keep the mesh ID, channel, and password identical on all three boards. The prototype uses a fixed demo password in the sketch.
 
 The sketch keeps the supplied LSM6DSOX configuration: I²C address `0x6A` with `0x6B` fallback, 104 Hz accel/gyro, ±4 g, ±500 dps, pedometer, and wake/shake event. It reads the IMU about every 20 ms to accumulate Z-axis rotation and sends a packet every 200 ms. If the sensor is not found, it sends a five-second status packet with `sensor_ok: false`.
 

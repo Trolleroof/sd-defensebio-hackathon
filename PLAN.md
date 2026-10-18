@@ -32,9 +32,9 @@ The organizer’s [October 16 hardware announcement](https://2026sddefense-dcs50
 | Arduino Nano ESP32 **ABX00083** or Adafruit ESP32-S3 Feather; buttons, LEDs, power banks, straps — rows 2–3, 37, 44, 47–49 | Wearable capture and distress/acknowledgment loop | Exact board received, wiring, power, connection. Nano has no Qwiic port; workbook lists adapters. |
 | SparkFun Qwiic **TMP117**; Grove GSR — rows 10, 12 | Optional additional observed channels | Contact, quality, response time, and a defined validation target before adding scope |
 
-**Selected team hardware for the two-person demo:** the available inventory is Arduino Uno R3 ×1, Raspberry Pi 4B ×1, Arduino Nano ESP32 ×3, nRF52840 Starter Kit ×1, Polar Verity Sense ×2, LSM6DSOX ×3, and battery packs ×2. Use two Nano ESP32 boards as wearable nodes, each paired over BLE with one Verity Sense and connected over I²C to one LSM6DSOX; strap the node and IMU to the participant. Use the third Nano ESP32 as a USB-powered ESP-WIFI-MESH root at command, connected to the laptop by USB serial. Power the wearables from the battery packs and keep the third LSM6DSOX as a spare. The team-specified Nano ESP32 configuration has an ESP32-S3, 512 KB internal SRAM, 8 MB PSRAM, and 16 MB flash. The Uno, Pi, and nRF52840 kit are not required for v0. Confirm board revisions, wiring, and power before assembly.
+**Selected team hardware for the two-person demo:** the available inventory is Arduino Uno R3 ×1, Raspberry Pi 4B ×1, Arduino Nano ESP32 ×3, nRF52840 Starter Kit ×1, Polar Verity Sense ×2, LSM6DSOX ×3, SparkFun SEN-15219 pulse oximeter/heart-rate sensor ×1, and battery packs ×2. Use two Nano ESP32 boards as wearable nodes, each connected over I²C to one LSM6DSOX; strap the node and IMU to the participant. Each wearable uses either a Verity Sense over BLE or the wired SparkFun sensor for heart rate, never both; [wiring and build selection](firmware/imu_mesh/README.md#optional-wired-heart-rate-sensor) are documented with the firmware. Use the third Nano ESP32 as a USB-powered ESP-WIFI-MESH root at command, connected to the laptop by USB serial. Power the wearables from the battery packs and keep the third LSM6DSOX as a spare. The team-specified Nano ESP32 configuration has an ESP32-S3, 512 KB internal SRAM, 8 MB PSRAM, and 16 MB flash. The Uno, Pi, and nRF52840 kit are not required for v0. Confirm board revisions, wiring, and power before assembly.
 
-Omit the ArduCam UC-844 Rev. B camera and GSR in v0. No skin-temperature sensor or node-mounted GNSS receiver is confirmed; do not describe GSR as temperature, sweat rate, or hydration. Use the Verity Sense for heart rate, and label its optical reading as a sensor measurement rather than an independent ECG reference. Radar, thermal cameras, environmental sensors, and the shared quadruped are outside this build.
+Omit the ArduCam UC-844 Rev. B camera and GSR in v0. No skin-temperature sensor or node-mounted GNSS receiver is confirmed; do not describe GSR as temperature, sweat rate, or hydration. Use either the Verity Sense or the wired SparkFun sensor for heart rate on each wearer, and label optical readings as sensor measurements rather than independent ECG references. Radar, thermal cameras, environmental sensors, and the shared quadruped are outside this build.
 
 **Hardware descriptions are not validation:** the workbook lists application ideas such as contactless heartbeat, fever, and tissue oxygenation proxies. Treat these as suggested uses, not demonstrated accuracy or clinical capabilities. The workbook attached to the [hardware announcement](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1792194966030419) provides exact rows and wiring notes (event Slack access required).
 
@@ -43,8 +43,9 @@ Omit the ArduCam UC-844 Rev. B camera and GSR in v0. No skin-temperature sensor 
 ### 1.3 The device-to-dashboard pipeline
 
 ```text
-Polar Verity Sense ──BLE──┐
-LSM6DSOX ───────────I²C───┴─ Nano ESP32 wearable nodes
+Polar Verity Sense ──BLE──────┐ (choose one HR source per wearable)
+SparkFun SEN-15219 ──I²C─────┤
+LSM6DSOX ───────────I²C──────┴─ Nano ESP32 wearable nodes
                                   ↓ ESP-WIFI-MESH
                          Nano ESP32 root at command
                                   ↓ USB serial (JSON event per line)

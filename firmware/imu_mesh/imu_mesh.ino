@@ -20,7 +20,12 @@
 #ifndef POLAR_ID
 #define POLAR_ID 0
 #endif
-#if NODE_ROLE == ROLE_SENSOR
+#ifndef HR_SOURCE_SPARKFUN
+#define HR_SOURCE_SPARKFUN 0
+#endif
+#if NODE_ROLE == ROLE_SENSOR && HR_SOURCE_SPARKFUN
+#include <SparkFun_Bio_Sensor_Hub_Library.h>
+#elif NODE_ROLE == ROLE_SENSOR
 #include <BLEDevice.h>
 #endif
 
@@ -74,9 +79,14 @@ uint32_t sequenceNumber = 0;
 uint32_t lastSensorStatusMs = 0;
 uint32_t lastSensorDiagMs = 0;
 #if NODE_ROLE == ROLE_SENSOR
-portMUX_TYPE hrMux = portMUX_INITIALIZER_UNLOCKED;
 int16_t latestHr = -1;
 uint32_t lastHrMs = 0;
+#if HR_SOURCE_SPARKFUN
+SparkFun_Bio_Sensor_Hub bioHub(D4, D5);  // RESET, MFIO; both are 3.3 V GPIO.
+bool sparkfunReady = false;
+uint32_t lastBioReadMs = 0;
+#else
+portMUX_TYPE hrMux = portMUX_INITIALIZER_UNLOCKED;
 volatile bool polarConnected = false;
 
 void onHeartRate(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
@@ -146,6 +156,7 @@ void polarTask(void *) {
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
+#endif
 #endif
 
 void checkInit(const char *stage, esp_err_t err) {
@@ -349,12 +360,19 @@ void sendImuSample() {
   memcpy(packet.node_mac, nodeMac, sizeof(nodeMac));
   packet.hr_bpm = -1;
 #if NODE_ROLE == ROLE_SENSOR
+#if HR_SOURCE_SPARKFUN
+  if (sparkfunReady && static_cast<uint32_t>(millis() - lastHrMs) < 5000 && latestHr > 0) {
+    packet.hr_bpm = latestHr;
+    packet.hr_valid = 1;
+  }
+#else
   portENTER_CRITICAL(&hrMux);
   if (polarConnected && static_cast<uint32_t>(millis() - lastHrMs) < 5000 && latestHr > 0) {
     packet.hr_bpm = latestHr;
     packet.hr_valid = 1;
   }
   portEXIT_CRITICAL(&hrMux);
+#endif
 #endif
 
   if (imuReady) {
@@ -395,6 +413,13 @@ void setup() {
 
 #if NODE_ROLE == ROLE_SENSOR
   initImu();
+#if HR_SOURCE_SPARKFUN
+  const uint8_t beginStatus = bioHub.begin();
+  const uint8_t configStatus = beginStatus ? beginStatus : bioHub.configBpm(MODE_ONE);
+  sparkfunReady = configStatus == 0;
+  Serial.printf("{\"type\":\"sparkfun_hr_status\",\"ready\":%s,\"error\":%u}\n",
+                sparkfunReady ? "true" : "false", configStatus);
+#endif
 #endif
 
   initMesh();
@@ -403,15 +428,26 @@ void setup() {
     while (true) delay(1000);
   }
 #if NODE_ROLE == ROLE_SENSOR
+#if !HR_SOURCE_SPARKFUN
   if (POLAR_ID && xTaskCreate(polarTask, "polar", 8192, nullptr, 2, nullptr) != pdPASS) {
     Serial.println("{\"type\":\"init_error\",\"stage\":\"polar_task\"}");
   }
+#endif
 #endif
 }
 
 void loop() {
 #if NODE_ROLE == ROLE_SENSOR
   const uint32_t now = millis();
+#if HR_SOURCE_SPARKFUN
+  if (sparkfunReady && static_cast<uint32_t>(now - lastBioReadMs) >= 1000) {
+    lastBioReadMs = now;
+    const bioData pulse = bioHub.readBpm();
+    // The hub reports status 3 only when it detects a finger.
+    latestHr = pulse.status == 3 && pulse.confidence > 0 && pulse.heartRate >= 30 && pulse.heartRate <= 240 ? pulse.heartRate : -1;
+    lastHrMs = latestHr > 0 ? millis() : 0;
+  }
+#endif
   if (imuReady && static_cast<uint32_t>(now - lastImuReadMs) >= 20) {
     sensors_event_t accel, gyro, temp;
     latestImuValid = imu.getEvent(&accel, &gyro, &temp);
