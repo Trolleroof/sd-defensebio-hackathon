@@ -1,0 +1,27 @@
+# Nano ESP32 IMU mesh prototype
+
+This is the first transport milestone: two wearable Nano ESP32 boards sample their LSM6DSOX and send packets through an ESP-WIFI-MESH relay to a third Nano acting as the USB serial root. The root prints one JSON telemetry record per received sample. Verity Sense heart rate is reserved as `hr_bpm: null` until the BLE stage.
+
+## Flash and run
+
+1. In `imu_mesh.ino`, set `NODE_ROLE` to `ROLE_ROOT`; flash that sketch to the command Nano.
+2. Set `NODE_ROLE` to `ROLE_SENSOR`; flash the same sketch to both wearable Nanos.
+3. Select **Arduino Nano ESP32** in Arduino IDE. Install **Adafruit LSM6DS**, **Adafruit Unified Sensor**, and **Adafruit BusIO**.
+4. Connect the root Nano to the laptop over USB and open its serial monitor at **115200 baud**. Power the root, then the first wearable, then the second.
+5. Keep the mesh ID, channel, and password identical on all three boards. The prototype uses a fixed demo password in the sketch.
+
+The sketch keeps the supplied LSM6DSOX configuration: I²C address `0x6A` with `0x6B` fallback, 104 Hz accel/gyro, ±4 g, ±500 dps, pedometer, and wake/shake event. It reads and sends a sample every 100 ms when the IMU is available. If the sensor is not found, it sends a one-second status packet with `sensor_ok: false`.
+
+## Packet model
+
+The mesh packet is a 57-byte versioned binary struct shared by the Nano boards. A source starts `hop_count` at zero; each sensor relay increments it once before forwarding upstream. A leaf routed through the other wearable should arrive at the root with `hop_count: 1`.
+
+The root emits a `mesh_status` JSON line every two seconds with the total mesh node count (including the root), emits join/leave events for direct children, and converts each received packet to a telemetry JSON line. Example telemetry:
+
+```json
+{"schema_version":1,"type":"telemetry","node_id":"A1B2C3D4E5F6","sequence":12,"uptime_ms":1200,"received_ms":1360,"hop_count":1,"sensor_ok":true,"accel_m_s2":[0.12,0.05,9.77],"gyro_rad_s":[0.01,0.02,0.00],"imu_temp_c":25.4,"steps":3,"wake":false,"hr_bpm":null}
+```
+
+`node_id` is the source board's Wi-Fi MAC; `sequence` is per node; `uptime_ms` is the source timestamp; `received_ms` is the root timestamp. Acceleration is m/s² and gyro is rad/s, matching the Adafruit sensor events. If the IMU is unavailable, sensor fields are `null`. Root boot and ESP-IDF log messages may also appear on the serial port, so the laptop reader should accept only lines that parse as JSON telemetry.
+
+The sensor firmware also emits a `sensor_status` JSON line every two seconds with IMU and parent-link state; a node with no parent emits `mesh_no_parent_found`. The binary payload is for matching Nano ESP32 firmware only. There is no offline queue: packets sent while a parent is unavailable are dropped. This prototype does not yet include BLE, GPS, or position estimation, and the fixed mesh credentials are for a hackathon bench setup only.

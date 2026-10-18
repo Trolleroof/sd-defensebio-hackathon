@@ -32,7 +32,9 @@ The organizer’s [October 16 hardware announcement](https://2026sddefense-dcs50
 | Arduino Nano ESP32 **ABX00083** or Adafruit ESP32-S3 Feather; buttons, LEDs, power banks, straps — rows 2–3, 37, 44, 47–49 | Wearable capture and distress/acknowledgment loop | Exact board received, wiring, power, connection. Nano has no Qwiic port; workbook lists adapters. |
 | SparkFun Qwiic **TMP117**; Grove GSR — rows 10, 12 | Optional additional observed channels | Contact, quality, response time, and a defined validation target before adding scope |
 
-Start with SEN-15219 pulse, LSM6DSOX movement, and a manual distress button if those components work. Use the H10 as a development reference if allocated. Keep temperature and GSR optional. Radar, thermal cameras, and environmental sensors stay outside the first build unless a core requirement needs them. A single quadruped with an arm/claw is announced for the event; shared robot availability is not a dependency for this product.
+**Selected team hardware for the two-person demo:** the available inventory is Arduino Uno R3 ×1, Raspberry Pi 4B ×1, Arduino Nano ESP32 ×3, nRF52840 Starter Kit ×1, Polar Verity Sense ×2, LSM6DSOX ×3, and battery packs ×2. Use two Nano ESP32 boards as wearable nodes, each paired over BLE with one Verity Sense and connected over I²C to one LSM6DSOX; strap the node and IMU to the participant. Use the third Nano ESP32 as a USB-powered ESP-WIFI-MESH root at command, connected to the laptop by USB serial. Power the wearables from the battery packs and keep the third LSM6DSOX as a spare. The team-specified Nano ESP32 configuration has an ESP32-S3, 512 KB internal SRAM, 8 MB PSRAM, and 16 MB flash. The Uno, Pi, and nRF52840 kit are not required for v0. Confirm board revisions, wiring, and power before assembly.
+
+Omit the ArduCam UC-844 Rev. B camera and GSR in v0. No skin-temperature sensor or node-mounted GNSS receiver is confirmed; do not describe GSR as temperature, sweat rate, or hydration. Use the Verity Sense for heart rate, and label its optical reading as a sensor measurement rather than an independent ECG reference. Radar, thermal cameras, environmental sensors, and the shared quadruped are outside this build.
 
 **Hardware descriptions are not validation:** the workbook lists application ideas such as contactless heartbeat, fever, and tissue oxygenation proxies. Treat these as suggested uses, not demonstrated accuracy or clinical capabilities. The workbook attached to the [hardware announcement](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1792194966030419) provides exact rows and wiring notes (event Slack access required).
 
@@ -41,20 +43,21 @@ Start with SEN-15219 pulse, LSM6DSOX movement, and a manual distress button if t
 ### 1.3 The device-to-dashboard pipeline
 
 ```text
-Wearable measurements + button events
-                  ↓
-Timestamped acquisition and connection checks
-                  ↓
-Gateway on a phone or laptop
-                  ↓
-Stored recording + processed pulse/movement features
-                  ↓
-Personalized predictor + current measured response
-                  ↓
-Operator dashboard → reviewed action → acknowledgment → reassessment
+Polar Verity Sense ──BLE──┐
+LSM6DSOX ───────────I²C───┴─ Nano ESP32 wearable nodes
+                                  ↓ ESP-WIFI-MESH
+                         Nano ESP32 root at command
+                                  ↓ USB serial (JSON event per line)
+                         Local Python service on laptop
+                         ├─ append-only JSONL session log
+                         └─ WebSocket → local browser dashboard
+                                  ↓
+                         operator review → priority → route → response
 ```
 
-1. **Collect:** retain participant ID, session ID, device ID, timestamps, units, and available raw signals.
+The first transport milestone is the [Arduino IMU mesh prototype](firmware/imu_mesh/README.md): the same sketch builds as the command root or a wearable, samples the LSM6DSOX, relays versioned packets over an ESP-WIFI-MESH chain, and emits JSON Lines from the root's USB serial port. It reserves `hr_bpm` for the Verity Sense stage. The full device path remains: each wearable is a BLE central for its Verity Sense and reads its IMU; the command Nano is the mesh root; the laptop connects to that root over USB serial and is not a mesh relay. Full telemetry adds movement class, position estimate with source/quality, and sensor/link freshness. The dashboard keeps disconnected nodes visible with last-update time and a distinct stale/offline state.
+
+1. **Collect:** retain participant ID, session ID, device ID, timestamps, units, and available raw signals. The gateway-to-laptop serial stream uses one versioned JSON event per line; append telemetry and operator actions to a local JSONL session log.
 2. **Synchronize:** align devices, record offsets, and check timing drift. Record activity markers explicitly.
 3. **Process:** generate pulse estimates, movement features, and signal-quality flags. Preserve gaps and rejected samples.
 4. **Predict:** run an approved predictor and show its expected response beside measurements. Display uncertainty only if the method has been evaluated.
@@ -62,26 +65,31 @@ Operator dashboard → reviewed action → acknowledgment → reassessment
 
 The LLM builds predictors in a separate controlled environment. The wearable and dashboard execute a reviewed predictor; newly generated code does not automatically replace the deployed model.
 
+The laptop and local dashboard are the v0 command center. Palantir Foundry is a possible later integration, not a dependency for the demo.
+
 ### 1.4 What the dashboard must show
 
 | View | Minimum content | Why it exists |
 | --- | --- | --- |
-| Team overview | Person, last update, pulse trend, movement, distress status, pending checks | Find people requiring attention |
-| Individual view | Measured and predicted response, recent activity, quality, model version | Explain what changed |
-| Attention queue | Trigger, supporting measurements, freshness, acknowledgment | Make the reason for each check visible |
+| Team overview | Person, last update, heart-rate trend, movement, map position and source, alert/critical status, pending checks | Find people requiring attention |
+| Individual view | Measured and predicted response, movement-matched heart-rate baseline, recent activity, signal quality/freshness, position confidence, model version | Explain what changed |
+| Attention queue | Automatic abnormality reason, supporting measurements, freshness, operator-set priority, acknowledgment | Make the reason for each check visible |
 | Action panel | Request check, acknowledge, record action, reassess; optional human-approved mock actuator | Complete the operational loop |
+| Route panel | Critical people in operator priority order, proposed route, added distance, configurable extra-distance limit | Help the operator review an extraction sequence |
 | Recording/model panel | Session saved, available inputs, predictor version, validation status, data origin | Show how hardware feeds model development |
 
 A deviation from predicted recovery means **check this person or the measurement**, not a diagnosis. Missing data, disconnected devices, sensor failure, and physiological deviations must have visibly different states. An IMU alone does not establish injury or consciousness. A skin-temperature reading does not establish core temperature.
 
-Location is optional and must identify its source. A phone coordinate, replayed coordinate, or manually placed demo marker must be labeled accurately.
+Use laptop OS location as the command-point origin when available; allow manual origin entry if the laptop has no location source. Initialize both wearable nodes there. Show node positions as **estimated** when derived from the arm/chest IMUs, and provide operator map-position correction when that estimate is unusable. Identify estimated and corrected positions separately. IMU-only dead reckoning will drift and is not reliable geolocation. Use an online OpenStreetMap-based map and routing service; if it is unavailable, keep people and priorities visible but do not claim a computed route.
+
+Build an initial heart-rate baseline and update a separate baseline for each node and movement class (stationary, walking, running) as valid data accumulates. Surface a demo abnormality when heart rate remains at least 20 bpm above the matching baseline for 10 seconds; show the value, baseline, movement class, duration, and signal freshness. Do not adapt a baseline while that node has an active abnormality. The operator, not the sensor rule, marks someone critical and sets priority. The route visits operator-marked critical people in priority order, then considers lower-priority stops as insertions. Include a lower-priority stop only if total route distance is within the operator-configured extra-distance limit versus the critical-only route. Default the limit to 10% and make it editable in the dashboard.
 
 ### 1.5 The demo: one complete loop
 
-1. Show a real wearable feed reaching the dashboard and saving a synchronized session.
-2. Show activity and recovery with the current predictor overlaid. Use a labeled replay if a live trajectory takes too long.
-3. Trigger a manual distress event or labeled replay scenario. Show its evidence in the attention queue.
-4. Have the operator request a check and acknowledge the response. If an actuator exists, demonstrate a harmless external indicator after explicit approval.
+1. Show both live wearable feeds reaching the laptop through the mesh root and saving a synchronized session.
+2. Show heart-rate and movement trends, movement-matched baselines, and estimated or corrected map positions. Label replayed or synthetic data when used.
+3. Trigger a sustained heart-rate abnormality and show its evidence and freshness in the attention queue; have the operator mark a person critical and set priority.
+4. Show the proposed route, adjust the extra-distance limit in the dashboard, and demonstrate an optional lower-priority stop entering or leaving the route. Have the operator acknowledge/check the person and record the response.
 5. Show continued monitoring and the saved event history. Open one benchmark episode showing how an agent improved a predictor.
 
 Display **LIVE / REPLAY / SYNTHETIC** on the relevant views. Demonstrating an acknowledgment or actuator does not establish a therapeutic effect. Physical drug delivery remains future work.
@@ -90,7 +98,7 @@ Display **LIVE / REPLAY / SYNTHETIC** on the relevant views. Demonstrating an ac
 
 **Official prompt anchor:** the organizer’s [build guidelines](https://2026sddefense-dcs5018.slack.com/archives/C0C3LG6PKRB/p1790278909686629) explicitly include **Operational Phenotyping with Minimal Sensors**. It asks for measurements that support personnel decisions while minimizing what a warfighter must wear, charge, and maintain. Signal processing and biohardware optimization are explicitly listed demo types.
 
-**Why our design follows that prompt:** use a small wearable; compare each person with their own modeled response; show the evidence that prompts an operator check; measure predictive improvement and device burden. This is the strongest verified event-specific justification for the product. Injury triage is a longer-term application; an exertion/recovery pilot establishes only its tested capability.
+**Why our design follows that prompt:** use a small wearable; compare each person with their own modeled response; show the evidence that prompts an operator check; measure predictive improvement and device burden. This is the strongest verified event-specific justification for the product. The demo can route to operator-marked priorities; clinical injury triage remains a longer-term application, and an exertion/recovery pilot establishes only its tested capability.
 
 **Suggested opening:** “We’re tackling the operational-phenotyping prompt: help a team leader see who needs a check using a small wearable. Our dashboard follows each person’s exertion and recovery, while AI agents build personalized predictive models from those same recordings. We test those programs on sessions they have never seen.”
 
@@ -127,12 +135,18 @@ Planning estimates assume two people and working tools; they are not promises. T
 | Build window | Deliverable | Proof before moving on |
 | --- | --- | --- |
 | Hours 0–2 | Confirm hardware and smallest supported task | A saved usable signal with timestamps |
-| Hours 2–6 | Gateway, recording, dashboard, manual distress loop | A real event reaches the correct person and is acknowledged |
+| Hours 2–6 | Mesh gateway, recording, dashboard, HR abnormality and route controls | Both node feeds reach the laptop; an alert can be reviewed and route updates when the detour limit changes |
 | Hours 6–12 | Repeat recordings and numerical baseline; benchmark work can proceed alongside product work | Separate sessions and a baseline prediction on an unseen session |
 | Hours 12–20 | Prototype virtual participants, agent episode, evaluation | Executable submission and saved evaluation artifacts |
 | Hours 20–24 | Freeze demo, rehearse, capture backup | Working product loop, labeled evidence, reproducible results |
 
 Collect only voluntary, comfortable activity recordings; record the activity rather than prescribing exertion from the model. Broad participant validation extends beyond the hackathon. If only one person or a few sessions are available, present a feasibility pilot. Fine-tuning is a separately owned workstream whose timing depends on Nikhil's decision.
+
+### 1.8 V0 integration checks and limits
+
+Before calling the wearable-to-command loop complete, demonstrate both Verity Sense feeds, IMU movement classes, and telemetry reaching the laptop through a multi-hop path. Confirm baseline accumulation and a sustained-abnormality alert; operator-set critical status and priority; acknowledgment and response logging; and clear stale/offline status when a node disconnects. Verify laptop-location/manual-origin fallback, corrected-position labeling, route recalculation when the extra-distance limit changes, and graceful behavior when the online map or routing service is unavailable. Label all live, replayed, and synthetic data; save the session log for review.
+
+This two-node demo does not establish medical accuracy, injury detection, reliable GPS-denied localization, or operational mesh range. IMU position estimates on an arm or chest can drift substantially; preserve estimated/corrected labels and leave priority and response decisions with the operator.
 
 ## 2. Phase 2 — physiology research workspace, benchmark, and post-training environments
 

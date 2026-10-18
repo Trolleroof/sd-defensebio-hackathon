@@ -1,0 +1,318 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_LSM6DSOX.h>
+
+#include <esp_event.h>
+#include <esp_mac.h>
+#include <esp_mesh.h>
+#include <esp_netif.h>
+#include <esp_wifi.h>
+#include <nvs_flash.h>
+#include <freertos/semphr.h>
+#include <string.h>
+
+// Build once as the command root, then as a wearable for both sensor boards.
+#define ROLE_SENSOR 0
+#define ROLE_ROOT 1
+#ifndef NODE_ROLE
+#define NODE_ROLE ROLE_SENSOR
+#endif
+
+namespace {
+constexpr uint32_t kPacketMagic = 0x494D5531;  // "IMU1"
+constexpr uint8_t kSchemaVersion = 1;
+constexpr uint8_t kMaxRelayHops = 1;
+constexpr uint8_t kMeshChannel = 6;
+constexpr uint32_t kSamplePeriodMs = 100;
+constexpr uint32_t kSensorStatusPeriodMs = 1000;
+constexpr int kMeshRxTimeoutMs = 1000;
+
+// These values must be identical on all three boards.
+constexpr uint8_t kMeshId[6] = {0x44, 0x42, 0x50, 0x48, 0x59, 0x31};
+constexpr char kMeshPassword[] = "demoMeshPass";
+
+struct __attribute__((packed)) MeshPacket {
+  uint32_t magic;
+  uint8_t schema_version;
+  uint8_t hop_count;
+  uint8_t sample_valid;
+  uint8_t wake;
+  uint32_t sequence;
+  uint32_t uptime_ms;
+  uint8_t node_mac[6];
+  float accel_m_s2[3];
+  float gyro_rad_s[3];
+  float imu_temp_c;
+  uint32_t steps;
+  int16_t hr_bpm;       // -1 until the Verity Sense BLE stream is added.
+  uint8_t hr_valid;
+};
+
+static_assert(sizeof(MeshPacket) < MESH_MTU, "Mesh packet exceeds ESP-WIFI-MESH MTU");
+
+Adafruit_LSM6DSOX imu;
+bool imuReady = false;
+portMUX_TYPE parentMux = portMUX_INITIALIZER_UNLOCKED;
+SemaphoreHandle_t meshSendMutex = nullptr;
+bool parentReady = false;
+mesh_addr_t parentAddress{};
+uint8_t nodeMac[6]{};
+uint32_t sequenceNumber = 0;
+uint32_t lastSensorStatusMs = 0;
+uint32_t lastSensorDiagMs = 0;
+
+void handleMeshEvent(void *, esp_event_base_t, int32_t eventId, void *eventData) {
+  if (eventId == MESH_EVENT_PARENT_CONNECTED) {
+    auto *connected = static_cast<mesh_event_connected_t *>(eventData);
+    portENTER_CRITICAL(&parentMux);
+    memcpy(parentAddress.addr, connected->connected.bssid, sizeof(parentAddress.addr));
+    parentReady = true;
+    portEXIT_CRITICAL(&parentMux);
+    Serial.println("{\"type\":\"mesh_parent_connected\"}");
+  } else if (eventId == MESH_EVENT_PARENT_DISCONNECTED) {
+    portENTER_CRITICAL(&parentMux);
+    parentReady = false;
+    portEXIT_CRITICAL(&parentMux);
+    Serial.println("{\"type\":\"mesh_parent_disconnected\"}");
+  } else if (eventId == MESH_EVENT_NO_PARENT_FOUND) {
+    Serial.println("{\"type\":\"mesh_no_parent_found\"}");
+  } else if (eventId == MESH_EVENT_CHILD_CONNECTED) {
+    Serial.println("{\"type\":\"mesh_child_connected\"}");
+  } else if (eventId == MESH_EVENT_CHILD_DISCONNECTED) {
+    Serial.println("{\"type\":\"mesh_child_disconnected\"}");
+  }
+}
+
+void initNvs() {
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
+}
+
+void initMesh() {
+  esp_err_t netifErr = esp_netif_init();
+  if (netifErr != ESP_OK && netifErr != ESP_ERR_INVALID_STATE) {
+    ESP_ERROR_CHECK(netifErr);
+  }
+  esp_err_t eventLoopErr = esp_event_loop_create_default();
+  if (eventLoopErr != ESP_OK && eventLoopErr != ESP_ERR_INVALID_STATE) {
+    ESP_ERROR_CHECK(eventLoopErr);
+  }
+
+  static esp_netif_t *meshStaNetif = nullptr;
+  ESP_ERROR_CHECK(esp_netif_create_default_wifi_mesh_netifs(&meshStaNetif, nullptr));
+
+  wifi_init_config_t wifiConfig = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&wifiConfig));
+  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+  ESP_ERROR_CHECK(esp_wifi_start());
+
+  ESP_ERROR_CHECK(esp_mesh_init());
+  ESP_ERROR_CHECK(esp_event_handler_register(
+      MESH_EVENT, ESP_EVENT_ANY_ID, &handleMeshEvent, nullptr));
+  ESP_ERROR_CHECK(esp_mesh_set_topology(MESH_TOPO_CHAIN));
+  ESP_ERROR_CHECK(esp_mesh_set_max_layer(3));
+  ESP_ERROR_CHECK(esp_mesh_fix_root(true));
+  ESP_ERROR_CHECK(esp_mesh_set_type(NODE_ROLE == ROLE_ROOT ? MESH_ROOT : MESH_NODE));
+  ESP_ERROR_CHECK(esp_mesh_set_ap_authmode(WIFI_AUTH_WPA2_PSK));
+
+  mesh_cfg_t meshConfig = MESH_INIT_CONFIG_DEFAULT();
+  memcpy(meshConfig.mesh_id.addr, kMeshId, sizeof(kMeshId));
+  meshConfig.channel = kMeshChannel;
+  meshConfig.router.ssid_len = 0;  // Self-networking: no Wi-Fi router required.
+  meshConfig.mesh_ap.max_connection = 1;
+  meshConfig.mesh_ap.nonmesh_max_connection = 0;
+  memcpy(meshConfig.mesh_ap.password, kMeshPassword, sizeof(kMeshPassword) - 1);
+  ESP_ERROR_CHECK(esp_mesh_set_config(&meshConfig));
+  ESP_ERROR_CHECK(esp_mesh_start());
+}
+
+bool copyParent(mesh_addr_t &out) {
+  portENTER_CRITICAL(&parentMux);
+  bool ready = parentReady;
+  if (ready) memcpy(out.addr, parentAddress.addr, sizeof(out.addr));
+  portEXIT_CRITICAL(&parentMux);
+  return ready;
+}
+
+esp_err_t sendToParent(MeshPacket &packet) {
+  mesh_addr_t parent{};
+  if (!copyParent(parent)) return ESP_ERR_MESH_DISCONNECTED;
+
+  mesh_data_t data{};
+  data.data = reinterpret_cast<uint8_t *>(&packet);
+  data.size = sizeof(packet);
+  data.proto = MESH_PROTO_BIN;
+  data.tos = MESH_TOS_P2P;
+  xSemaphoreTake(meshSendMutex, portMAX_DELAY);
+  esp_err_t err = esp_mesh_send(&parent, &data, MESH_DATA_P2P, nullptr, 0);
+  xSemaphoreGive(meshSendMutex);
+  return err;
+}
+
+void printMac(const uint8_t mac[6], char out[13]) {
+  snprintf(out, 13, "%02X%02X%02X%02X%02X%02X",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+void printTelemetry(const MeshPacket &packet) {
+  char nodeId[13];
+  printMac(packet.node_mac, nodeId);
+
+  Serial.printf(
+      "{\"schema_version\":%u,\"type\":\"telemetry\",\"node_id\":\"%s\","
+      "\"sequence\":%lu,\"uptime_ms\":%lu,\"received_ms\":%lu,\"hop_count\":%u,"
+      "\"sensor_ok\":%s,",
+      packet.schema_version, nodeId,
+      static_cast<unsigned long>(packet.sequence),
+      static_cast<unsigned long>(packet.uptime_ms),
+      static_cast<unsigned long>(millis()), packet.hop_count,
+      packet.sample_valid ? "true" : "false");
+
+  if (packet.sample_valid) {
+    Serial.printf(
+        "\"accel_m_s2\":[%.3f,%.3f,%.3f],\"gyro_rad_s\":[%.3f,%.3f,%.3f],"
+        "\"imu_temp_c\":%.2f,\"steps\":%lu,\"wake\":%s,",
+        packet.accel_m_s2[0], packet.accel_m_s2[1], packet.accel_m_s2[2],
+        packet.gyro_rad_s[0], packet.gyro_rad_s[1], packet.gyro_rad_s[2],
+        packet.imu_temp_c, static_cast<unsigned long>(packet.steps),
+        packet.wake ? "true" : "false");
+  } else {
+    Serial.print(
+        "\"accel_m_s2\":null,\"gyro_rad_s\":null,\"imu_temp_c\":null,"
+        "\"steps\":null,\"wake\":null,");
+  }
+
+  if (packet.hr_valid) Serial.printf("\"hr_bpm\":%d}\n", packet.hr_bpm);
+  else Serial.println("\"hr_bpm\":null}");
+}
+
+void meshReceiveTask(void *) {
+  uint8_t receiveBuffer[sizeof(MeshPacket)];
+  mesh_addr_t from{};
+
+  while (true) {
+    mesh_data_t data{};
+    data.data = receiveBuffer;
+    data.size = sizeof(receiveBuffer);
+    data.proto = MESH_PROTO_BIN;
+    data.tos = MESH_TOS_P2P;
+    int flags = 0;
+
+    esp_err_t err = esp_mesh_recv(
+        &from, &data, kMeshRxTimeoutMs, &flags, nullptr, 0);
+    if (err != ESP_OK || data.size != sizeof(MeshPacket)) continue;
+
+    MeshPacket packet{};
+    memcpy(&packet, receiveBuffer, sizeof(packet));
+    if (packet.magic != kPacketMagic || packet.schema_version != kSchemaVersion ||
+        packet.hop_count > kMaxRelayHops || packet.sample_valid > 1 ||
+        packet.wake > 1 || packet.hr_valid > 1) {
+      continue;
+    }
+
+    if (esp_mesh_is_root()) {
+      printTelemetry(packet);
+    } else if (packet.hop_count < kMaxRelayHops) {
+      ++packet.hop_count;
+      sendToParent(packet);
+    }
+  }
+}
+
+void initImu() {
+  Wire.begin();
+  imuReady = imu.begin_I2C(0x6A) || imu.begin_I2C(0x6B);
+  if (!imuReady) return;
+
+  imu.setAccelDataRate(LSM6DS_RATE_104_HZ);
+  imu.setAccelRange(LSM6DS_ACCEL_RANGE_4_G);
+  imu.setGyroDataRate(LSM6DS_RATE_104_HZ);
+  imu.setGyroRange(LSM6DS_GYRO_RANGE_500_DPS);
+  imu.enablePedometer(true);
+  imu.enableWakeup(true, 1, 12);
+}
+
+void sendImuSample() {
+  MeshPacket packet{};
+  packet.magic = kPacketMagic;
+  packet.schema_version = kSchemaVersion;
+  packet.sequence = sequenceNumber++;
+  packet.uptime_ms = millis();
+  memcpy(packet.node_mac, nodeMac, sizeof(nodeMac));
+  packet.hr_bpm = -1;
+
+  if (imuReady) {
+    sensors_event_t accel, gyro, temp;
+    packet.sample_valid = imu.getEvent(&accel, &gyro, &temp);
+    if (packet.sample_valid) {
+      packet.accel_m_s2[0] = accel.acceleration.x;
+      packet.accel_m_s2[1] = accel.acceleration.y;
+      packet.accel_m_s2[2] = accel.acceleration.z;
+      packet.gyro_rad_s[0] = gyro.gyro.x;
+      packet.gyro_rad_s[1] = gyro.gyro.y;
+      packet.gyro_rad_s[2] = gyro.gyro.z;
+      packet.imu_temp_c = temp.temperature;
+      packet.steps = imu.readPedometer();
+      packet.wake = imu.shake();
+    }
+  }
+
+  sendToParent(packet);
+}
+}  // namespace
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  esp_err_t macErr = esp_read_mac(nodeMac, ESP_MAC_WIFI_STA);
+  ESP_ERROR_CHECK(macErr);
+  initNvs();
+
+  meshSendMutex = xSemaphoreCreateMutex();
+  if (meshSendMutex == nullptr) {
+    Serial.println("Could not create mesh send mutex.");
+    while (true) delay(1000);
+  }
+
+#if NODE_ROLE == ROLE_SENSOR
+  initImu();
+#endif
+
+  initMesh();
+  if (xTaskCreate(meshReceiveTask, "mesh_rx", 6144, nullptr, 5, nullptr) != pdPASS) {
+    Serial.println("Could not start mesh receive task.");
+    while (true) delay(1000);
+  }
+}
+
+void loop() {
+#if NODE_ROLE == ROLE_SENSOR
+  const uint32_t now = millis();
+  const uint32_t interval = imuReady ? kSamplePeriodMs : kSensorStatusPeriodMs;
+  if (static_cast<uint32_t>(now - lastSensorStatusMs) >= interval) {
+    lastSensorStatusMs = now;
+    sendImuSample();
+  }
+  if (static_cast<uint32_t>(now - lastSensorDiagMs) >= 2000) {
+    lastSensorDiagMs = now;
+    mesh_addr_t parent{};
+    Serial.printf(
+        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"parent_connected\":%s}\n",
+        imuReady ? "true" : "false", copyParent(parent) ? "true" : "false");
+  }
+#else
+  static uint32_t lastStatusMs = 0;
+  const uint32_t now = millis();
+  if (static_cast<uint32_t>(now - lastStatusMs) >= 2000) {
+    lastStatusMs = now;
+    Serial.printf("{\"type\":\"mesh_status\",\"role\":\"root\",\"node_count\":%d}\n",
+                  esp_mesh_get_total_node_num());
+  }
+  delay(20);
+#endif
+}
