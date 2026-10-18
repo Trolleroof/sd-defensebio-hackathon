@@ -1,0 +1,2 @@
+# Preserve original source-recording bytes and recognize CRLF line endings.
+sources/physionet-wearable/*.csv -text whitespace=cr-at-eol
