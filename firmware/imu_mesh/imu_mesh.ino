@@ -124,9 +124,19 @@ void polarTask(void *) {
         BLERemoteService *service = client->getService(hrService);
         BLERemoteCharacteristic *measurement = service ? service->getCharacteristic(hrMeasurement) : nullptr;
         if (measurement && measurement->canNotify()) {
+          const uint32_t subscribedAt = millis();
           measurement->registerForNotify(onHeartRate);
           Serial.printf("{\"type\":\"polar_connected\",\"id\":\"%08lX\"}\n", static_cast<unsigned long>(POLAR_ID));
-          while (client->isConnected()) vTaskDelay(pdMS_TO_TICKS(500));
+          while (client->isConnected()) {
+            vTaskDelay(pdMS_TO_TICKS(500));
+            portENTER_CRITICAL(&hrMux);
+            const uint32_t last = lastHrMs;
+            portEXIT_CRITICAL(&hrMux);
+            if (static_cast<uint32_t>(millis() - (last ? last : subscribedAt)) > 10000) {
+              Serial.println("{\"type\":\"polar_notifications_stale\"}");
+              break;
+            }
+          }
         }
         client->disconnect();
       }

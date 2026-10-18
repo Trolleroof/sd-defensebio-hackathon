@@ -91,6 +91,8 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 | `mesh_child_disconnected` | none | root | a wearable left |
 | `sensor_status` | `imu_ok: bool`, `parent_connected: bool` | wearable | every 5 s |
 | `polar_connected` | `id: string` (8 hex chars) | wearable | HR notifications subscribed |
+| `polar_notifications_stale` | none | wearable | no HR notification for 10 s; BLE client reconnects |
+| `polar_disconnected` | none | wearable | BLE client disconnected |
 
 Wearable-only lines appear on that wearable's own USB port, never on the root's.
 
