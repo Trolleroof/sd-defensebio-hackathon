@@ -84,6 +84,7 @@ uint32_t lastHrMs = 0;
 #if HR_SOURCE_SPARKFUN
 SparkFun_Bio_Sensor_Hub bioHub(D4, D5);  // RESET, MFIO; both are 3.3 V GPIO.
 bool sparkfunReady = false;
+uint8_t sparkfunError = 0;
 uint32_t lastBioReadMs = 0;
 #else
 portMUX_TYPE hrMux = portMUX_INITIALIZER_UNLOCKED;
@@ -416,6 +417,7 @@ void setup() {
 #if HR_SOURCE_SPARKFUN
   const uint8_t beginStatus = bioHub.begin();
   const uint8_t configStatus = beginStatus ? beginStatus : bioHub.configBpm(MODE_ONE);
+  sparkfunError = configStatus;
   sparkfunReady = configStatus == 0;
   Serial.printf("{\"type\":\"sparkfun_hr_status\",\"ready\":%s,\"error\":%u}\n",
                 sparkfunReady ? "true" : "false", configStatus);
@@ -468,9 +470,16 @@ void loop() {
   if (static_cast<uint32_t>(now - lastSensorDiagMs) >= 5000) {
     lastSensorDiagMs = now;
     mesh_addr_t parent{};
+#if HR_SOURCE_SPARKFUN
+    Serial.printf(
+        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"sparkfun_hr_ready\":%s,\"sparkfun_hr_error\":%u,\"hr_valid\":%s,\"parent_connected\":%s}\n",
+        imuReady ? "true" : "false", sparkfunReady ? "true" : "false",
+        sparkfunError, latestHr > 0 ? "true" : "false", copyParent(parent) ? "true" : "false");
+#else
     Serial.printf(
         "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"parent_connected\":%s}\n",
         imuReady ? "true" : "false", copyParent(parent) ? "true" : "false");
+#endif
   }
   delay(20);
 #else

@@ -89,7 +89,7 @@ One JSON object per line, `\n`-terminated. ESP-IDF logs and other non-JSON text 
 | `mesh_no_parent_found` | none | wearable | scan found no parent |
 | `mesh_child_connected` | none | root | a wearable joined |
 | `mesh_child_disconnected` | none | root | a wearable left |
-| `sensor_status` | `imu_ok: bool`, `parent_connected: bool` | wearable | every 5 s |
+| `sensor_status` | `imu_ok: bool`, `parent_connected: bool`; wired-SparkFun build also has `sparkfun_hr_ready: bool`, `sparkfun_hr_error: int`, `hr_valid: bool` | wearable | every 5 s |
 | `polar_connected` | `id: string` (8 hex chars) | wearable | HR notifications subscribed |
 | `polar_notifications_stale` | none | wearable | no HR notification for 10 s; BLE client reconnects |
 | `polar_disconnected` | none | wearable | BLE client disconnected |
