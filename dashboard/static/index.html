@@ -351,11 +351,11 @@ function renderDetail() {
     root.innerHTML = `
       <div class="d-head">
         <h2>${esc(p.name)}</h2><span class="sub">${esc(p.role)}</span><span class="tag ${p.source}">${p.source}</span>
-        <div class="actions">${p.id.startsWith("mesh_") ? `<input class="origin-input" id="headingInput" type="number" min="0" max="359" step="1" placeholder="Heading °" aria-label="Heading in degrees clockwise from north"><button class="btn" id="headingBtn">Set heading</button>` : ""}${p.source !== "SYNTHETIC" ? `<button class="btn" id="placeBtn">Correct position</button>` : ""}<button class="btn danger" id="markDistress">Mark distress</button></div>
+        <div class="actions">${p.id.startsWith("mesh_") ? `<input class="origin-input" id="headingInput" type="number" min="0" max="359" step="1" placeholder="Heading °" aria-label="Heading in degrees clockwise from north"><button class="btn" id="headingBtn">Set heading</button><button class="btn" id="recalibrateBtn">Recalibrate</button>` : ""}${p.source !== "SYNTHETIC" ? `<button class="btn" id="placeBtn">Correct position</button>` : ""}<button class="btn danger" id="markDistress">Mark distress</button></div>
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
-        ${p.id.startsWith("mesh_") ? `<div class="metric"><div class="k">Estimated speed</div><div class="v" id="mSpeed"></div></div>` : ""}
+        ${p.id.startsWith("mesh_") ? `<div class="metric"><div class="k">Location calibration</div><div class="v" id="mCalibration"></div></div><div class="metric"><div class="k">Estimated speed</div><div class="v" id="mSpeed"></div></div>` : ""}
         <div class="metric"><div class="k">${p.imu ? "Activity baseline" : "Expected"}</div><div class="v" id="mExp"></div></div>
         <div class="metric"><div class="k">Difference</div><div class="v" id="mDev"></div></div>
         ${p.imu ? `<div class="metric"><div class="k">Activity</div><div class="v" id="mActivity"></div></div>` : ""}
@@ -391,6 +391,12 @@ function renderDetail() {
       const degrees = root.querySelector("#headingInput").value;
       if (degrees !== "" && +degrees >= 0 && +degrees < 360) send({ type: "heading", person: p.id, degrees: +degrees });
     };
+    const rb = root.querySelector("#recalibrateBtn");
+    if (rb) rb.onclick = () => {
+      send({ type: "recalibrate", person: p.id });
+      set("#mCalibration", `30<small>s: hold still</small>`);
+      set("#mSpeed", "—");
+    };
     root.querySelectorAll(".range button").forEach((b) => b.onclick = () => { S.range = +b.dataset.r; renderDetail(); });
   }
   root.querySelectorAll(".range button").forEach((b) => b.classList.toggle("on", +b.dataset.r === S.range));
@@ -398,7 +404,10 @@ function renderDetail() {
   const dev = r.hr != null && r.exp != null ? r.hr - r.exp : null;
   const set = (id, html, cls = "") => { const el = root.querySelector(id); el.innerHTML = html; el.className = "v " + cls; };
   set("#mHr", `${fmt(r.hr)}<small>bpm</small>`, r.status === "distress" ? "crit" : "");
-  if (p.id.startsWith("mesh_")) set("#mSpeed", r.location_calibration === "ready" ? r.speed_m_s == null ? "<small>No current IMU data</small>" : `${fmt(r.speed_m_s, 2)}<small>m/s</small>` : r.location_calibration === "calibrating" ? `<small>Hold still ${r.location_calibration_remaining_s ?? 30}s</small>` : "<small>Hold still to calibrate</small>");
+  if (p.id.startsWith("mesh_")) {
+    set("#mCalibration", r.location_calibration === "ready" ? "Ready" : r.location_calibration === "waiting for IMU" ? "<small>Waiting for IMU</small>" : `${r.location_calibration_remaining_s ?? 30}<small>s: hold still</small>`);
+    set("#mSpeed", r.location_calibration === "ready" ? r.speed_m_s == null ? "<small>No current IMU data</small>" : `${fmt(r.speed_m_s, 2)}<small>m/s</small>` : "—");
+  }
   set("#mExp", `${fmt(r.exp)}<small>bpm</small>`);
   set("#mDev", dev == null ? "—" : `${dev > 0 ? "+" : ""}${fmt(dev)}<small>bpm</small>`, dev != null && Math.abs(dev) > S.meta.deviation_bpm ? "warn" : "");
   if (p.imu) {

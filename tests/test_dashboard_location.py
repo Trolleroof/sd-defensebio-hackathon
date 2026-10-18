@@ -99,8 +99,40 @@ class DashboardLocationTest(unittest.TestCase):
             person.advance(1, 21200 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
         self.assertIsNotNone(person.accel_bias)
 
+    def test_location_calibration_countdown(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+        team.add(person)
+        person.last_sample = time.time()
+        self.assertEqual(team.tick()["people"][0]["location_calibration"], "hold still")
+        for i in range(50):
+            person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+        row = team.tick()["people"][0]
+        self.assertEqual((row["location_calibration"], row["location_calibration_remaining_s"]), ("calibrating", 21))
+
 
 class DashboardOriginApiTest(unittest.IsolatedAsyncioTestCase):
+    async def test_recalibrate_message_restarts_only_selected_wearer(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
+        other = Person("mesh_2", "Other", "Other", "LIVE", imu=True)
+        team.add(person)
+        team.add(other)
+        person.accel_bias, person.velocity_n, person.calibration_start_ms = (0.1, 0.2), 2.0, 1000
+        other.accel_bias = (0.3, 0.4)
+        app = web.Application()
+        app["team"] = team
+        app.router.add_get("/ws", ws_handler)
+        async with TestClient(TestServer(app)) as client:
+            ws = await client.ws_connect("/ws")
+            await ws.receive_json()
+            await ws.send_json({"type": "recalibrate", "person": person.id})
+            await ws.close()
+        self.assertIsNone(person.accel_bias)
+        self.assertIsNone(person.calibration_start_ms)
+        self.assertEqual(person.velocity_n, 0)
+        self.assertEqual(other.accel_bias, (0.3, 0.4))
+
     async def test_browser_origin_and_heading_messages(self):
         team = Team(None, (0, 0))
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
