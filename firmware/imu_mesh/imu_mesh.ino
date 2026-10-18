@@ -29,8 +29,8 @@ constexpr uint32_t kPacketMagic = 0x494D5531;  // "IMU1"
 constexpr uint8_t kSchemaVersion = 1;
 constexpr uint8_t kMaxRelayHops = 1;
 constexpr uint8_t kMeshChannel = 6;
-constexpr uint32_t kSamplePeriodMs = 100;
-constexpr uint32_t kSensorStatusPeriodMs = 1000;
+constexpr uint32_t kSamplePeriodMs = 1000;
+constexpr uint32_t kSensorStatusPeriodMs = 5000;
 constexpr int kMeshRxTimeoutMs = 1000;
 
 // These values must be identical on all three boards.
@@ -142,10 +142,12 @@ void handleMeshEvent(void *, esp_event_base_t, int32_t eventId, void *eventData)
     portEXIT_CRITICAL(&parentMux);
     Serial.println("{\"type\":\"mesh_parent_connected\"}");
   } else if (eventId == MESH_EVENT_PARENT_DISCONNECTED) {
+    auto *disconnected = static_cast<mesh_event_disconnected_t *>(eventData);
     portENTER_CRITICAL(&parentMux);
     parentReady = false;
     portEXIT_CRITICAL(&parentMux);
-    Serial.println("{\"type\":\"mesh_parent_disconnected\"}");
+    // Reason 200 = beacon timeout (radio contention/range), 2/4 = auth/assoc expire.
+    Serial.printf("{\"type\":\"mesh_parent_disconnected\",\"reason\":%u}\n", disconnected->reason);
   } else if (eventId == MESH_EVENT_NO_PARENT_FOUND) {
     Serial.println("{\"type\":\"mesh_no_parent_found\"}");
   } else if (eventId == MESH_EVENT_CHILD_CONNECTED) {
@@ -186,8 +188,8 @@ void initMesh() {
   checkInit("mesh_init", esp_mesh_init());
   checkInit("mesh_event_register", esp_event_handler_register(
       MESH_EVENT, ESP_EVENT_ANY_ID, &handleMeshEvent, nullptr));
-  checkInit("mesh_topology", esp_mesh_set_topology(MESH_TOPO_CHAIN));
-  checkInit("mesh_max_layer", esp_mesh_set_max_layer(3));
+  checkInit("mesh_topology", esp_mesh_set_topology(MESH_TOPO_TREE));
+  checkInit("mesh_max_layer", esp_mesh_set_max_layer(2));
   checkInit("mesh_fix_root", esp_mesh_fix_root(true));
   checkInit("mesh_type", esp_mesh_set_type(NODE_ROLE == ROLE_ROOT ? MESH_ROOT : MESH_IDLE));
   checkInit("mesh_authmode", esp_mesh_set_ap_authmode(WIFI_AUTH_WPA2_PSK));
@@ -199,7 +201,8 @@ void initMesh() {
   meshConfig.router.ssid_len = sizeof(kRouterSsid) - 1;
   memcpy(meshConfig.router.ssid, kRouterSsid, meshConfig.router.ssid_len);
   memcpy(meshConfig.router.password, kRouterPassword, sizeof(kRouterPassword) - 1);
-  meshConfig.mesh_ap.max_connection = 1;
+  // Star: both wearables join the root directly; layer 2 is a leaf, so no parent swapping.
+  meshConfig.mesh_ap.max_connection = 2;
   meshConfig.mesh_ap.nonmesh_max_connection = 0;
   memcpy(meshConfig.mesh_ap.password, kMeshPassword, sizeof(kMeshPassword) - 1);
   checkInit("mesh_config", esp_mesh_set_config(&meshConfig));
@@ -388,17 +391,18 @@ void loop() {
     lastSensorStatusMs = now;
     sendImuSample();
   }
-  if (static_cast<uint32_t>(now - lastSensorDiagMs) >= 2000) {
+  if (static_cast<uint32_t>(now - lastSensorDiagMs) >= 5000) {
     lastSensorDiagMs = now;
     mesh_addr_t parent{};
     Serial.printf(
         "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"parent_connected\":%s}\n",
         imuReady ? "true" : "false", copyParent(parent) ? "true" : "false");
   }
+  delay(20);
 #else
   static uint32_t lastStatusMs = 0;
   const uint32_t now = millis();
-  if (static_cast<uint32_t>(now - lastStatusMs) >= 2000) {
+  if (static_cast<uint32_t>(now - lastStatusMs) >= 5000) {
     lastStatusMs = now;
     Serial.printf("{\"type\":\"mesh_status\",\"role\":\"root\",\"node_count\":%d}\n",
                   esp_mesh_get_total_node_num());
