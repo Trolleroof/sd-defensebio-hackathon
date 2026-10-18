@@ -9,6 +9,8 @@ from pathlib import Path
 
 from . import judging, scoring, splits
 from .importer import prepare
+from research_env.core.common import write
+
 from .session import Session, build_split, evaluate, TASK_MANIFEST, TEMPLATE, build_train_manifest, _write
 
 BASELINES = ("elapsed_time", "ridge_lag", "gradient_boosting", "thermal_state")
@@ -89,8 +91,6 @@ def main(argv=None):
     p.add_argument("--model", default="sonnet"); p.add_argument("--dev-calls", type=int, default=5)
     p.add_argument("--wall-min", type=int, default=30)
     p = sub.add_parser("judge-export"); p.add_argument("session"); p.add_argument("out")
-    p = sub.add_parser("judge-import"); p.add_argument("packets"); p.add_argument("verdicts"); p.add_argument("out")
-    p = sub.add_parser("judge-run"); p.add_argument("packets"); p.add_argument("config"); p.add_argument("out")
     a = ap.parse_args(argv)
     if a.cmd == "prepare":
         m = prepare(a.source_root, a.output_root, a.split, allow_network=not a.offline)
@@ -117,15 +117,8 @@ def main(argv=None):
         print(json.dumps(run_pilot(Path(a.prepared), Path(a.session), a.model, a.dev_calls, a.wall_min), indent=1))
     elif a.cmd == "judge-export":
         packets = judging.export_packets(Session(Path(a.session)))
-        Path(a.out).write_text(json.dumps(packets, indent=1))
-        print(f"{len(packets['packets'])} packets; llm_judge_status={packets['llm_judge_status']}")
-    elif a.cmd == "judge-import":
-        rep = judging.import_verdicts(json.loads(Path(a.packets).read_text()),
-                                      json.loads(Path(a.verdicts).read_text()))
-        Path(a.out).write_text(json.dumps(rep, indent=1)); print(json.dumps(rep["summary"], indent=1))
-    elif a.cmd == "judge-run":
-        rep = judging.run_provider(json.loads(Path(a.packets).read_text()), json.loads(Path(a.config).read_text()))
-        Path(a.out).write_text(json.dumps(rep, indent=1)); print(json.dumps(rep["summary"], indent=1))
+        write(a.out, packets)        # shared format: `python -m research_env judge-run|judge-import` read it
+        print(f"{len(packets)} packets; llm_judge_status=pending")
 
 
 if __name__ == "__main__":

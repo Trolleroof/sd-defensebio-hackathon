@@ -19,12 +19,14 @@ Everything in `research_env/tasks/heat/` is owned by Set 2. The only edit outsid
 | `workspace_template/` | Participant `TASK.md`, `DATA_DICTIONARY.md`, `heatlib.py`, four baselines, `tools/heat.py` |
 | `worker.py` | **Interim.** Isolated train/predict worker (sandbox-exec, JSON only, one fresh module per person) |
 | `session.py` | **Interim.** Budgets, hash-chained experiment events, dev feedback, incumbents, private replay |
-| `judging.py` | **Interim.** Decision and final-selection packets, `physiology-research-judge-v1` validator, process score, Anthropic adapter |
+| `judging.py` | Heat adapter onto Set 1's shared judge (`research_env/judging`): turns heat events into public evidence records and builds shared packets |
 | `pilot.py` | **Interim.** Live-agent pilot: `claude -p` in an OS sandbox, file-inbox controller |
 | `cli.py`, `__main__.py` | Command line |
 | `tests/test_heat.py` | 26 focused checks |
 
-The three **interim** modules exist only because Set 1's `research_env/core` and `research_env/judging` did not exist yet. They follow the proposed v1 interface (`prepare`, `train`, `predict`, `score`). The task-specific modules (importer, requests, scoring, baselines, workspace) are designed to move to Set 1's runner unchanged.
+**Judging now runs on Set 1's shared judge** (merged from `main`, PR #4). Heat no longer has its own rubric, validator or provider: packets are built with `research_env.judging.judge.packet`, and Set 1's `judge-run` and `judge-import` commands read heat packet files unchanged.
+
+The **interim** worker, session and pilot modules remain. Set 1's `core/evaluation.py` imports pulse data and scoring directly, and its doc says heat and load need task adapters that do not exist yet. Adding that hook changes Set 1's interface, so it needs coordinating with Set 1 rather than editing their code from here. The task-specific modules (importer, requests, scoring, baselines, workspace) are designed to move onto the shared runner unchanged.
 
 ## 2. Reproduction
 
@@ -36,7 +38,8 @@ python3 -m research_env.tasks.heat create .heat-runs/prepared .heat-runs/session
 python3 -m research_env.tasks.heat pilot .heat-runs/prepared .heat-runs/pilot-01 --model sonnet --dev-calls 5 --wall-min 30
 python3 -m research_env.tasks.heat replay .heat-runs/pilot-01
 python3 -m research_env.tasks.heat judge-export .heat-runs/pilot-01 .heat-runs/pilot-01/judge_packets.json
-python3 -m research_env.tasks.heat judge-import packets.json verdicts.json judging.json
+python3 -m research_env judge-import .heat-runs/pilot-01/judge_packets.json .heat-runs/pilot-01/judging.json
+python3 -m research_env judge-run .heat-runs/pilot-01/judge_packets.json judge-config.json .heat-runs/pilot-01/judge-out --key-env PHYSIOLOGY_JUDGE_KEY
 ```
 
 - `prepare` copies the verified local evidence file when present. Otherwise it downloads from Figshare and verifies the md5 and sha256.
@@ -76,7 +79,7 @@ python3 -m research_env.tasks.heat judge-import packets.json verdicts.json judgi
 
 ## 3. Executed checks
 
-`python3 -m unittest discover -s research_env/tasks/heat/tests -t . -v` ran 26 checks, all passing, on 2026-10-17.
+`python3 -m unittest discover -s research_env/tasks/heat/tests -t . -v` runs 26 checks. All pass under both Homebrew Python 3.14 (numpy 2.4.4) and Set 1's pinned `.venv-research` (Python 3.13, `research_env/requirements.lock`, numpy 2.2.6). Baseline losses are identical on both. Set 1's `tests/test_research_env.py` (13 tests) also passes after the merge.
 
 - **Provenance:** known source cells (`AK9`, `C3`, `Y42`), cell lineage on every record, the exact masked-cell set with no replacement, and excluded channels absent.
 - **Person isolation:**
@@ -95,7 +98,13 @@ python3 -m research_env.tasks.heat judge-import packets.json verdicts.json judgi
 - **Leaky candidates:** worker reads of the private targets, the prepared data and the repo are all denied (`Operation not permitted`).
 - **Budgets:** failed calls count, the call cap is enforced, the wall-clock cap is enforced, a decision record is required, and feedback closes after submit.
 - **Artifact replay:** a clean retrain gives the same artifact hash and the same dev feedback. The event hash chain verifies, and checkpoint replay works.
-- **Judge:** decision packets exclude their own outcome and all later events, and contain no private path or session secret. The validator rejects bad scores, fabricated evidence IDs, a scored `final_selection_claims` on a decision packet, missing criteria and a wrong packet hash. Process-score arithmetic (criterion means 3/3/5/3/1 → 50) and partial coverage are checked. A mock provider exercises the repair path.
+- **Judge (through Set 1's shared judge):**
+  - every evidence record predates its packet's event
+  - a decision packet excludes its own outcome, and a later packet sees it only as a `development_result` record, which turns on `feedback_integration`
+  - packets contain no private path, session secret or private-test data
+  - the shared validator rejects bad scores, unknown evidence IDs, a scored inapplicable criterion, missing criteria and a wrong hash
+  - shared `summarize` reports pending, partial, and complete (all 4s → 75)
+  - a mock provider exercises the shared `judge_packet` repair path
 
 Evidence paths (all gitignored, not committed): `.heat-runs/prepared/dataset_manifest.json`, `.heat-runs/prepared/quality_log.jsonl`, `.heat-runs/baselines/baseline_report.json`.
 
@@ -132,11 +141,11 @@ This shows the loop works. It is not evidence of research ability. Artifacts are
 
 ### LLM judge: pending
 
-Packets were exported (2 for the pilot) with `llm_judge_status: pending`. No judge provider is configured and no judge calls were made. The Anthropic adapter exists, but it runs only with an explicit config and `ANTHROPIC_API_KEY`.
+The pilot's 2 packets were re-exported in the shared format. Set 1's `judge-import` reports them as `pending`, 0/2 judged. No judge provider is configured and no judge calls were made. Running one needs Set 1's `judge-run` with an explicit OpenAI-compatible config (endpoint, model, temperature, max_tokens, max_calls, max_total_tokens) and an authorized key.
 
 ## 5. Blockers and next gate
 
-- **Set 1 integration.** Port the worker, session and judging modules onto `research_env/core` and `research_env/judging` once those exist. The worker is macOS `sandbox-exec` only, and Python startup still reads system paths, so it is not a hardened multi-tenant sandbox. There is no pinned container image; the runtime is Python 3.14.4 with numpy 2.4.4.
+- **Set 1 runner integration.** Judging is done. The worker and session still need a task-adapter hook in `core/evaluation.py`, which Set 1 has to agree to. Once that exists, heat can also use Set 1's Docker image (`research_env/Dockerfile`). Until then, the heat worker is macOS `sandbox-exec` only. It allows reads of the interpreter's own prefixes, which a venv under `/Users` needs; explicitly denied roots stay denied. It is not a hardened multi-tenant sandbox.
 - **Pilot isolation.** Claude Code runs in an `(allow default)` profile with reads denied for the private root, the prepared data, the repo and the evidence directory. Network is open for model inference. The harness, which is outside the sandbox, also reads `~/.claude` user settings.
 - **Statistics.** 5 people per held-out split gives wide person-level bootstrap intervals. Interpreting results needs ≥ 3 agent seeds at the full budget (2 h, 30 calls), compared against frozen conventional search with the same budget. Conventional search is not implemented yet.
 - **Judge.** Configure an authorized provider and model, run it, then audit a stratified subset with two human reviewers before trusting any process score.

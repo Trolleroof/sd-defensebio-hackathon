@@ -61,9 +61,25 @@ def _q(p: str) -> str:
     return '"' + p.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _runtime_roots(denied) -> list[str]:
+    """Interpreter prefixes the worker must read (e.g. a venv under /Users).
+
+    A prefix that contains an explicitly denied root is refused rather than
+    allowed, so the runtime exception can never re-open controller data.
+    """
+    roots = sorted({str(Path(p).resolve()) for p in (sys.prefix, sys.base_prefix)})
+    for r in roots:
+        for d in denied:
+            if Path(d).resolve() == Path(r) or Path(r) in Path(d).resolve().parents:
+                raise RuntimeError(f"interpreter prefix {r} contains denied root {d}")
+    return roots
+
+
 def _profile(tmp: Path, denied) -> str:
     deny = {"/Users", "/tmp", "/private/tmp", "/var/folders", *map(str, denied)}
     rules = "\n".join(f"(deny file-read* (subpath {_q(d)}))" for d in sorted(deny))
+    runtime = "\n".join(f"(allow file-read* (subpath {_q(r)}))" for r in _runtime_roots(denied))
+    redeny = "\n".join(f"(deny file-read* (subpath {_q(str(d))}))" for d in sorted(map(str, denied)))
     return f"""(version 1)
 (deny default)
 (allow process*)
@@ -73,6 +89,8 @@ def _profile(tmp: Path, denied) -> str:
 (allow ipc-posix-shm)
 (allow file-read* (subpath "/"))
 {rules}
+{runtime}
+{redeny}
 (allow file-read* (subpath {_q(str(tmp))}))
 (allow file-write* (subpath {_q(str(tmp))}))
 (deny network*)
