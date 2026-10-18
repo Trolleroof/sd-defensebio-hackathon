@@ -8,3 +8,9 @@ runs/
 
 *.py[cod]
 .benchmark-runs/
+
+.research-data/
+
+.research-runs/
+
+.venv-research/
