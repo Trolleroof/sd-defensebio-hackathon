@@ -17,6 +17,8 @@ own outcome and every later event are excluded by construction (the shared
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from research_env.judging.judge import packet
 
 JUDGE_FOCUS = [
@@ -27,11 +29,29 @@ JUDGE_FOCUS = [
 ]
 
 
-def _action(e):
+SOURCE_CHARS = 30000
+
+
+def _source(session, cid):
+    """Participant-written candidate source (public), so validity is observable even without a diff."""
+    root = session.private / "candidates" / cid / "src"
+    provided = (session.public / "heatlib.py").read_bytes()
+    files = {}
+    for p in sorted(root.rglob("*.py")):
+        if p.relative_to(root) == Path("heatlib.py") and p.read_bytes() == provided:
+            files["heatlib.py"] = "(unchanged copy of the provided heatlib.py)"
+        else:
+            files[str(p.relative_to(root))] = p.read_text()[:SOURCE_CHARS]
+    return files
+
+
+def _action(e, session=None):
     out = {"type": e["type"], "candidate_id": e.get("candidate_id"), "elapsed_s": e["elapsed_s"]}
     if e["type"] == "dev_eval":
         out.update(decision=e["decision"], command=e["command"], seed=e["seed"], code_diff=e["code_diff"],
                    budget=e["budget"])
+        if session is not None:
+            out["candidate_source"] = _source(session, e["candidate_id"])
     elif e["type"] == "declare_incumbent":
         out.update(reason=e["reason"])
     elif e["type"] == "submit":
@@ -48,17 +68,19 @@ def export_packets(session) -> list:
     """Return shared-format packets: one decision packet per dev_eval/declare, one final-selection."""
     task = {"id": "task", "available_before": "e0000",
             "content": {"kind": "task", "task_md": (session.public / "TASK.md").read_text(),
+                        "session_budget": session.state["budget"],
+                        "session_budget_note": "actual limits for this session; they override TASK.md defaults",
                         "judge_focus": JUDGE_FOCUS}}
     evidence, packets = [task], []
     for e in session.events():
         if e["type"] in ("dev_eval", "declare_incumbent"):
-            packets.append(packet(e["event_id"], "decision", _action(e), list(evidence)))
+            packets.append(packet(e["event_id"], "decision", _action(e, session), list(evidence)))
         elif e["type"] == "submit":
             packets.append(packet(e["event_id"], "final_selection", _action(e), list(evidence)))
         # outcome becomes visible only to later packets
         if e["type"] == "dev_eval":
             evidence.append({"id": e["event_id"], "available_before": e["event_id"],
-                             "content": {"kind": "experiment", **_action(e)}})
+                             "content": {"kind": "experiment", **_action(e, session)}})
             evidence.append({"id": e["event_id"] + "-result", "available_before": e["event_id"],
                              "content": {"kind": "development_result", "candidate_id": e["candidate_id"],
                                          "dev_result": e["dev_result"], "worker_status": _worker_status(e)}})

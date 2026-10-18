@@ -330,6 +330,8 @@ class Judging(unittest.TestCase):
         self.assertEqual([e["id"] for e in first["evidence"]], ["task"])          # nothing before it
         self.assertFalse(first["applicability"]["feedback_integration"])
         self.assertNotIn("dev_result", json.dumps(first["action"]))               # own outcome excluded
+        self.assertIn("def predict", first["action"]["candidate_source"]["model.py"])   # code observable without a diff
+        self.assertEqual(first["evidence"][0]["content"]["session_budget"]["dev_calls"], 30)
         ids = [e["id"] for e in second["evidence"]]
         self.assertEqual(ids, ["task", first["event_id"], first["event_id"] + "-result"])
         self.assertTrue(second["applicability"]["feedback_integration"])
@@ -382,6 +384,45 @@ class Judging(unittest.TestCase):
         out = shared_judge.judge_packet(self.packets[1], Mock(), _TMP / "attempts.json")
         self.assertEqual(out["llm_judge_status"], "executed"); self.assertEqual(len(calls), 2)
         self.assertEqual(shared_judge.judge_packet(self.packets[1], None, _TMP / "a2.json")["llm_judge_status"], "pending")
+
+    def test_claude_cli_provider_wiring_with_fake_cli(self):
+        from research_env.tasks.heat import claude_judge
+        fake = _TMP / "fakebin" / "claude"
+        fake.parent.mkdir(exist_ok=True)
+        # Fake CLI: logs argv, fails the first call with prose, then echoes a valid verdict.
+        fake.write_text("""#!/usr/bin/env python3
+import json, sys, os
+log = os.path.join(os.path.dirname(__file__), "argv.jsonl")
+if sys.argv[1:] == ["--version"]:
+    print("9.9.9 (fake)"); sys.exit(0)
+open(log, "a").write(json.dumps(sys.argv[1:]) + "\\n")
+n = sum(1 for _ in open(log))
+packet = json.loads(sys.stdin.read().split("\\n\\n", 1)[1])
+crit = {}
+for c in packet["rubric"]:
+    ok = packet["applicability"].get(c, True)
+    crit[c] = {"score": 4, "reason": "r", "evidence_ids": ["task"]} if ok else {"score": None, "reason": "n/a", "evidence_ids": []}
+v = {"rubric_version": packet["rubric_version"], "packet_sha256": packet["packet_sha256"],
+     "event_id": packet["event_id"], "criteria": crit, "flags": []}
+text = "I think it is fine." if n == 1 else "```json\\n" + json.dumps(v) + "\\n```"
+print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": text,
+                  "total_cost_usd": 0.01, "modelUsage": {"fake-model-1": {}}, "usage": {}, "num_turns": 1}))
+""")
+        fake.chmod(0o755)
+        prov = claude_judge.ClaudeCLIJudge(model="fake", max_calls=10, max_usd=1.0, executable=str(fake))
+        rep = claude_judge.run(self.packets, prov, _TMP / "claude-judge-out")
+        self.assertEqual(rep["llm_judge_status"], "complete"); self.assertAlmostEqual(rep["process_score"], 75.0)
+        self.assertEqual(prov.calls, len(self.packets) + 1)                    # one repair
+        argv = [json.loads(l) for l in (fake.parent / "argv.jsonl").read_text().splitlines()]
+        a = argv[0]
+        self.assertEqual(a[a.index("--tools") + 1], "")
+        self.assertEqual(a[a.index("--system-prompt") + 1], shared_judge.SYSTEM)
+        self.assertIn("--no-session-persistence", a); self.assertIn("--strict-mcp-config", a)
+        self.assertEqual(rep["models_reported"], ["fake-model-1"])
+        tight = claude_judge.ClaudeCLIJudge(model="fake", max_calls=1, max_usd=1.0, executable=str(fake))
+        tight(self.packets[0])
+        with self.assertRaises(ValueError):
+            tight(self.packets[0])
 
 
 if __name__ == "__main__":

@@ -91,6 +91,10 @@ def main(argv=None):
     p.add_argument("--model", default="sonnet"); p.add_argument("--dev-calls", type=int, default=5)
     p.add_argument("--wall-min", type=int, default=30)
     p = sub.add_parser("judge-export"); p.add_argument("session"); p.add_argument("out")
+    p = sub.add_parser("judge-run-claude", help="judge shared packets with the logged-in Claude Code CLI")
+    p.add_argument("packets"); p.add_argument("out_dir"); p.add_argument("--model", required=True)
+    p.add_argument("--max-calls", type=int, required=True); p.add_argument("--max-usd", type=float, required=True)
+    p.add_argument("--per-call-usd", type=float, default=1.0); p.add_argument("--effort")
     a = ap.parse_args(argv)
     if a.cmd == "prepare":
         m = prepare(a.source_root, a.output_root, a.split, allow_network=not a.offline)
@@ -115,6 +119,13 @@ def main(argv=None):
     elif a.cmd == "pilot":
         from .pilot import run_pilot
         print(json.dumps(run_pilot(Path(a.prepared), Path(a.session), a.model, a.dev_calls, a.wall_min), indent=1))
+    elif a.cmd == "judge-run-claude":
+        from . import claude_judge
+        provider = claude_judge.ClaudeCLIJudge(model=a.model, max_calls=a.max_calls, max_usd=a.max_usd,
+                                               per_call_usd=a.per_call_usd, effort=a.effort)
+        rep = claude_judge.run(json.loads(Path(a.packets).read_text()), provider, a.out_dir)
+        print(json.dumps({k: rep[k] for k in ("llm_judge_status", "judged_packets", "total_packets",
+                                               "process_score", "calls", "total_cost_usd", "models_reported")}, indent=1))
     elif a.cmd == "judge-export":
         packets = judging.export_packets(Session(Path(a.session)))
         write(a.out, packets)        # shared format: `python -m research_env judge-run|judge-import` read it

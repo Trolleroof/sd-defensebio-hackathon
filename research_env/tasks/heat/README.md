@@ -19,7 +19,8 @@ Everything in `research_env/tasks/heat/` is owned by Set 2. The only edit outsid
 | `workspace_template/` | Participant `TASK.md`, `DATA_DICTIONARY.md`, `heatlib.py`, four baselines, `tools/heat.py` |
 | `worker.py` | **Interim.** Isolated train/predict worker (sandbox-exec, JSON only, one fresh module per person) |
 | `session.py` | **Interim.** Budgets, hash-chained experiment events, dev feedback, incumbents, private replay |
-| `judging.py` | Heat adapter onto Set 1's shared judge (`research_env/judging`): turns heat events into public evidence records and builds shared packets |
+| `judging.py` | Heat adapter onto Set 1's shared judge (`research_env/judging`): turns heat events into public evidence records, including candidate source and the session's actual budget, and builds shared packets |
+| `claude_judge.py` | Claude Code CLI provider for the shared `judge_packet`: one fresh `claude -p` per packet, no tools, frozen shared system prompt, call and USD budgets |
 | `pilot.py` | **Interim.** Live-agent pilot: `claude -p` in an OS sandbox, file-inbox controller |
 | `cli.py`, `__main__.py` | Command line |
 | `tests/test_heat.py` | 26 focused checks |
@@ -39,6 +40,7 @@ python3 -m research_env.tasks.heat pilot .heat-runs/prepared .heat-runs/pilot-01
 python3 -m research_env.tasks.heat replay .heat-runs/pilot-01
 python3 -m research_env.tasks.heat judge-export .heat-runs/pilot-01 .heat-runs/pilot-01/judge_packets.json
 python3 -m research_env judge-import .heat-runs/pilot-01/judge_packets.json .heat-runs/pilot-01/judging.json
+python3 -m research_env.tasks.heat judge-run-claude .heat-runs/pilot-01/judge_packets.json .heat-runs/pilot-01/judge-opus --model opus --max-calls 6 --max-usd 3
 python3 -m research_env judge-run .heat-runs/pilot-01/judge_packets.json judge-config.json .heat-runs/pilot-01/judge-out --key-env PHYSIOLOGY_JUDGE_KEY
 ```
 
@@ -105,6 +107,8 @@ python3 -m research_env judge-run .heat-runs/pilot-01/judge_packets.json judge-c
   - the shared validator rejects bad scores, unknown evidence IDs, a scored inapplicable criterion, missing criteria and a wrong hash
   - shared `summarize` reports pending, partial, and complete (all 4s → 75)
   - a mock provider exercises the shared `judge_packet` repair path
+  - a fake `claude` executable checks the CLI provider: no tools, the shared system prompt, a fresh context per call, the repair path, and the call budget
+  - decision packets carry the candidate's source, and the task evidence carries the session's actual budget
 
 Evidence paths (all gitignored, not committed): `.heat-runs/prepared/dataset_manifest.json`, `.heat-runs/prepared/quality_log.jsonl`, `.heat-runs/baselines/baseline_report.json`.
 
@@ -139,15 +143,35 @@ In the wearable tier, no learned baseline clearly beats elapsed-time on both spl
 
 This shows the loop works. It is not evidence of research ability. Artifacts are in the session scratchpad: `agent_transcript.jsonl`, `private/events.jsonl`, `private/final_score.json`.
 
-### LLM judge: pending
+### LLM judge: executed once on the pilot (Claude Code CLI)
 
-The pilot's 2 packets were re-exported in the shared format. Set 1's `judge-import` reports them as `pending`, 0/2 judged. No judge provider is configured and no judge calls were made. Running one needs Set 1's `judge-run` with an explicit OpenAI-compatible config (endpoint, model, temperature, max_tokens, max_calls, max_total_tokens) and an authorized key.
+The judge was `claude-opus-5-5`, run through `claude -p` on the user's Claude Code login. It had no tools, used the frozen shared system prompt, and judged each packet in a fresh context. The participant was Sonnet, so judge and participant are different models. Both packets were judged on the first attempt with no repairs, for $0.18 total. Status: `complete`, 2/2, process score 60.
+
+| Criterion | Decision e0002 | Final selection e0003 |
+|---|---|---|
+| evidence use | 3 | 4 |
+| experiment choice | 4 | 3 |
+| feedback integration | null (first call) | 2 (−0.30 °C bias seen, not revised) |
+| reproducibility/validity | 4 | 4 |
+| final selection/claims | null (not final) | 4 (claims narrowed to the evidence) |
+
+The first judging run exposed two gaps in heat's packets, both since fixed:
+- **No code to inspect.** The first decision had no code diff, so validity was unobservable.
+- **Wrong budget shown.** The task evidence showed `TASK.md`'s 2 h / 30 calls, not the session's real 30 min / 5 calls.
+
+On the second run, the judge's flags matched the evidence:
+- the agent stopped after 1 of 5 calls
+- it left an observed bias unaddressed
+- its decision record cited no evidence IDs
+- the mean curve leaks across inner leave-one-person-out folds
+
+This is **one judge run on one tiny trace**. Before process scores mean anything, the brief requires a human double-review of a stratified subset, with disagreement reported. The CLI cannot set temperature, so repeated judgments may vary. Process scores stay separate from numerical loss.
 
 ## 5. Blockers and next gate
 
 - **Set 1 runner integration.** Judging is done. The worker and session still need a task-adapter hook in `core/evaluation.py`, which Set 1 has to agree to. Once that exists, heat can also use Set 1's Docker image (`research_env/Dockerfile`). Until then, the heat worker is macOS `sandbox-exec` only. It allows reads of the interpreter's own prefixes, which a venv under `/Users` needs; explicitly denied roots stay denied. It is not a hardened multi-tenant sandbox.
 - **Pilot isolation.** Claude Code runs in an `(allow default)` profile with reads denied for the private root, the prepared data, the repo and the evidence directory. Network is open for model inference. The harness, which is outside the sandbox, also reads `~/.claude` user settings.
 - **Statistics.** 5 people per held-out split gives wide person-level bootstrap intervals. Interpreting results needs ≥ 3 agent seeds at the full budget (2 h, 30 calls), compared against frozen conventional search with the same budget. Conventional search is not implemented yet.
-- **Judge.** Configure an authorized provider and model, run it, then audit a stratified subset with two human reviewers before trusting any process score.
+- **Judge reliability.** It runs through the Claude Code CLI or Set 1's OpenAI-compatible adapter. Still needed: judge repeatability (several runs per packet), a two-reviewer human audit of a stratified subset, and more and longer traces.
 - **Extensions.** The Zenodo earbud/esophageal dataset (19835255) and the Mendeley heat-tolerance dataset are not yet audited.
 - **Next decisive gate:** a full-budget, 3-seed Sonnet run in the wearable tier, compared with elapsed-time using the person-level paired bootstrap on private test.
