@@ -1,0 +1,60 @@
+{
+ "task": "heat-core-forecast-v1",
+ "participant_visible_keys": [
+  "task",
+  "horizons_min",
+  "cutoffs_min",
+  "tiers",
+  "metric",
+  "budget",
+  "frozen_baselines",
+  "skill_epsilon_c"
+ ],
+ "horizons_min": [
+  5,
+  10,
+  20
+ ],
+ "cutoffs_min": "every integer minute 5..55; horizons requested only where cutoff + horizon <= 60",
+ "tiers": {
+  "wearable": "primary: HR, CORE-device skin temperature, work rate, measured ambient temperature/RH, sex/age/height/mass/BMI",
+  "calibrated": "separately scored: wearable inputs plus one rectal reference at minute 1 (requires a rectal probe before exercise)"
+ },
+ "metric": {
+  "primary": "person-balanced mean over people of the equal mean of 5/10/20-minute MAE, degrees C",
+  "secondary": [
+   "per-horizon MAE, RMSE, signed bias (prediction - reference)",
+   "hottest-period (reference >= 38.5 C) underprediction and MAE with counts",
+   "IS90, 90% coverage, 90% width"
+  ],
+  "interval_score": "IS90 = (upper-lower) + 20*max(lower-ref,0) + 20*max(ref-upper,0)",
+  "validity": "every requested horizon needs finite lower <= mean <= upper; any invalid output invalidates the run (null loss)",
+  "alerts": "omitted in v1: only 9/24 people ever reach 39.0 C reference, too sparse for alert rankings"
+ },
+ "budget": {
+  "wall_s": 7200,
+  "dev_calls": 30,
+  "cpu_cores": 8,
+  "memory_bytes": 17179869184,
+  "gpu": "none"
+ },
+ "skill_epsilon_c": 0.01,
+ "frozen_baselines": {
+  "wearable": {
+   "id": "elapsed_time",
+   "loss_c": {
+    "development": 0.35703199621014015,
+    "private_test": 0.21998636652728681
+   },
+   "frozen_from": "cli baselines --freeze, seed 0"
+  },
+  "calibrated": {
+   "id": "elapsed_time",
+   "loss_c": {
+    "development": 0.24674192787362678,
+    "private_test": 0.3704212303278745
+   },
+   "frozen_from": "cli baselines --freeze, seed 0"
+  }
+ }
+}
