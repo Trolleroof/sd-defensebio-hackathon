@@ -14,10 +14,11 @@ STALE_S = 10
 latest = {node_id: None for node_id in NODE_IDS}
 lock = threading.Lock()
 serial_connected = False
+last_event = None
 
 
 def read_serial(port_name):
-    global serial_connected
+    global serial_connected, last_event
     last_error = None
     while True:
         try:
@@ -34,7 +35,11 @@ def read_serial(port_name):
                         data = json.loads(raw)
                     except (ValueError, UnicodeDecodeError):
                         continue
-                    if not isinstance(data, dict) or data.get("type") != "telemetry":
+                    if not isinstance(data, dict):
+                        continue
+                    with lock:
+                        last_event = (time.time(), data)
+                    if data.get("type") != "telemetry":
                         continue
                     node_id = data.get("node_id")
                     if not isinstance(node_id, str) or node_id not in latest:
@@ -51,22 +56,27 @@ def read_serial(port_name):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        pass
+
     def do_GET(self):
         if self.path != "/api/nodes":
             self.send_error(404)
             return
         now = time.time()
         with lock:
+            connected = serial_connected
+            root_event = {"received_at": last_event[0], "data": last_event[1]} if last_event else None
             nodes = {
                 node_id: {
-                    "online": serial_connected and entry is not None and now - entry[0] <= STALE_S,
+                    "online": connected and entry is not None and now - entry[0] <= STALE_S,
                     "age_s": round(now - entry[0], 2) if entry else None,
                     "received_at": entry[0] if entry else None,
                     "latest": entry[1] if entry else None,
                 }
                 for node_id, entry in latest.items()
             }
-        body = json.dumps({"nodes": nodes}).encode()
+        body = json.dumps({"serial_connected": connected, "last_event": root_event, "nodes": nodes}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
