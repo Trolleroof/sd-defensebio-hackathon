@@ -105,7 +105,10 @@ class DashboardLocationTest(unittest.TestCase):
         team.add(person)
         person.last_sample = time.time()
         self.assertEqual(team.tick()["people"][0]["location_calibration"], "hold still")
-        for i in range(50):
+        for i in range(7):
+            person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+        self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 29)
+        for i in range(7, 50):
             person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
         row = team.tick()["people"][0]
         self.assertEqual((row["location_calibration"], row["location_calibration_remaining_s"]), ("calibrating", 21))

@@ -239,6 +239,7 @@ const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour12: false }
 const ago = (s) => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h`;
 const STATUS = { distress: "Distress", deviation: "Off expected", "no data": "No data", "no contact": "No contact", ok: "OK" };
 const fmt = (v, d = 0) => v == null ? "—" : Number(v).toFixed(d);
+const timer = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 // ---------------------------------------------------------------- socket
 let ws, serverOffset = 0;
@@ -355,7 +356,7 @@ function renderDetail() {
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
-        ${p.id.startsWith("mesh_") ? `<div class="metric"><div class="k">Location calibration</div><div class="v" id="mCalibration"></div></div><div class="metric"><div class="k">Estimated speed</div><div class="v" id="mSpeed"></div></div>` : ""}
+        ${p.id.startsWith("mesh_") ? `<div class="metric"><div class="k">Location calibration</div><div class="v" id="mCalibration" role="timer" aria-label="Location calibration countdown"></div></div><div class="metric"><div class="k">Estimated speed</div><div class="v" id="mSpeed"></div></div>` : ""}
         <div class="metric"><div class="k">${p.imu ? "Activity baseline" : "Expected"}</div><div class="v" id="mExp"></div></div>
         <div class="metric"><div class="k">Difference</div><div class="v" id="mDev"></div></div>
         ${p.imu ? `<div class="metric"><div class="k">Activity</div><div class="v" id="mActivity"></div></div>` : ""}
@@ -394,7 +395,7 @@ function renderDetail() {
     const rb = root.querySelector("#recalibrateBtn");
     if (rb) rb.onclick = () => {
       send({ type: "recalibrate", person: p.id });
-      set("#mCalibration", `30<small>s: hold still</small>`);
+      set("#mCalibration", `${timer(30)}<small>Hold still</small>`);
       set("#mSpeed", "—");
     };
     root.querySelectorAll(".range button").forEach((b) => b.onclick = () => { S.range = +b.dataset.r; renderDetail(); });
@@ -405,7 +406,7 @@ function renderDetail() {
   const set = (id, html, cls = "") => { const el = root.querySelector(id); el.innerHTML = html; el.className = "v " + cls; };
   set("#mHr", `${fmt(r.hr)}<small>bpm</small>`, r.status === "distress" ? "crit" : "");
   if (p.id.startsWith("mesh_")) {
-    set("#mCalibration", r.location_calibration === "ready" ? "Ready" : r.location_calibration === "waiting for IMU" ? "<small>Waiting for IMU</small>" : `${r.location_calibration_remaining_s ?? 30}<small>s: hold still</small>`);
+    set("#mCalibration", `${timer(r.location_calibration === "ready" ? 0 : r.location_calibration_remaining_s ?? 30)}<small>${r.location_calibration === "ready" ? "Ready" : r.location_calibration === "waiting for IMU" ? "Waiting for IMU" : "Hold still"}</small>`);
     set("#mSpeed", r.location_calibration === "ready" ? r.speed_m_s == null ? "<small>No current IMU data</small>" : `${fmt(r.speed_m_s, 2)}<small>m/s</small>` : "—");
   }
   set("#mExp", `${fmt(r.exp)}<small>bpm</small>`);
