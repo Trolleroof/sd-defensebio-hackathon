@@ -7,7 +7,7 @@ import { POST_SECTIONS, RELEASE } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "PhysBench report",
-  description: "How PhysBench measures whether agents can build personalized physiology predictors.",
+  description: "Setup, methodology and results for PhysBench.",
 };
 
 function H2({ id }: { id: string }) {
@@ -27,15 +27,11 @@ export default function Post() {
         <div className="wrap">
           <Reveal>
             <span className="eyebrow">Report · {RELEASE.version}</span>
-            <h1>Measuring research, not recall, on wearable physiology</h1>
-            <p>
-              An environment where agents fit, test and submit personalized heart-rate predictors under fixed
-              budgets. They're scored on hidden recordings and judged on how they got there.
-            </p>
+            <h1>PhysBench {RELEASE.version}</h1>
+            <p>Setup, methodology and results. Results are placeholders.</p>
             <div className="byline">
               <span>DefenseBio</span>
               <span>{RELEASE.updated}</span>
-              <span>Results below are placeholders</span>
             </div>
           </Reveal>
         </div>
@@ -46,118 +42,89 @@ export default function Post() {
         <article className="prose">
           <H2 id="introduction" />
           <p>
-            Most physiology models are fit once to a population and then applied to everyone. A wearable worn by
-            one person for weeks makes a different question possible: can a model learn <em>this</em> person&apos;s
-            response to load, and does it hold up when they do something new?
+            Heart-rate models are usually fit to a population. With weeks of data from one wearer, you can fit a
+            model to that person instead. We test whether an agent can do that, and whether its model still works
+            on activities missing from the training data.
           </p>
           <p>
-            That's research work. You inspect data, choose a structure, test it against limited feedback and
-            decide when to stop. Existing agent benchmarks score code tasks with a known answer, or ML tasks on
-            public data that may be memorized. PhysBench scores the predictor on recordings the agent never sees,
-            and scores the reasoning separately.
+            The predictor is scored on recordings the agent never sees. A separate judge reads the trace and
+            grades how the agent worked.
           </p>
-          <p className="placeholder">
-            Placeholder: one paragraph positioning PhysBench against long-horizon research benchmarks once pilot
-            results are in.
-          </p>
+          <p className="placeholder">Placeholder: comparison to related benchmarks.</p>
 
           <H2 id="environment" />
           <p>
-            Each episode is one target participant from PPG-DaLiA: 15 people, an ECG-derived heart-rate reference,
-            wrist and chest accelerometers and labelled activities. The agent gets a Python workspace, the
-            target&apos;s support recordings, four reference participants and a fitted conventional baseline.
+            Data comes from PPG-DaLiA: 15 participants, ECG-derived heart rate, wrist and chest accelerometers,
+            labelled activities. Each episode targets one participant. The agent gets a Python workspace, that
+            participant&apos;s support recordings, four reference participants and a fitted baseline.
           </p>
           <table>
             <thead>
-              <tr><th>Phase</th><th>Agent has</th><th>Agent does</th></tr>
+              <tr><th>Phase</th><th>Input</th><th>Action</th></tr>
             </thead>
             <tbody>
-              <tr><td><strong>Build</strong></td><td>Support data from familiar activities, reference cohort, baseline</td><td>Inspect, fit a predictor</td></tr>
-              <tr><td><strong>Investigate</strong></td><td>≤3 dev-feedback calls on held-out familiar windows</td><td>Revise with evidence</td></tr>
-              <tr><td><strong>Transfer</strong></td><td>Submit</td><td>Hidden scoring on stairs, table soccer, cycling and recovery</td></tr>
+              <tr><td><strong>Build</strong></td><td>Support data, reference cohort, baseline</td><td>Fit a predictor</td></tr>
+              <tr><td><strong>Investigate</strong></td><td>Up to 3 dev-feedback calls</td><td>Revise</td></tr>
+              <tr><td><strong>Transfer</strong></td><td>Submit</td><td>Scored on stairs, table soccer, cycling, recovery</td></tr>
             </tbody>
           </table>
           <p>
-            The contract is <code>predict(history, future) → (60,)</code> bpm. History is the last 60 s of heart
-            rate and inputs. Future is the next 120 s of inputs only. Consequential actions are rejected unless
-            they come with a written justification of at least 40 characters.
+            Interface: <code>predict(history, future) → (60,)</code> in bpm. <code>history</code> is the last 60 s
+            of heart rate and inputs. <code>future</code> is the next 120 s of inputs. Dev feedback, submission and
+            writes to <code>submission/</code> need a justification of at least 40 characters.
           </p>
 
           <H2 id="methodology" />
           <h3>Splits</h3>
           <p>
-            Four participants form a visible reference cohort, four are used for calibration and freezing the
-            criteria, and six are held out. One participant moved from held-out to development after their
-            baseline numbers were viewed during calibration. That move is recorded rather than hidden.
+            4 reference, 4 development, 6 held-out. S3 moved from held-out to development after its baseline
+            scores were seen during calibration. S6 is excluded because its recording is truncated.
           </p>
-          <h3>Anchor and pass criteria</h3>
+          <h3>Anchor and pass</h3>
           <p>
-            The anchor is <code>kinetic_pop_calibrated</code>: population heart-rate kinetics with a personal
-            offset and gain fitted on support. A pass needs a valid run, an improvement over the anchor of at
-            least a frozen margin, an explicit submission with a report, and no integrity flags. Criteria are
-            hashed into a frozen config before any held-out run, and the held-out runner refuses to start
-            without them.
+            The anchor, <code>kinetic_pop_calibrated</code>, uses population heart-rate kinetics with a personal
+            offset and gain fit on support data. A run passes if it executes, beats the anchor by the frozen margin,
+            submits a report and has no integrity flags. Criteria are hashed before any held-out run.
           </p>
           <h3>Judge</h3>
-          <p>
-            A fixed seven-item rubric, 0–2 per item, plus two integrity flags. The judge never sees the model's
-            identity or its hidden accuracy.
-          </p>
+          <p>Seven items scored 0–2, plus two integrity flags. Model name and hidden accuracy are withheld.</p>
 
           <H2 id="results" />
-          <p className="placeholder">
-            Placeholder: headline finding in two sentences. For example, which models clear the anchor, by how
-            much, and whether judge scores track accuracy.
-          </p>
+          <p className="placeholder">Placeholder: headline result.</p>
           <Reveal className="figure">
             <Leaderboard />
-            <figcaption>Figure 1 · Placeholder. Pass@1, transfer MAE, judge score and cost per episode.</figcaption>
+            <figcaption>Figure 1 · Placeholder scores.</figcaption>
           </Reveal>
           <Reveal className="figure">
             <HorizonChart />
-            <figcaption>Figure 2 · Placeholder. Transfer MAE (bpm) by forecast horizon for the top entry vs the anchor.</figcaption>
+            <figcaption>Figure 2 · Placeholder. MAE (bpm) by horizon, top entry vs anchor.</figcaption>
           </Reveal>
-          <p className="placeholder">
-            Placeholder: per-activity breakdown (stairs vs cycling vs recovery) and paired model differences
-            with bootstrap CIs.
-          </p>
+          <p className="placeholder">Placeholder: per-activity results and paired differences with bootstrap CIs.</p>
 
           <H2 id="failures" />
-          <p className="placeholder">
-            Placeholder: two or three failure modes observed in traces, each with one linked trace excerpt.
-          </p>
+          <p className="placeholder">Placeholder: failure cases with trace excerpts.</p>
           <table>
             <thead>
-              <tr><th>Model</th><th>What happened</th><th>Caught by</th></tr>
+              <tr><th>Model</th><th>Failure</th><th>Caught by</th></tr>
             </thead>
             <tbody>
-              <tr><td className="mono">model-x</td><td><span className="placeholder">Placeholder: failure description</span></td><td className="mono">audit</td></tr>
-              <tr><td className="mono">model-y</td><td><span className="placeholder">Placeholder: failure description</span></td><td className="mono">judge</td></tr>
-              <tr><td className="mono">model-z</td><td><span className="placeholder">Placeholder: failure description</span></td><td className="mono">hidden score</td></tr>
+              <tr><td className="mono">model-x</td><td><span className="placeholder">Placeholder</span></td><td className="mono">audit</td></tr>
+              <tr><td className="mono">model-y</td><td><span className="placeholder">Placeholder</span></td><td className="mono">judge</td></tr>
+              <tr><td className="mono">model-z</td><td><span className="placeholder">Placeholder</span></td><td className="mono">hidden score</td></tr>
             </tbody>
           </table>
 
           <H2 id="limitations" />
           <ul>
             <li>
-              <strong>Isolation is partly best-effort.</strong> Per-episode users, root-only labels and resource
-              limits are enforced. The network guard isn't kernel-level, because the container can't create
-              network namespaces.
+              <strong>Isolation.</strong> Per-episode users, root-only labels and resource limits are enforced. The
+              network block is a Python hook, not a network namespace.
             </li>
-            <li>
-              <strong>One dataset, one target.</strong> Heart rate from movement on PPG-DaLiA. Other channels
-              are wired in the adapter but not yet enabled.
-            </li>
-            <li>
-              <strong>The judge is unvalidated.</strong> Its agreement with expert reviewers hasn't been
-              measured.
-            </li>
-            <li>
-              <strong>Linked campaigns use synthetic fixtures.</strong> They test structure and retention, not
-              human physiology.
-            </li>
+            <li><strong>Scope.</strong> One dataset, one target: heart rate from movement.</li>
+            <li><strong>Judge.</strong> Agreement with expert reviewers hasn&apos;t been measured.</li>
+            <li><strong>Campaigns.</strong> Synthetic fixtures. They don&apos;t model human physiology.</li>
           </ul>
-          <p className="placeholder">Placeholder: what changes in v0.2.</p>
+          <p className="placeholder">Placeholder: v0.2 changes.</p>
         </article>
       </div>
     </>

@@ -14,18 +14,18 @@ export default function Home() {
             <span className="tag">{RELEASE.status}</span>
           </div>
           <h1 className="rise">
-            Can an agent build a <span>personal</span> physiology model?
+            Personalized <span>heart-rate</span> prediction for agents
           </h1>
           <p className="lede rise">
-            PhysBench gives a model a sandboxed workspace, real wearable recordings and a fixed budget. It has
-            to fit a heart-rate predictor for one person, then forecast activities it has never seen them do.
-            Hidden recordings score the code. A separate judge grades the research.
+            Agents fit a heart-rate model for one person from wearable data, then forecast activities that person
+            didn&apos;t do in the training data. We score the code on hidden recordings and grade the trace
+            separately.
           </p>
           <div className="hero-meta rise">
             <div><span className="eyebrow">Episodes</span><strong>{RELEASE.episodes}</strong></div>
             <div><span className="eyebrow">Held-out subjects</span><strong>6</strong></div>
-            <div><span className="eyebrow">Forecast horizon</span><strong>60 s</strong></div>
-            <div><span className="eyebrow">Dev feedback</span><strong>3 calls</strong></div>
+            <div><span className="eyebrow">Horizon</span><strong>60 s</strong></div>
+            <div><span className="eyebrow">Dev calls</span><strong>3</strong></div>
             <div><span className="eyebrow">Updated</span><strong style={{ fontSize: 15 }}>{RELEASE.updated}</strong></div>
           </div>
         </div>
@@ -37,12 +37,9 @@ export default function Home() {
           <Reveal className="section-head">
             <div>
               <span className="eyebrow">Leaderboard</span>
-              <h2>Heart rate under activity transfer</h2>
+              <h2>Activity transfer</h2>
             </div>
-            <p>
-              Placeholder entries. Model names, scores and costs fill in from <code className="mono">summary.json</code> after
-              pilot-0 runs on the held-out split.
-            </p>
+            <p>Placeholder entries until the held-out pilot runs.</p>
           </Reveal>
           <Leaderboard />
         </div>
@@ -52,25 +49,25 @@ export default function Home() {
         <div className="wrap">
           <Reveal className="section-head">
             <div>
-              <span className="eyebrow">What is scored</span>
-              <h2>Code, then conduct</h2>
+              <span className="eyebrow">Scoring</span>
+              <h2>Metrics</h2>
             </div>
           </Reveal>
           <Reveal stagger className="grid-3">
             <div className="cell">
-              <span className="num">01 · Accuracy</span>
-              <h3>Phase-balanced transfer MAE</h3>
-              <p>Mean of exertion-phase and recovery-phase error on hidden windows. Per-activity and per-horizon breakdowns are kept.</p>
+              <span className="num">01</span>
+              <h3>Transfer MAE</h3>
+              <p>Mean of exertion and recovery error on hidden windows, in bpm.</p>
             </div>
             <div className="cell">
-              <span className="num">02 · Pass</span>
-              <h3>Beat the anchor, cleanly</h3>
-              <p>Valid execution, a frozen margin over population kinetics with a personal fit, and no integrity flags from the audit or judge.</p>
+              <span className="num">02</span>
+              <h3>Pass@1</h3>
+              <p>Valid run, beats the anchor by a frozen margin, no integrity flags.</p>
             </div>
             <div className="cell">
-              <span className="num">03 · Judge</span>
-              <h3>Seven-item research rubric</h3>
-              <p>Scored 0–2 per item. The judge never sees the model name or its hidden accuracy, and it checks the report against the trace.</p>
+              <span className="num">03</span>
+              <h3>Judge score</h3>
+              <p>Seven items scored 0–2. The judge doesn&apos;t see the model name or hidden accuracy.</p>
             </div>
           </Reveal>
         </div>
@@ -81,9 +78,9 @@ export default function Home() {
           <Reveal className="section-head">
             <div>
               <span className="eyebrow">Report</span>
-              <h2>Read the full write-up</h2>
+              <h2>Contents</h2>
             </div>
-            <Link href="/blog/physbench/" className="tag olive">Open report →</Link>
+            <Link href="/blog/physbench/" className="tag olive">Read →</Link>
           </Reveal>
           <Reveal stagger className="toc">
             {POST_SECTIONS.map((s) => (
@@ -101,7 +98,7 @@ export default function Home() {
         <div className="wrap">
           <Reveal className="section-head">
             <div>
-              <span className="eyebrow">Environments</span>
+              <span className="eyebrow">Tasks</span>
               <h2>{TASKS.length} task families</h2>
             </div>
             <Link href="/tasks/" className="tag">All tasks →</Link>
@@ -123,12 +120,9 @@ export default function Home() {
           <Reveal>
             <a className="panel-link" href={DASHBOARD_URL}>
               <div>
-                <span className="eyebrow">Field side</span>
+                <span className="eyebrow">Dashboard</span>
                 <h3>Operator dashboard</h3>
-                <p>
-                  The same sensors feed a live team view: heart rate, movement, HRV, expected-HR deviation and the
-                  alert-check-resolve loop. Predictors built here are meant to replace its fixed kinetic model.
-                </p>
+                <p>Live heart rate, movement and HRV for a team, with alerts when heart rate drifts from expected.</p>
               </div>
               <span className="arrow" style={{ fontSize: 22 }}>↗</span>
             </a>

@@ -23,10 +23,10 @@ export default function Dashboard() {
         <div className="wrap">
           <Reveal>
             <span className="eyebrow">Operator dashboard</span>
-            <h1>Where the predictors end up</h1>
+            <h1>Operator dashboard</h1>
             <p>
-              The dashboard streams team heart rate, movement and HRV, flags people whose heart rate drifts from
-              expected, and runs the check loop: request, acknowledge, resolve with a note.
+              Live heart rate, movement and HRV for a team. Alerts when heart rate drifts from expected. Operators
+              request a check, acknowledge it and resolve it with a note.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 28 }}>
               <a className="header-cta" style={{ marginLeft: 0 }} href={DASHBOARD_URL}>Open dashboard ↗</a>
@@ -39,7 +39,7 @@ export default function Dashboard() {
       <section className="section" style={{ borderTop: 0 }}>
         <div className="wrap">
           <Reveal className="section-head">
-            <div><span className="eyebrow">Data sources</span><h2>Every person is labelled</h2></div>
+            <div><span className="eyebrow">Sources</span><h2>Data sources</h2></div>
           </Reveal>
           <Reveal stagger className="grid-3">
             {SOURCES.map((s) => (
@@ -55,10 +55,9 @@ export default function Dashboard() {
       <section className="section">
         <div className="wrap">
           <Reveal className="section-head">
-            <div><span className="eyebrow">Attention items</span><h2>Three alert types</h2></div>
+            <div><span className="eyebrow">Alerts</span><h2>Alert types</h2></div>
             <p>
-              Expected HR comes from a fixed first-order kinetic model. It isn&apos;t fitted or validated yet. A
-              predictor that passes PhysBench is what replaces it.
+              Expected heart rate uses a fixed kinetic model that hasn&apos;t been fitted or validated.
             </p>
           </Reveal>
           <Reveal stagger className="grid-3">
@@ -75,7 +74,7 @@ export default function Dashboard() {
       <section className="section">
         <div className="wrap">
           <Reveal>
-            <span className="eyebrow">Run locally</span>
+            <span className="eyebrow">Run</span>
             <pre className="mono" style={{ margin: "16px 0 0", padding: 20, border: "1px solid var(--line)", overflowX: "auto", fontSize: 13, color: "var(--muted)" }}>
 {`sensor/.venv/bin/pip install -r dashboard/requirements.txt
 sensor/.venv/bin/python dashboard/server.py          # replay + simulated team

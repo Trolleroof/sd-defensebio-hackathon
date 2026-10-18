@@ -11,10 +11,9 @@ export default function Tasks() {
         <div className="wrap">
           <Reveal>
             <span className="eyebrow">Tasks</span>
-            <h1>Task families</h1>
+            <h1>Tasks</h1>
             <p>
-              Each family has its own data contract, budget and phase schedule. Real and synthetic panels are
-              reported separately.
+              Real and synthetic results are reported separately.
             </p>
           </Reveal>
         </div>

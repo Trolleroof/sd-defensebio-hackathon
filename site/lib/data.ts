@@ -60,7 +60,7 @@ export const TASKS = [
     data: "PPG-DaLiA · real",
     budget: "3 dev calls · 60 s history · 120 s horizon",
     summary:
-      "Fit a personalized heart-rate predictor from familiar activities, then forecast stairs, table soccer, cycling and recovery that never appear in support data.",
+      "Train on sitting, driving and walking. Forecast stairs, table soccer, cycling and recovery.",
     phases: ["Build", "Investigate", "Transfer"],
   },
   {
@@ -70,26 +70,26 @@ export const TASKS = [
     data: "Local CSV adapter · real or pilot",
     budget: "Persistent action cap · evaluation and acquisition budgets",
     summary:
-      "Forecast post-exertion recovery for one participant from a declared cutoff, with calibrated uncertainty and an executable submission.",
+      "Forecast one participant's heart rate after exercise, with uncertainty.",
     phases: ["Build", "Investigate"],
   },
   {
     id: "campaigns",
     name: "Linked research campaigns",
-    family: "Model structure and retention",
+    family: "Structure and retention",
     data: "Structural fixtures · synthetic",
     budget: "3 acquisition credits · 8 dev calls across 4 rounds",
     summary:
-      "One workspace across four rounds. Each round releases a new condition — longer bouts, carried load, a later session — and private checkpoints score retention on every earlier condition.",
+      "Four rounds in one workspace. Each round adds a condition: longer bouts, carried load, a later session. Checkpoints also score earlier conditions.",
     phases: ["Build", "Investigate", "Transfer", "Sustain"],
   },
 ];
 
 export const POST_SECTIONS = [
-  { id: "introduction", n: "01", title: "Introduction", sub: "Why physiology needs its own environment" },
-  { id: "environment", n: "02", title: "The environment", sub: "Workspace, budgets and the episode loop" },
-  { id: "methodology", n: "03", title: "Methodology", sub: "Splits, anchors and frozen criteria" },
-  { id: "results", n: "04", title: "Results", sub: "Where models separate" },
-  { id: "failures", n: "05", title: "Failure analysis", sub: "How runs go wrong" },
-  { id: "limitations", n: "06", title: "Limitations", sub: "What this does not measure yet" },
+  { id: "introduction", n: "01", title: "Introduction", sub: "Motivation" },
+  { id: "environment", n: "02", title: "The environment", sub: "Data, phases, contract" },
+  { id: "methodology", n: "03", title: "Methodology", sub: "Splits, anchor, judge" },
+  { id: "results", n: "04", title: "Results", sub: "Scores by model" },
+  { id: "failures", n: "05", title: "Failure analysis", sub: "Observed failures" },
+  { id: "limitations", n: "06", title: "Limitations", sub: "Known gaps" },
 ];
