@@ -4,14 +4,20 @@ Two wearable Nano ESP32 boards sample their LSM6DSOX and either a Polar Verity S
 
 ## Optional wired heart-rate sensor
 
-Wire the **SparkFun SEN-15219** to a **wearable Nano ESP32**, sharing the IMU's I²C bus. Use 3.3 V logic throughout. A Qwiic-to-header cable or adapter carries the first four connections; the SparkFun board still needs separate `RESET` and `MFIO` wires.
+Wire the **SparkFun SEN-15219** to a **wearable Nano ESP32**, sharing the IMU's I²C bus. Keep the IMU's existing A4/A5 connections. Plug a short Qwiic/STEMMA QT cable from the IMU breakout's free connector into the SparkFun board; that cable extends 3.3 V, ground, SDA, and SCL to the second sensor. The SparkFun board still needs separate `RESET` and `MFIO` wires. If the IMU breakout has no free connector, split the same four wires in parallel with a Qwiic hub or header junction.
+
+```text
+Nano A4/A5, 3V3, GND ── IMU ── Qwiic/STEMMA QT cable ── SparkFun SEN-15219
+Nano D4 ──────────────────────────────────────────────── RESET
+Nano D5 ──────────────────────────────────────────────── MFIO
+```
 
 | SparkFun SEN-15219 | Nano ESP32 | Existing IMU connection |
 | --- | --- | --- |
 | `3V3` | `3V3` | share 3.3 V |
 | `GND` | `GND` | share ground |
-| `SDA` | `A4 / SDA` | share SDA |
-| `SCL` | `A5 / SCL` | share SCL |
+| `SDA` | existing `A4 / SDA` bus | through IMU's free connector or parallel split |
+| `SCL` | existing `A5 / SCL` bus | through IMU's free connector or parallel split |
 | `RESET` | `D4` | separate control wire |
 | `MFIO` | `D5` | separate control wire |
 
