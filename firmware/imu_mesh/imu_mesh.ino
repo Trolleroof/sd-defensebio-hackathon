@@ -70,6 +70,8 @@ float yawSincePacket = 0;
 uint32_t lastImuReadMs = 0;
 sensors_event_t latestAccel{}, latestGyro{}, latestTemp{};
 bool latestImuValid = false;
+float accelSum[3]{};
+uint16_t accelCount = 0;
 portMUX_TYPE parentMux = portMUX_INITIALIZER_UNLOCKED;
 SemaphoreHandle_t meshSendMutex = nullptr;
 bool parentReady = false;
@@ -377,11 +379,13 @@ void sendImuSample() {
 #endif
 
   if (imuReady) {
-    packet.sample_valid = latestImuValid;
+    packet.sample_valid = accelCount > 0;
     if (packet.sample_valid) {
-      packet.accel_m_s2[0] = latestAccel.acceleration.x;
-      packet.accel_m_s2[1] = latestAccel.acceleration.y;
-      packet.accel_m_s2[2] = latestAccel.acceleration.z;
+      for (int axis = 0; axis < 3; ++axis) {
+        packet.accel_m_s2[axis] = accelSum[axis] / accelCount;
+        accelSum[axis] = 0;
+      }
+      accelCount = 0;
       packet.gyro_rad_s[0] = latestGyro.gyro.x;
       packet.gyro_rad_s[1] = latestGyro.gyro.y;
       packet.gyro_rad_s[2] = latestGyro.gyro.z;
@@ -459,6 +463,10 @@ void loop() {
       latestAccel = accel;
       latestGyro = gyro;
       latestTemp = temp;
+      accelSum[0] += accel.acceleration.x;
+      accelSum[1] += accel.acceleration.y;
+      accelSum[2] += accel.acceleration.z;
+      ++accelCount;
     }
     lastImuReadMs = now;
   }

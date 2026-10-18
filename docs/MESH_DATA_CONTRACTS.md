@@ -37,7 +37,7 @@ ESP-WIFI-MESH `MESH_PROTO_BIN`, `MESH_TOS_P2P`, sent to the parent's address. Pa
 | 8 | 4 | `uint32` | `sequence` | per-node counter from 0 at boot; increments on every send attempt, so gaps = dropped packets |
 | 12 | 4 | `uint32` | `uptime_ms` | source `millis()` at sample time |
 | 16 | 6 | `uint8[6]` | `node_mac` | source Wi-Fi STA MAC |
-| 22 | 12 | `float32[3]` | `accel_m_s2` | x, y, z in m/s² |
+| 22 | 12 | `float32[3]` | `accel_m_s2` | x, y, z in m/s², averaged across IMU reads since the previous packet |
 | 34 | 12 | `float32[3]` | `gyro_rad_s` | x, y, z in rad/s |
 | 46 | 4 | `float32` | `yaw_delta_rad` | integrated device Z rotation since previous packet |
 | 50 | 4 | `float32` | `imu_temp_c` | IMU die temperature, °C (not body temperature) |
@@ -132,5 +132,5 @@ Wearable-only lines appear on that wearable's own USB port, never on the root's.
 - Processes `latest` only when `(uptime_ms, sequence)` changed since the last poll.
 - Uses `hr_bpm` only when it is a number > 0; otherwise HR is cleared.
 - Uses IMU only when `sensor_ok` is true and both vectors are 3 numbers. Converts accel to mG (`× 1000 / 9.80665`) and gyro to dps (`× 180 / π`).
-- Advances estimated map position from pedometer step changes and `yaw_delta_rad` after the browser sets the command origin. The operator sets initial heading; heading assumes a level, forward-facing mount.
+- After 30 continuous seconds of stationary readings, subtracts measured horizontal acceleration and yaw-rate bias, integrates acceleration into velocity and velocity into estimated map position. Pedometer steps help detect activity and stationarity; no fixed stride length is used. The operator sets initial heading; heading assumes a level, forward-facing mount.
 - Movement uses the variation in acceleration magnitude over the latest 2 s (at least 2 samples); rotation uses the mean angular speed over that window. The latest X/Y/Z acceleration and gyro rates are also sent to the browser. Values disappear when IMU samples stop.

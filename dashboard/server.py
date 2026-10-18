@@ -109,6 +109,17 @@ class Person:
     heading_set: bool = False
     steps_seen: int | None = None
     uptime_seen: int | None = None
+    calibration_start_ms: int | None = None
+    calibration_samples: int = 0
+    calibration_acc_sum: tuple = (0.0, 0.0)
+    calibration_yaw_sum: float = 0.0
+    calibration_dt: float = 0.0
+    calibration_reference: tuple | None = None
+    accel_bias: tuple | None = None
+    yaw_bias: float = 0.0
+    velocity_n: float = 0.0
+    velocity_e: float = 0.0
+    still_since_ms: int | None = None
     imu: bool = False                 # has a gyroscope/IMU source
     gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # (time, |w| in dps)
     gyro_xyz: tuple | None = None
@@ -143,23 +154,76 @@ class Person:
             self.imu_temp = temp
         self.imu_t = self.last_sample
 
-    def advance(self, steps: int, uptime_ms: int, yaw_delta: float):
-        """Move by accelerometer pedometer steps, rotating heading with the mounted IMU."""
-        continuous = self.uptime_seen is not None and 0 < uptime_ms - self.uptime_seen <= 5000
-        if continuous:
-            self.heading = (self.heading - math.degrees(yaw_delta)) % 360
+    def advance(self, steps: int, uptime_ms: int, yaw_delta: float, acc: tuple, gyro: tuple):
+        """Estimate horizontal velocity from calibrated acceleration, then integrate position."""
+        if self.uptime_seen is not None and uptime_ms < self.uptime_seen:
+            self.accel_bias = None
+            self.calibration_start_ms = None
+            self.still_since_ms = None
+        dt = (uptime_ms - self.uptime_seen) / 1000 if self.uptime_seen is not None else 0
+        continuous = 0 < dt <= 0.6
         delta = (steps - self.steps_seen) % 65536 if continuous and self.steps_seen is not None else 0
         self.steps_seen, self.uptime_seen = steps, uptime_ms
-        if not self.loc or not 0 < delta <= 10:
+        if not continuous:
+            self.velocity_n = self.velocity_e = 0.0
+            if self.accel_bias is None:
+                self.calibration_start_ms = None
+
+        if self.accel_bias is None:
+            stationary = (continuous and delta == 0 and 8.8 < math.sqrt(sum(a * a for a in acc)) < 10.8
+                          and math.sqrt(sum(g * g for g in gyro)) < 0.08
+                          and (self.calibration_reference is None or math.dist(acc, self.calibration_reference) < 0.25))
+            if not stationary:
+                self.calibration_start_ms = None
+                self.calibration_samples = 0
+                self.calibration_acc_sum = (0.0, 0.0)
+                self.calibration_yaw_sum = self.calibration_dt = 0.0
+                self.calibration_reference = None
+                return
+            if self.calibration_start_ms is None:
+                self.calibration_start_ms = uptime_ms
+                self.calibration_reference = acc
+            self.calibration_samples += 1
+            self.calibration_acc_sum = (self.calibration_acc_sum[0] + acc[0], self.calibration_acc_sum[1] + acc[1])
+            self.calibration_yaw_sum += yaw_delta
+            self.calibration_dt += dt
+            if uptime_ms - self.calibration_start_ms < 30000 or self.calibration_samples < 100:
+                return
+            self.accel_bias = tuple(value / self.calibration_samples for value in self.calibration_acc_sum)
+            self.yaw_bias = self.calibration_yaw_sum / self.calibration_dt
+            self.velocity_n = self.velocity_e = 0.0
+            self.still_since_ms = uptime_ms
             return
-        # shortcut: fixed 0.7 m stride and level, forward-facing mount; calibrate stride and orientation on hardware.
-        distance = delta * 0.7
-        north = distance * math.cos(math.radians(self.heading))
-        east = distance * math.sin(math.radians(self.heading))
+
+        if not continuous:
+            return
+        turn = yaw_delta - self.yaw_bias * dt
+        heading_mid = math.radians(self.heading - math.degrees(turn) / 2)
+        self.heading = (self.heading - math.degrees(turn)) % 360
+        # shortcut: this assumes a level mount; add attitude/gravity compensation if the wearable tilts in use.
+        ax, ay = acc[0] - self.accel_bias[0], acc[1] - self.accel_bias[1]
+        ax = ax if abs(ax) >= 0.08 else 0.0
+        ay = ay if abs(ay) >= 0.08 else 0.0
+        if delta == 0 and abs(ax) < 0.15 and abs(ay) < 0.15 and abs(turn / dt) < 0.05:
+            self.still_since_ms = self.still_since_ms or uptime_ms
+        else:
+            self.still_since_ms = None
+        if self.still_since_ms is not None and uptime_ms - self.still_since_ms >= 2000:
+            self.velocity_n = self.velocity_e = 0.0
+            return
+        north_a = ax * math.cos(heading_mid) + ay * math.sin(heading_mid)
+        east_a = ax * math.sin(heading_mid) - ay * math.cos(heading_mid)
+        north = self.velocity_n * dt + 0.5 * north_a * dt * dt
+        east = self.velocity_e * dt + 0.5 * east_a * dt * dt
+        self.velocity_n += north_a * dt
+        self.velocity_e += east_a * dt
+        if not self.loc:
+            return
         self.lat += math.degrees(north / 6371000)
         self.lon += math.degrees(east / (6371000 * max(0.01, math.cos(math.radians(self.lat)))))
         self.lon = (self.lon + 180) % 360 - 180
-        self.loc, self.loc_t = "estimated", time.time()
+        if abs(north) + abs(east) >= 0.001:
+            self.loc, self.loc_t = "estimated", time.time()
 
     def imu_fresh(self, now: float | None = None) -> bool:
         return self.imu and (now or time.time()) - self.imu_t <= (STALE_S if self.id.startswith("mesh_") else 2)
@@ -505,7 +569,7 @@ class MeshApiSource:
                             p.acc[-1] = (p.imu_t, p.acc[-1][1])
                             p.gyro[-1] = (p.imu_t, p.gyro[-1][1])
                             if type(data.get("steps")) is int and 0 <= data["steps"] < 65536 and type(data.get("uptime_ms")) is int and data["uptime_ms"] >= 0 and type(data.get("yaw_delta_rad")) in (int, float) and math.isfinite(data["yaw_delta_rad"]):
-                                p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"])
+                                p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"], tuple(acc), tuple(gyro))
                         p.last_sample = entry["received_at"]
                     last_error = None
                 except Exception as error:
@@ -563,6 +627,7 @@ class Team:
             return
         first = p.loc is None
         p.lat, p.lon, p.loc, p.loc_t = lat, lon, "corrected", time.time()
+        p.velocity_n = p.velocity_e = 0.0
         self.log("action", person, f"{p.name} {'placed' if first else 'moved'} on map by operator")
 
     def set_origin(self, lat: float, lon: float, source: str):
@@ -573,6 +638,7 @@ class Team:
         for p in self.people.values():
             if p.id.startswith("mesh_") and p.loc is None:
                 p.lat, p.lon, p.loc, p.loc_t = lat, lon, "origin", time.time()
+                p.velocity_n = p.velocity_e = 0.0
         self.log("action", None, f"Command origin set from {source}")
 
     def raise_distress(self, person: str, how: str):
@@ -672,6 +738,9 @@ class Team:
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
             if p.id.startswith("mesh_"):
+                row["speed_m_s"] = round(math.hypot(p.velocity_n, p.velocity_e), 2) if p.accel_bias is not None and fresh else None
+                row["location_calibration"] = "ready" if p.accel_bias is not None else "calibrating" if p.calibration_start_ms is not None and fresh else "hold still"
+                row["location_calibration_remaining_s"] = max(0, math.ceil((30000 - (p.uptime_seen - p.calibration_start_ms)) / 1000)) if p.accel_bias is None and p.calibration_start_ms is not None and p.uptime_seen is not None else None
                 for key in ("hr", "mv", "rmssd", "activity", "acc_xyz", "acc_mag", "rot", "gyro_xyz", "temp"):
                     value = row.get(key)
                     previous = p.display.get(key)
@@ -746,6 +815,7 @@ async def ws_handler(request):
                         if math.isfinite(heading) and 0 <= heading < 360:
                             p = team.people[m["person"]]
                             p.heading, p.heading_set = heading, True
+                            p.velocity_n = p.velocity_e = 0.0
                             team.log("action", p.id, f"{p.name} heading calibrated to {heading:.0f}°")
                 except (KeyError, TypeError, ValueError):
                     continue
