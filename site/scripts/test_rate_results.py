@@ -24,8 +24,8 @@ class Ratings(unittest.TestCase):
         self.assertEqual(result["models"], reversed_result["models"])
         self.assertEqual(audit, reversed_audit)
         self.assertEqual((result, audit), reanalyze(result))
-        self.assertEqual(len(audit['overall']['matches']), 252)
-        self.assertAlmostEqual(sum(m['overall_elo'] for m in result['models']), 8000)
+        self.assertEqual(len(audit['overall']['matches']), 405)
+        self.assertAlmostEqual(sum(m['overall_elo'] for m in result['models']), 10000)
         self.assertTrue(all(isinstance(m['overall_elo'], float) for m in result['models']))
         for model in result['models']:
             if model['valid'] == 0:

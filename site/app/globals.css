@@ -309,6 +309,7 @@ a { color: inherit; text-decoration: none; }
 .family-moonshot { --provider-color: #ad9fd5; }
 .family-deepseek { --provider-color: #7bb8bd; }
 .family-xai { --provider-color: #a2a6ab; }
+.family-ibm { --provider-color: #8fb3a0; }
 .ranking-label { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .model-logo { display: block; width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: brightness(0) invert(1); opacity: .9; }
 .ranking-name { font-size: 14px; font-weight: 500; }

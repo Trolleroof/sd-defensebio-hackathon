@@ -17,9 +17,14 @@ TASKS = ('pulse', 'heat', 'load')
 SEEDS = (0, 1, 2)
 
 
+def label(model):
+    # Rating order follows the benchmark's competitor names, so self-hosted rows carry one.
+    return model.get('competitor') or f"{model['model']} {model['effort'].capitalize()}"
+
+
 def reanalyze(source):
     result = copy.deepcopy(source)
-    models = sorted(f"{m['model']} {m['effort'].capitalize()}" for m in result['models'])
+    models = sorted(label(m) for m in result['models'])
     cases = {}
     for row in source['raw_scores']:
         key = (row['model'], (row['task'], row['seed']))
@@ -39,7 +44,7 @@ def reanalyze(source):
         for entry in board['entries']:
             entry['rank'] = 1 + sum(other['elo'] > entry['elo'] + 1e-9 for other in board['entries'])
     for model in result['models']:
-        name = f"{model['model']} {model['effort'].capitalize()}"
+        name = label(model)
         entry = overall_entries[name]
         model['overall_elo'] = entry['elo']
         model['overall_matches'] = {key: entry[key] for key in ('wins', 'draws', 'losses', 'skipped')}
