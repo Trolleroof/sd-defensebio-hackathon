@@ -14,7 +14,7 @@ Open http://127.0.0.1:8765.
 For the Nano mesh on Windows, run:
 
 ```powershell
-python dashboard/server.py --mesh-port COM11 --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=SECOND_NODE_ID --replay '' --synthetic 0
+python dashboard/server.py --mesh-port COM11 --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=206EF1316838 --replay '' --synthetic 0
 ```
 
 Use the 12-digit Wi-Fi `node_id` from root telemetry for each wearable; colons are accepted. Close the serial monitor before starting the dashboard because only one program can open COM11 at a time. Accepted telemetry is saved to `mesh.jsonl` in the session directory. Mesh reconnects resume automatically.
