@@ -45,6 +45,7 @@ ROOT = Path(__file__).resolve().parent
 TICK_S = 1.0
 HISTORY_S = 600          # seconds of history kept per person and sent on connect
 STALE_S = 10             # no samples for this long -> "no data"
+HR_HOLD_S = 30           # keep the last displayed live HR through brief BLE gaps
 DEVIATION_BPM = 20       # |measured - expected| above this ...
 DEVIATION_HOLD_S = 30    # ... for this long -> attention item
 MODEL_VERSION = "activity baselines for IMU; kinetic-v0 otherwise (not validated)"
@@ -81,6 +82,7 @@ class Person:
     device: str = ""
     hr: float | None = None
     hr_t: float = 0.0
+    hr_window: deque = field(default_factory=lambda: deque(maxlen=5))
     last_sample: float = 0.0          # wall time of the last sample from the device
     connected: bool = False
     contact: bool | None = None       # skin contact flag, when the sensor reports it
@@ -112,9 +114,14 @@ class Person:
     imu_t: float = 0.0                # wall time of the last IMU sample
 
     def add_hr(self, bpm: float, t: float | None = None):
+        sample_t = t or time.time()
+        if self.source == "LIVE":
+            if sample_t - self.hr_t > HR_HOLD_S:
+                self.hr_window.clear()
+            self.hr_window.append(bpm)
         self.hr = bpm
-        self.hr_t = t or time.time()
-        self.last_sample = t or time.time()
+        self.hr_t = sample_t
+        self.last_sample = sample_t
         if self.model.rest is None:
             self.early_hr.append(bpm)
             if len(self.early_hr) >= 20:  # resting level from the first readings
@@ -636,7 +643,10 @@ class Team:
                 reference = f"{activity} baseline" if p.imu else "expected"
                 self.open_alert(p.id, "deviation", f"HR {abs(dev):.0f} bpm {word} {reference} for {DEVIATION_HOLD_S}+ s", "warning")
             st = self.status(p, now, dev)
-            row = {"t": round(now, 1), "hr": p.hr if hr_fresh else None, "exp": round(exp, 1) if exp else None,
+            display_hr = p.hr if hr_fresh else None
+            if p.source == "LIVE":
+                display_hr = round(statistics.fmean(p.hr_window), 1) if p.hr_window and now - p.hr_t <= HR_HOLD_S else None
+            row = {"t": round(now, 1), "hr": display_hr, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
             if p.imu:

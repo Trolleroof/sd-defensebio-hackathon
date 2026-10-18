@@ -24,6 +24,8 @@ The gateway serves [the latest data for both nodes](http://127.0.0.1:8766/api/no
 
 Every person is labeled with where their data comes from: **LIVE** (Polar over BLE), **REPLAY** (a recorded `sensor/<prefix>_*.csv` session, looped), or **SYNTHETIC** (simulated). The simulated team has scripted events for the demo: a distress press (Okafor, ~75 s), HR above expected (Alvarez, ~75 s), and a sensor dropout (Patel, 120–150 s).
 
+For live Polar heart rate, the dashboard shows the average of the last five readings. It holds that display value through gaps of up to 30 seconds and blends new readings into the same average when the sensor reconnects. Sensor freshness and attention items still use the actual arrival time; after 10 seconds without heart-rate data, quality reports `no data` even while the display holds its last value.
+
 **Attention items**
 
 | Type | Trigger |

@@ -33,7 +33,7 @@ def test_motion_uses_recent_samples_and_exposes_axes():
     assert "acc_xyz" not in row
 
 
-def test_heart_rate_expires_while_imu_keeps_reporting():
+def test_live_heart_rate_smooths_short_dropouts_and_expires():
     person = Person("live", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
     team = Team(None, (0, 0))
     team.add(person)
@@ -41,8 +41,14 @@ def test_heart_rate_expires_while_imu_keeps_reporting():
     person.hr_t -= 11
     person.add_imu((0, 0, 1000), (0, 0, 0), 26)
     row = team.tick()["people"][0]
-    assert row["hr"] is None
+    assert row["hr"] == 80
     assert row["quality"] == "no data"
+    person.add_hr(120)
+    assert team.tick()["people"][0]["hr"] == 100
+    person.hr_t -= 31
+    assert team.tick()["people"][0]["hr"] is None
+    person.add_hr(90)
+    assert team.tick()["people"][0]["hr"] == 90
 
 
 def test_polar_reconnects_when_imu_continues_without_ble():
