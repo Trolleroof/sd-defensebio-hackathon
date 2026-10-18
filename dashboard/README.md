@@ -11,13 +11,16 @@ sensor/.venv/bin/python dashboard/server.py --imu /dev/cu.usbmodem1101   # add t
 
 Open http://127.0.0.1:8765.
 
-For the Nano mesh on Windows, run:
+For the Nano mesh on Windows, run these in separate terminals:
 
 ```powershell
-python dashboard/server.py --mesh-port COM11 --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=206EF1316838 --replay '' --synthetic 0
+uv venv .venv --python 3.13
+uv pip install --python .venv\Scripts\python.exe -r dashboard\requirements.txt
+.venv\Scripts\python.exe dashboard\mesh_api.py --serial-port COM11
+.venv\Scripts\python.exe dashboard\server.py --mesh-api http://127.0.0.1:8766/api/nodes --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=206EF1316838 --replay= --synthetic 0
 ```
 
-Use the 12-digit Wi-Fi `node_id` from root telemetry for each wearable; colons are accepted. Close the serial monitor before starting the dashboard because only one program can open COM11 at a time. Root JSON events and telemetry are saved to `mesh.jsonl` in the session directory. Mesh reconnects resume automatically.
+The gateway serves [the latest data for both nodes](http://127.0.0.1:8766/api/nodes). Each node has `online`, `age_s`, `received_at`, and `latest` fields; `latest` is the root telemetry packet or `null` until one arrives. It marks a node offline after 10 seconds without telemetry and reconnects if COM11 disappears. Only the gateway opens COM11, so close a serial monitor before starting it. The gateway and the dashboard's `--mesh-api` mode do not record a session. Use the 12-digit Wi-Fi `node_id` from root telemetry for each wearable; colons are accepted in `--mesh-node`.
 
 Every person is labeled with where their data comes from: **LIVE** (Polar over BLE), **REPLAY** (a recorded `sensor/<prefix>_*.csv` session, looped), or **SYNTHETIC** (simulated). The simulated team has scripted events for the demo: a distress press (Okafor, ~75 s), HR above expected (Alvarez, ~75 s), and a sensor dropout (Patel, 120–150 s).
 
@@ -35,4 +38,4 @@ Every person is labeled with where their data comes from: **LIVE** (Polar over B
 
 **Expected HR** comes from a first-order kinetic model driven by movement. Resting HR is taken from the first 20 readings, and gain and time constants are fixed defaults. The model is not fitted or validated. Swap in a reviewed predictor in `Kinetic.step`.
 
-Each run saves `samples.csv` (1 Hz per person), `imu_<person>.csv` (every IMU line, when `--imu` is used), and `events.jsonl` (alerts and operator actions) under `dashboard/sessions/<timestamp>/`.
+Recorded modes save `samples.csv` (1 Hz per person), `imu_<person>.csv` (every IMU line, when `--imu` is used), and `events.jsonl` (alerts and operator actions) under `dashboard/sessions/<timestamp>/`. Mesh API mode keeps only current data and in-memory dashboard history.

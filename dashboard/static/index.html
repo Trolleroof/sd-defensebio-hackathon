@@ -250,7 +250,7 @@ function onSnapshot(m) {
   for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = { ...(p.history.at(-1) || {}), loc: p.loc, loc_t: p.loc_t }; }
   S.alerts = m.alerts; S.events = m.events;
   if (!S.sel || !S.people.has(S.sel)) S.sel = S.order[0];
-  $("#hSession").textContent = `Session ${m.session}`;
+  $("#hSession").textContent = m.session ? `Session ${m.session}` : "Live (not recording)";
   initMap(m.base);
   renderAll();
 }

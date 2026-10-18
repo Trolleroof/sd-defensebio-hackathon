@@ -6,10 +6,11 @@ Sources (each person is labeled with where their data comes from):
              and/or an LSM6DSOX IMU streamed over USB serial (sensor/lsm6dsox.py)
   REPLAY     a recorded session from sensor/<prefix>_{hr,ppi,acc}.csv, looped in real time
   SYNTHETIC  simulated teammates so the multi-person views have something to show
+  MESH       latest packets from the local mesh API, without session recording
 
 Every tick the gateway computes movement, HRV, an expected HR from a first-order kinetic
 model, and attention items. Operator actions come back over the same socket and are saved
-with the samples under dashboard/sessions/<timestamp>/.
+with the samples under dashboard/sessions/<timestamp>/ in recorded modes.
 
 Usage:
   python dashboard/server.py                          # replay sensor/test4 + synthetic team
@@ -17,6 +18,7 @@ Usage:
   python dashboard/server.py --live --synthetic 0     # live sensor only
   python dashboard/server.py --replay sensor/test1    # different recording
   python dashboard/server.py --imu /dev/cu.usbmodem1101   # add the LSM6DSOX (gyro, accel, die temp)
+  python dashboard/server.py --mesh-api http://127.0.0.1:8766/api/nodes --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=206EF1316838 --replay= --synthetic 0
   python dashboard/server.py --base 32.7157,-117.1611 # map center for simulated positions
 
 Locations are never GPS here: simulated people move around --base, and the operator can place
@@ -36,7 +38,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from aiohttp import WSMsgType, web
+from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
 
 ROOT = Path(__file__).resolve().parent
 TICK_S = 1.0
@@ -388,66 +390,54 @@ class ImuSource:
                 await asyncio.sleep(3)
 
 
-class MeshSource:
-    """Read the root Nano's JSON lines and save the original telemetry for replay."""
+class MeshApiSource:
+    """Poll the local mesh API; the gateway alone owns the serial port."""
 
-    def __init__(self, people: dict[str, Person], port: str, session_dir: Path):
-        self.people, self.port = people, port
-        self.out = open(session_dir / "mesh.jsonl", "a")
-
-    def take(self, line: str):
-        try:
-            data = json.loads(line)
-            if not isinstance(data, dict):
-                return
-            self.out.write(json.dumps({"t": time.time(), **data}) + "\n")
-            self.out.flush()
-            if data.get("type") != "telemetry":
-                return
-            p = self.people.get(data.get("node_id"))
-            if p is None:
-                return
-            p.connected = True
-            p.last_sample = time.time()
-            bpm = data.get("hr_bpm")
-            if isinstance(bpm, (int, float)) and bpm > 0:
-                p.add_hr(bpm)
-            else:
-                p.hr = None
-            acc = data.get("accel_m_s2")
-            gyro = data.get("gyro_rad_s")
-            if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(isinstance(v, (int, float)) for v in acc + gyro):
-                p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
-        except (ValueError, TypeError, KeyError):
-            return
+    def __init__(self, people: dict[str, Person], url: str):
+        self.people, self.url = people, url
+        self.seen = {}
 
     async def run(self, team):
-        import serial
         last_error = None
-        while True:
-            try:
-                port = await asyncio.to_thread(serial.Serial, self.port, 115200, timeout=1)
-                team.log("system", None, f"Mesh connected on {self.port}")
-                last_error = None
-                with port:
-                    while True:
-                        raw = await asyncio.to_thread(port.readline)
-                        if raw:
-                            self.take(raw.decode(errors="ignore"))
-            except Exception as e:
-                for p in self.people.values():
-                    p.connected = False
-                msg = f"Mesh unavailable: {e}"
-                if msg != last_error:
-                    team.log("system", None, msg)
-                last_error = msg
-                await asyncio.sleep(3)
+        async with ClientSession(timeout=ClientTimeout(total=2)) as client:
+            while True:
+                try:
+                    async with client.get(self.url) as response:
+                        response.raise_for_status()
+                        nodes = (await response.json())["nodes"]
+                    for node_id, p in self.people.items():
+                        entry = nodes.get(node_id, {})
+                        p.connected = bool(entry.get("online"))
+                        data = entry.get("latest")
+                        if not p.connected or not isinstance(data, dict):
+                            continue
+                        marker = (data.get("uptime_ms"), data.get("sequence"))
+                        if self.seen.get(node_id) == marker:
+                            continue
+                        self.seen[node_id] = marker
+                        p.last_sample = entry["received_at"]
+                        bpm = data.get("hr_bpm")
+                        if isinstance(bpm, (int, float)) and bpm > 0:
+                            p.add_hr(bpm, entry["received_at"])
+                        else:
+                            p.hr = None
+                        acc, gyro = data.get("accel_m_s2"), data.get("gyro_rad_s")
+                        if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(isinstance(v, (int, float)) for v in acc + gyro):
+                            p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
+                    last_error = None
+                except Exception as error:
+                    for p in self.people.values():
+                        p.connected = False
+                    if str(error) != last_error:
+                        team.log("system", None, f"Mesh API unavailable: {error}")
+                        last_error = str(error)
+                await asyncio.sleep(0.1)
 
 
 # ---------------------------------------------------------------- team, attention, actions
 
 class Team:
-    def __init__(self, session_dir: Path, base: tuple[float, float]):
+    def __init__(self, session_dir: Path | None, base: tuple[float, float]):
         self.base = base
         self.people: dict[str, Person] = {}
         self.alerts: dict[str, dict] = {}
@@ -455,11 +445,13 @@ class Team:
         self.clients: set[web.WebSocketResponse] = set()
         self.started = time.time()
         self.session_dir = session_dir
-        session_dir.mkdir(parents=True, exist_ok=True)
-        self.samples = open(session_dir / "samples.csv", "w", newline="")
-        self.samples_w = csv.writer(self.samples)
-        self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "rot_dps", "imu_temp_c", "quality", "status", "lat", "lon", "loc_source"])
-        self.events_f = open(session_dir / "events.jsonl", "a")
+        self.samples = self.samples_w = self.events_f = None
+        if session_dir:
+            session_dir.mkdir(parents=True, exist_ok=True)
+            self.samples = open(session_dir / "samples.csv", "w", newline="")
+            self.samples_w = csv.writer(self.samples)
+            self.samples_w.writerow(["t", "person", "source", "hr", "expected", "movement_mg", "rmssd_ms", "rot_dps", "imu_temp_c", "quality", "status", "lat", "lon", "loc_source"])
+            self.events_f = open(session_dir / "events.jsonl", "a")
         self._next = 1
 
     def add(self, p: Person):
@@ -468,7 +460,8 @@ class Team:
     def log(self, kind: str, person: str | None, text: str, alert: str | None = None) -> dict:
         ev = {"t": time.time(), "kind": kind, "person": person, "text": text, "alert": alert}
         self.events.append(ev)
-        self.events_f.write(json.dumps(ev) + "\n"); self.events_f.flush()
+        if self.events_f:
+            self.events_f.write(json.dumps(ev) + "\n"); self.events_f.flush()
         return ev
 
     def open_alert(self, person: str, kind: str, reason: str, severity: str):
@@ -556,17 +549,19 @@ class Team:
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
             p.history.append(row)
-            self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
-                                     row.get("lat"), row.get("lon"), p.loc])
+            if self.samples_w:
+                self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
+                                         row.get("lat"), row.get("lon"), p.loc])
             rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
                          "age": round(now - p.last_sample, 1) if p.last_sample else None})
-        self.samples.flush()
+        if self.samples:
+            self.samples.flush()
         return {"type": "tick", "t": now, "people": rows, "alerts": list(self.alerts.values())}
 
     def snapshot(self) -> dict:
         return {
             "type": "snapshot", "t": time.time(), "started": self.started, "model": MODEL_VERSION,
-            "session": self.session_dir.name, "base": self.base, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
+            "session": self.session_dir.name if self.session_dir else None, "base": self.base, "stale_s": STALE_S, "deviation_bpm": DEVIATION_BPM,
             "people": [{"id": p.id, "name": p.name, "role": p.role, "source": p.source, "device": p.device, "imu": p.imu,
                         "loc": p.loc, "loc_t": p.loc_t, "history": list(p.history)} for p in self.people.values()],
             "alerts": list(self.alerts.values()), "events": self.events[-200:],
@@ -618,7 +613,9 @@ async def broadcaster(app):
 
 def build(args) -> web.Application:
     lat, lon = (float(x) for x in args.base.split(","))
-    team = Team(ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"), (lat, lon))
+    if args.mesh_api and args.imu:
+        raise SystemExit("--mesh-api cannot be combined with --imu")
+    team = Team(None if args.mesh_api else ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"), (lat, lon))
     sources = []
     if args.live:
         p = Person("live", args.live_name, "Wearer", "LIVE", device="Polar Verity Sense")
@@ -636,7 +633,7 @@ def build(args) -> web.Application:
             p, owns = Person("imu", args.live_name, "Wearer", src, device=f"LSM6DSOX ({Path(args.imu).name})"), True
             team.add(p)
         sources.append(ImuSource(p, args.imu, team.session_dir, owns))
-    if args.mesh_port:
+    if args.mesh_api:
         mesh_people = {}
         for spec in args.mesh_node:
             name, sep, node_id = spec.partition("=")
@@ -647,8 +644,8 @@ def build(args) -> web.Application:
             team.add(p)
             mesh_people[node_id] = p
         if not mesh_people:
-            raise SystemExit("--mesh-port requires at least one --mesh-node NAME=NODE_ID")
-        sources.append(MeshSource(mesh_people, args.mesh_port, team.session_dir))
+            raise SystemExit("--mesh-api requires at least one --mesh-node NAME=NODE_ID")
+        sources.append(MeshApiSource(mesh_people, args.mesh_api))
     roster = [("Alvarez", "Rifleman", "elevated"), ("Chen", "Medic", None), ("Okafor", "Radio", "distress"),
               ("Patel", "Team lead", "dropout"), ("Brooks", "Rifleman", None), ("Novak", "Grenadier", None)]
     for i, (name, role, script) in enumerate(roster[:args.synthetic]):
@@ -666,14 +663,15 @@ def build(args) -> web.Application:
     async def stop(app):
         for t in app["tasks"]:
             t.cancel()
-        for s in sources:
-            if isinstance(s, MeshSource):
-                s.out.close()
-        team.samples.close(); team.events_f.close()
+        if team.samples:
+            team.samples.close()
+        if team.events_f:
+            team.events_f.close()
 
     app.on_startup.append(start)
     app.on_cleanup.append(stop)
-    print(f"Recording to {team.session_dir}")
+    if team.session_dir:
+        print(f"Recording to {team.session_dir}")
     return app
 
 
@@ -682,7 +680,7 @@ def main():
     p.add_argument("--live", action="store_true", help="stream a Polar Verity Sense as a live person")
     p.add_argument("--live-name", default="Live wearer")
     p.add_argument("--imu", help="LSM6DSOX serial port (e.g. /dev/cu.usbmodem1101) or a saved imu_*.csv to replay")
-    p.add_argument("--mesh-port", help="root Nano serial port, e.g. COM11")
+    p.add_argument("--mesh-api", help="local mesh gateway URL, e.g. http://127.0.0.1:8766/api/nodes; disables session recording")
     p.add_argument("--mesh-node", action="append", default=[], help="wearer and Wi-Fi node ID, e.g. Alex=206EF1316774; repeat per node")
     p.add_argument("--address", help="BLE address of the sensor (default: first 'Polar…' found)")
     default_replay = ROOT.parent / "sensor" / "test4"
