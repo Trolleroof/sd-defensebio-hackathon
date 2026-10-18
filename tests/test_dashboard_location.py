@@ -103,15 +103,43 @@ class DashboardLocationTest(unittest.TestCase):
         team = Team(None, (0, 0))
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
         team.add(person)
-        person.last_sample = time.time()
-        self.assertEqual(team.tick()["people"][0]["location_calibration"], "hold still")
-        for i in range(7):
-            person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
-        self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 29)
-        for i in range(7, 50):
-            person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
-        row = team.tick()["people"][0]
-        self.assertEqual((row["location_calibration"], row["location_calibration_remaining_s"]), ("calibrating", 21))
+        now = [1000.0]
+        with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
+            person.last_sample = now[0]
+            self.assertEqual(team.tick()["people"][0]["location_calibration"], "hold still")
+            for i in range(7):
+                now[0] = person.last_sample = person.imu_t = 1000 + i * 0.2
+                person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+            self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 29)
+            for i in range(7, 50):
+                now[0] = person.last_sample = person.imu_t = 1000 + i * 0.2
+                person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+            row = team.tick()["people"][0]
+            self.assertEqual((row["location_calibration"], row["location_calibration_remaining_s"]), ("calibrating", 21))
+
+    def test_sparse_packets_keep_stationary_calibration_running(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+        team.add(person)
+        now = [997.0]
+        with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
+            for uptime in (1000, 4000, 7000):
+                now[0] = person.last_sample = person.imu_t = 1000 + (uptime - 4000) / 1000
+                person.advance(0, uptime, 0, (0, -0.7, 9.78), (0, 0, 0))
+            self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 27)
+        with patch("dashboard.server.time.time", return_value=1005):
+            self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 25)
+        for uptime in range(10000, 35000, 3000):
+            person.advance(0, uptime, 0, (0, -0.7, 9.78), (0, 0, 0))
+        self.assertIsNotNone(person.accel_bias)
+
+    def test_calibration_restarts_after_long_packet_gap(self):
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
+        for uptime in (1000, 4000, 7000):
+            person.advance(0, uptime, 0, (0, 0, 9.80665), (0, 0, 0))
+        self.assertEqual(person.calibration_start_ms, 4000)
+        person.advance(0, 18000, 0, (0, 0, 9.80665), (0, 0, 0))
+        self.assertIsNone(person.calibration_start_ms)
 
 
 class DashboardOriginApiTest(unittest.IsolatedAsyncioTestCase):
@@ -133,6 +161,7 @@ class DashboardOriginApiTest(unittest.IsolatedAsyncioTestCase):
             await ws.close()
         self.assertIsNone(person.accel_bias)
         self.assertIsNone(person.calibration_start_ms)
+        self.assertIsNone(person.calibration_start_t)
         self.assertEqual(person.velocity_n, 0)
         self.assertEqual(other.accel_bias, (0.3, 0.4))
 
