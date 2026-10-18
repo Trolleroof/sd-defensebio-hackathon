@@ -41,18 +41,28 @@
         "load": {
           "elo": 1071.8073080894694,
           "valid": 2,
-          "mean_loss": 29.34090994515198
+          "mean_loss": 29.34090994515198,
+          "original_elo": 1071.8073080894694
         },
         "heat": {
           "elo": 1008.7928295465117,
           "valid": 2,
-          "mean_loss": 0.18428612372642345
+          "mean_loss": 0.18428612372642345,
+          "original_elo": 1008.7928295465117
         },
         "pulse": {
           "elo": 971.4599191872695,
           "valid": 1,
-          "mean_loss": 10.014156740055713
+          "mean_loss": 10.014156740055713,
+          "original_elo": 971.4599191872695
         }
+      },
+      "overall_elo": 1049.9575804416893,
+      "overall_matches": {
+        "wins": 18,
+        "draws": 13,
+        "losses": 15,
+        "skipped": 17
       }
     },
     {
@@ -88,18 +98,28 @@
         "load": {
           "elo": 984.0517688487953,
           "valid": 1,
-          "mean_loss": 29.34090994515198
+          "mean_loss": 29.34090994515198,
+          "original_elo": 984.0517688487953
         },
         "heat": {
           "elo": 1137.9066557854983,
           "valid": 3,
-          "mean_loss": 0.18203695199757072
+          "mean_loss": 0.18203695199757072,
+          "original_elo": 1137.9066557854983
         },
         "pulse": {
           "elo": 1091.1041254004747,
           "valid": 2,
-          "mean_loss": 10.013290341057608
+          "mean_loss": 10.013290341057608,
+          "original_elo": 1091.1041254004747
         }
+      },
+      "overall_elo": 1166.986436506945,
+      "overall_matches": {
+        "wins": 27,
+        "draws": 13,
+        "losses": 8,
+        "skipped": 15
       }
     },
     {
@@ -135,18 +155,28 @@
         "load": {
           "elo": 1075.387827184115,
           "valid": 2,
-          "mean_loss": 29.34090994515198
+          "mean_loss": 29.34090994515198,
+          "original_elo": 1075.387827184115
         },
         "heat": {
           "elo": 1130.0388543564854,
           "valid": 3,
-          "mean_loss": 0.18203695199757072
+          "mean_loss": 0.18203695199757072,
+          "original_elo": 1130.0388543564854
         },
         "pulse": {
           "elo": 1134.4074966520882,
           "valid": 3,
-          "mean_loss": 10.014156740055713
+          "mean_loss": 10.014156740055713,
+          "original_elo": 1134.4074966520882
         }
+      },
+      "overall_elo": 1197.794084035101,
+      "overall_matches": {
+        "wins": 38,
+        "draws": 14,
+        "losses": 6,
+        "skipped": 5
       }
     },
     {
@@ -182,18 +212,28 @@
         "load": {
           "elo": 1148.197443085095,
           "valid": 3,
-          "mean_loss": 29.34090994515198
+          "mean_loss": 29.34090994515198,
+          "original_elo": 1148.197443085095
         },
         "heat": {
           "elo": 1118.3121532603004,
           "valid": 3,
-          "mean_loss": 0.18292125961901728
+          "mean_loss": 0.18292125961901728,
+          "original_elo": 1118.3121532603004
         },
         "pulse": {
           "elo": 1049.4907406485586,
           "valid": 2,
-          "mean_loss": 10.014156740055713
+          "mean_loss": 10.014156740055713,
+          "original_elo": 1049.4907406485586
         }
+      },
+      "overall_elo": 1201.8926747385433,
+      "overall_matches": {
+        "wins": 34,
+        "draws": 18,
+        "losses": 5,
+        "skipped": 6
       }
     },
     {
@@ -227,20 +267,30 @@
       },
       "tasks": {
         "load": {
-          "elo": null,
+          "elo": 891.1110716918117,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         },
         "heat": {
-          "elo": null,
+          "elo": 860.9758473736453,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         },
         "pulse": {
-          "elo": null,
+          "elo": 877.6584237538506,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         }
+      },
+      "overall_elo": 745.7588694553301,
+      "overall_matches": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 33,
+        "skipped": 30
       }
     },
     {
@@ -276,18 +326,28 @@
         "load": {
           "elo": 1065.0370207528392,
           "valid": 2,
-          "mean_loss": 29.34090994515198
+          "mean_loss": 29.34090994515198,
+          "original_elo": 1065.0370207528392
         },
         "heat": {
           "elo": 945.8595648541028,
           "valid": 1,
-          "mean_loss": 0.18428612372642345
+          "mean_loss": 0.18428612372642345,
+          "original_elo": 945.8595648541028
         },
         "pulse": {
           "elo": 1036.9006928266283,
           "valid": 1,
-          "mean_loss": 10.012423942059504
+          "mean_loss": 10.012423942059504,
+          "original_elo": 1036.9006928266283
         }
+      },
+      "overall_elo": 1003.78245096339,
+      "overall_matches": {
+        "wins": 17,
+        "draws": 10,
+        "losses": 15,
+        "skipped": 21
       }
     },
     {
@@ -321,20 +381,30 @@
       },
       "tasks": {
         "load": {
-          "elo": null,
+          "elo": 882.9890677588279,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         },
         "heat": {
           "elo": 949.0005167524441,
           "valid": 1,
-          "mean_loss": 0.18428612372642345
+          "mean_loss": 0.18428612372642345,
+          "original_elo": 949.0005167524441
         },
         "pulse": {
           "elo": 968.3826310040871,
           "valid": 1,
-          "mean_loss": 10.014156740055713
+          "mean_loss": 10.014156740055713,
+          "original_elo": 968.3826310040871
         }
+      },
+      "overall_elo": 892.1008419149015,
+      "overall_matches": {
+        "wins": 6,
+        "draws": 6,
+        "losses": 25,
+        "skipped": 26
       }
     },
     {
@@ -368,20 +438,30 @@
       },
       "tasks": {
         "load": {
-          "elo": null,
+          "elo": 881.4184925890464,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         },
         "heat": {
-          "elo": null,
+          "elo": 849.1135780710114,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         },
         "pulse": {
-          "elo": null,
+          "elo": 870.5959705270428,
           "valid": 0,
-          "mean_loss": null
+          "mean_loss": null,
+          "original_elo": null
         }
+      },
+      "overall_elo": 741.7270619441007,
+      "overall_matches": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 33,
+        "skipped": 30
       }
     }
   ],
@@ -1042,5 +1122,29 @@
       "interval_score_90": null,
       "failure_reason": "ValueError: Two response attempts exhausted for experiment0"
     }
-  ]
+  ],
+  "rating_policy": {
+    "version": "pooled-task-elo-v1",
+    "analysis": "Post-run reanalysis; original complete-suite Elo retained in suite_elo.",
+    "overall": "All model pairs on each matched task and agent seed; pool the nine task/seed slots.",
+    "outcomes": "Lower MAE wins; valid beats failed; two failures skip; tolerance 1e-9.",
+    "initial_elo": 1000,
+    "k": 32,
+    "scale": 400,
+    "match_order_seed": 0,
+    "task_order": [
+      "pulse",
+      "heat",
+      "load"
+    ],
+    "agent_seeds": [
+      0,
+      1,
+      2
+    ],
+    "ranking": "All participants retain numeric Elo, including those with zero valid attempts.",
+    "scheduled_matches": 252,
+    "scored_matches": 177,
+    "audit": "/results/pooled-task-elo-v1.json"
+  }
 }

@@ -1,0 +1,4656 @@
+{
+  "policy": {
+    "version": "pooled-task-elo-v1",
+    "analysis": "Post-run reanalysis; original complete-suite Elo retained in suite_elo.",
+    "overall": "All model pairs on each matched task and agent seed; pool the nine task/seed slots.",
+    "outcomes": "Lower MAE wins; valid beats failed; two failures skip; tolerance 1e-9.",
+    "initial_elo": 1000,
+    "k": 32,
+    "scale": 400,
+    "match_order_seed": 0,
+    "task_order": [
+      "pulse",
+      "heat",
+      "load"
+    ],
+    "agent_seeds": [
+      0,
+      1,
+      2
+    ],
+    "ranking": "All participants retain numeric Elo, including those with zero valid attempts.",
+    "scheduled_matches": 252,
+    "scored_matches": 177,
+    "audit": "/results/pooled-task-elo-v1.json"
+  },
+  "overall": {
+    "entries": [
+      {
+        "competitor": "Claude Opus 5.5 Medium",
+        "elo": 1201.8926747385433,
+        "wins": 34,
+        "draws": 18,
+        "losses": 5,
+        "skipped": 6,
+        "valid_runs": 8,
+        "rank": 1
+      },
+      {
+        "competitor": "GPT-6 Astra Medium",
+        "elo": 1197.794084035101,
+        "wins": 38,
+        "draws": 14,
+        "losses": 6,
+        "skipped": 5,
+        "valid_runs": 8,
+        "rank": 2
+      },
+      {
+        "competitor": "Claude Sonnet 5.5 Medium",
+        "elo": 1166.986436506945,
+        "wins": 27,
+        "draws": 13,
+        "losses": 8,
+        "skipped": 15,
+        "valid_runs": 6,
+        "rank": 3
+      },
+      {
+        "competitor": "Gemini 4 Argon Medium",
+        "elo": 1049.9575804416893,
+        "wins": 18,
+        "draws": 13,
+        "losses": 15,
+        "skipped": 17,
+        "valid_runs": 5,
+        "rank": 4
+      },
+      {
+        "competitor": "Gemini 3.8 Flash Medium",
+        "elo": 1003.78245096339,
+        "wins": 17,
+        "draws": 10,
+        "losses": 15,
+        "skipped": 21,
+        "valid_runs": 4,
+        "rank": 5
+      },
+      {
+        "competitor": "Kimi K3 High",
+        "elo": 892.1008419149015,
+        "wins": 6,
+        "draws": 6,
+        "losses": 25,
+        "skipped": 26,
+        "valid_runs": 2,
+        "rank": 6
+      },
+      {
+        "competitor": "Grok 4.7 Medium",
+        "elo": 745.7588694553301,
+        "wins": 0,
+        "draws": 0,
+        "losses": 33,
+        "skipped": 30,
+        "valid_runs": 0,
+        "rank": 7
+      },
+      {
+        "competitor": "DeepSeek V4 Flash 0423 High",
+        "elo": 741.7270619441007,
+        "wins": 0,
+        "draws": 0,
+        "losses": 33,
+        "skipped": 30,
+        "valid_runs": 0,
+        "rank": 8
+      }
+    ],
+    "matches": [
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 16.0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": -0.7363067935219938
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -15.229860185357271
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 15.265247982020782
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 14.597697516197197
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 0.06309162075191388
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 13.217962782277656
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -17.374675764333006
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -14.565672655312122
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 13.338073854462753
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 14.810020463585122
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.0,
+        "delta": -17.865682195776856
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 12.054979929746416
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 15.61938330679856
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -2.470653541120644
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 12.510987881625258
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 11.093036960599104
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -11.513154352520143
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -2.4250872813734397
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -17.44556827195631
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -2.9854340345893853
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 12.763995699647516
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 15.422691523860454
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -11.723495551083593
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 11.654952593416208
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": 0.12440283227019044
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": 0.11294553882071412
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 10.256182767908324
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 13.857455783650611
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 11.928868191193807
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -4.164661711455299
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -7.462332494808585
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 4.400835883723124
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -13.409511580454557
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 3.7760049748512152
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 12.30930945472431
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -14.161147309590033
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -6.819003233882761
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -4.875848502461157
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 8.122760019589371
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 13.624790659172884
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -11.695228370173007
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 11.687071679870481
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.5,
+        "delta": -0.853656958510804
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 9.414843480964425
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 10.53791949357199
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 9.701620310255272
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 7.168105882204635
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 14.387843276015456
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -4.897372758158899
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -10.041640066226732
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 6.04635310338932
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -4.577096991697533
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -19.98918832231065
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 10.587045895291347
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 8.395680579568484
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -10.189959410178782
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 13.450991926697483
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 12.855069452808582
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -3.827752754855613
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 10.83023377452604
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -10.350619612293508
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 10.368788125922489
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 9.785503055381216
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 6.189069083143828
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 11.735220970339594
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -0.47751160794195613
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 10.330954887410744
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 8.721523021505686
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -7.632563222126564
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 7.287259319165269
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 4.665750506269575
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -23.25007384696376
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -3.555521886157127
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 9.184750024094779
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 6.277750001149396
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -10.062002818575802
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 6.682798148774314
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 6.970156355906418
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 6.542567390626708
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -0.49177187265818034
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 1.9026718563712315
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 1.0,
+        "delta": 17.72968906542817
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -7.475228912297009
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -4.055143991305332
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 14.290312725019149
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -4.877697394434983
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -18.99663140912191
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -11.63436970809645
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 5.376823786783973
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 5.105569282686648
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 10.814015237287972
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -6.186250834928821
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 13.037577295764475
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 13.190957124311723
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -3.9688372089444286
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -4.258377250008728
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -5.793845190080662
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.0,
+        "delta": -16.7457586495338
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -3.1580486013311777
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 14.072740405284588
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -10.61413774777492
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 12.810476036792497
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 0.1758983816073716
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 1.0,
+        "delta": 16.842997008851864
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -6.402257268594454
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 13.714405217504744
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -4.746431748172672
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 3.6693536099462456
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": 1.0330663750606401
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 10.261722273717726
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 7.046269514738896
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 4.811544697968955
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 12.56400961274883
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 1.0,
+        "delta": 16.722987900047954
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 7.449992859293566
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 9.669116118440435
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 1.0,
+        "delta": 15.183945194521797
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -20.113892968556712
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 5.525225404583473
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -12.726445167356362
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -3.9264385082508975
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 5.989606763525469
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 4.466237728595267
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 5.542298121469347
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 1.0,
+        "delta": 13.549876792650057
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -16.6235251092515
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 2.945531444097856
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.5,
+        "delta": -3.913890834276568
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 2.915233699293708
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 3.9730910090204397
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 5.170957919389586
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 2.5055900561460547
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -18.143839434210555
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.0,
+        "delta": -20.804926020890235
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 3.816635553433965
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -4.371409169128395
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -3.4448161595365256
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 13.65274569099628
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 11.420176990344771
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.5,
+        "delta": -3.317331601799541
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 6.133171239963282
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 2.622574155516002
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "GPT-6 Astra Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 2.550790599221468
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 8.885157991499494
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -11.221969308740112
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.5,
+        "delta": -10.946337549091613
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 11.21533078896794
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 1.0,
+        "delta": 17.871621952747944
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Claude Sonnet 5.5 Medium",
+        "outcome": 0.5,
+        "delta": -2.468338118383535
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 3.2488911740617503
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 12.35089129223968
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.5,
+        "delta": -4.708533804225265
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 5.240577647387738
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 6.6711283374771995
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.5,
+        "delta": 0.015630894254568872
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": 0.0,
+        "delta": -15.985808763058131
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 11.236318052385897
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Kimi K3 High",
+        "outcome": 0.0,
+        "delta": -22.257017529595498
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 4.53810176464448
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 5.797908671546562
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "pulse",
+          1
+        ],
+        "a": "Grok 4.7 Medium",
+        "b": "Kimi K3 High",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "GPT-6 Astra Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -4.976856474665578
+      },
+      {
+        "seed": [
+          "heat",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 11.185438661957729
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "DeepSeek V4 Flash 0423 High",
+        "outcome": 1.0,
+        "delta": 3.1106937065648665
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 13.257283764807212
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 5.9589448760645
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 10.886137530392467
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": null,
+        "delta": 0
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 10.70511768281068
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 6.2432553399011965
+      },
+      {
+        "seed": [
+          "heat",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 8.407198228017748
+      },
+      {
+        "seed": [
+          "pulse",
+          2
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 0.5,
+        "delta": -5.089980858345825
+      },
+      {
+        "seed": [
+          "pulse",
+          0
+        ],
+        "a": "Claude Sonnet 5.5 Medium",
+        "b": "Gemini 4 Argon Medium",
+        "outcome": 1.0,
+        "delta": 11.335221075468237
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "Gemini 3.8 Flash Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 6.272803440343562
+      },
+      {
+        "seed": [
+          "load",
+          2
+        ],
+        "a": "Claude Opus 5.5 Medium",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 1.0,
+        "delta": 8.096806246452289
+      },
+      {
+        "seed": [
+          "load",
+          0
+        ],
+        "a": "Gemini 4 Argon Medium",
+        "b": "Kimi K3 High",
+        "outcome": 1.0,
+        "delta": 9.961893571515542
+      },
+      {
+        "seed": [
+          "heat",
+          0
+        ],
+        "a": "DeepSeek V4 Flash 0423 High",
+        "b": "Gemini 3.8 Flash Medium",
+        "outcome": 0.0,
+        "delta": -6.140262671318417
+      },
+      {
+        "seed": [
+          "load",
+          1
+        ],
+        "a": "GPT-6 Astra Medium",
+        "b": "Grok 4.7 Medium",
+        "outcome": 1.0,
+        "delta": 2.262203977544395
+      }
+    ]
+  },
+  "tasks": {
+    "pulse": {
+      "entries": [
+        {
+          "competitor": "GPT-6 Astra Medium",
+          "elo": 1134.4074966520882,
+          "wins": 14,
+          "draws": 5,
+          "losses": 2,
+          "skipped": 0,
+          "valid_runs": 3,
+          "rank": 1
+        },
+        {
+          "competitor": "Claude Sonnet 5.5 Medium",
+          "elo": 1091.1041254004747,
+          "wins": 10,
+          "draws": 3,
+          "losses": 2,
+          "skipped": 6,
+          "valid_runs": 2,
+          "rank": 2
+        },
+        {
+          "competitor": "Claude Opus 5.5 Medium",
+          "elo": 1049.4907406485586,
+          "wins": 7,
+          "draws": 5,
+          "losses": 3,
+          "skipped": 6,
+          "valid_runs": 2,
+          "rank": 3
+        },
+        {
+          "competitor": "Gemini 3.8 Flash Medium",
+          "elo": 1036.9006928266283,
+          "wins": 7,
+          "draws": 0,
+          "losses": 5,
+          "skipped": 9,
+          "valid_runs": 1,
+          "rank": 4
+        },
+        {
+          "competitor": "Gemini 4 Argon Medium",
+          "elo": 971.4599191872695,
+          "wins": 3,
+          "draws": 3,
+          "losses": 6,
+          "skipped": 9,
+          "valid_runs": 1,
+          "rank": 5
+        },
+        {
+          "competitor": "Kimi K3 High",
+          "elo": 968.3826310040871,
+          "wins": 4,
+          "draws": 2,
+          "losses": 7,
+          "skipped": 8,
+          "valid_runs": 1,
+          "rank": 6
+        },
+        {
+          "competitor": "Grok 4.7 Medium",
+          "elo": 877.6584237538506,
+          "wins": 0,
+          "draws": 0,
+          "losses": 10,
+          "skipped": 11,
+          "valid_runs": 0,
+          "rank": 7
+        },
+        {
+          "competitor": "DeepSeek V4 Flash 0423 High",
+          "elo": 870.5959705270428,
+          "wins": 0,
+          "draws": 0,
+          "losses": 10,
+          "skipped": 11,
+          "valid_runs": 0,
+          "rank": 8
+        }
+      ],
+      "matches": [
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 16.0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.5,
+          "delta": -0.7363067935219938
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -15.263693206478006
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -16.0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 14.564127121723708
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 14.530498471024522
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 15.297389788213305
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -15.263693206478006
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -2.098297283384383
+        },
+        {
+          "seed": 1,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 1.0,
+          "delta": 16.062718530394747
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -1.306293845486472
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 14.822096730098224
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -2.52395012458091
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 11.931721354408715
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 14.104219330613539
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -19.213043656522917
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 12.352647898256738
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.377539824933464
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 0.9372092739268396
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.593797410616297
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -11.89737416633357
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 12.106045156090712
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 14.798727514790535
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -13.341348768089086
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.050775669276113
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 19.59429066002577
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -17.193058814668444
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 15.550767227474143
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.0,
+          "delta": -12.834589486985234
+        },
+        {
+          "seed": 2,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 16.97809540549995
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 15.754354027547798
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 2.6151436101345613
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.90510413791235
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -9.394109758725978
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.495992767391215
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 9.144809265091396
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": -1.6699321473243813
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -12.71860300566871
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": -5.236551645473121
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 11.710379337255684
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 13.718562569207304
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 10.727125349141414
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 12.998377718438366
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 9.865062604962443
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -13.158177513272745
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -16.871862101719387
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -12.176726897368766
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 0.6808179982117135
+        },
+        {
+          "seed": 0,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -12.867971802523227
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 10.807045432481036
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 14.477337947985063
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -20.256953469365687
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 9.373538065654706
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 9.615346590627361
+        }
+      ]
+    },
+    "heat": {
+      "entries": [
+        {
+          "competitor": "Claude Sonnet 5.5 Medium",
+          "elo": 1137.9066557854983,
+          "wins": 14,
+          "draws": 6,
+          "losses": 1,
+          "skipped": 0,
+          "valid_runs": 3,
+          "rank": 1
+        },
+        {
+          "competitor": "GPT-6 Astra Medium",
+          "elo": 1130.0388543564854,
+          "wins": 16,
+          "draws": 3,
+          "losses": 2,
+          "skipped": 0,
+          "valid_runs": 3,
+          "rank": 2
+        },
+        {
+          "competitor": "Claude Opus 5.5 Medium",
+          "elo": 1118.3121532603004,
+          "wins": 13,
+          "draws": 6,
+          "losses": 2,
+          "skipped": 0,
+          "valid_runs": 3,
+          "rank": 3
+        },
+        {
+          "competitor": "Gemini 4 Argon Medium",
+          "elo": 1008.7928295465117,
+          "wins": 6,
+          "draws": 5,
+          "losses": 6,
+          "skipped": 4,
+          "valid_runs": 2,
+          "rank": 4
+        },
+        {
+          "competitor": "Kimi K3 High",
+          "elo": 949.0005167524441,
+          "wins": 2,
+          "draws": 4,
+          "losses": 8,
+          "skipped": 7,
+          "valid_runs": 1,
+          "rank": 5
+        },
+        {
+          "competitor": "Gemini 3.8 Flash Medium",
+          "elo": 945.8595648541028,
+          "wins": 2,
+          "draws": 4,
+          "losses": 8,
+          "skipped": 7,
+          "valid_runs": 1,
+          "rank": 6
+        },
+        {
+          "competitor": "Grok 4.7 Medium",
+          "elo": 860.9758473736453,
+          "wins": 0,
+          "draws": 0,
+          "losses": 13,
+          "skipped": 8,
+          "valid_runs": 0,
+          "rank": 7
+        },
+        {
+          "competitor": "DeepSeek V4 Flash 0423 High",
+          "elo": 849.1135780710114,
+          "wins": 0,
+          "draws": 0,
+          "losses": 13,
+          "skipped": 8,
+          "valid_runs": 0,
+          "rank": 8
+        }
+      ],
+      "matches": [
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 16.0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.5,
+          "delta": -0.7363067935219938
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -15.263693206478006
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": 0.0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 15.297532827475365
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 15.262138141580877
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 13.836824524582724
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 13.247763103551915
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 14.629402403364583
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": 0.0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.963432895257405
+        },
+        {
+          "seed": 1,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -17.2805723021924
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -15.236295768152786
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 17.431435840702026
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 14.748180093900867
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.205198866480305
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 12.043722686197054
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 11.53932531554403
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.30021891805054
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 10.982353339709508
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -4.115118532122754
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -5.721435074034048
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -13.87616667700215
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.862454225848534
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -8.617073390923537
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 8.838007935368243
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 14.650058162943946
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 10.052945593481315
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -14.204313666095723
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -3.309689334018625
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -12.946409391402907
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 13.002563416828949
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 11.865086837102556
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 13.648712881373715
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.5,
+          "delta": -0.23748478531111772
+        },
+        {
+          "seed": 2,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": -5.125712629971517
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.0,
+          "delta": -15.97958129177469
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 3.9156008423210373
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -6.640503325463524
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 11.460510899044067
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 7.309035764934581
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": 2.1016349273716894
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": -3.8089364581094145
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 7.674399176987343
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 1.0,
+          "delta": 20.342289014569943
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 9.373651099820513
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -10.729232706563993
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 13.651280272403856
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 7.8439240943618955
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": -6.063210319628855
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 9.680974189560128
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 8.223967453580908
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 8.858187012427003
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 13.747223226412409
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.5,
+          "delta": -7.3565411729869545
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 1.0,
+          "delta": 17.774328844394795
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -12.342960027033019
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 0.14457632962342615
+        },
+        {
+          "seed": 0,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 0.0,
+          "delta": -13.808795968399222
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 7.914226734694772
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 11.153805656062541
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 10.449075141405661
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 8.56258518638997
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 7.047918244711553
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 6.612122317204548
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 10.397853938121354
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 8.998221515424774
+        }
+      ]
+    },
+    "load": {
+      "entries": [
+        {
+          "competitor": "Claude Opus 5.5 Medium",
+          "elo": 1148.197443085095,
+          "wins": 14,
+          "draws": 7,
+          "losses": 0,
+          "skipped": 0,
+          "valid_runs": 3,
+          "rank": 1
+        },
+        {
+          "competitor": "GPT-6 Astra Medium",
+          "elo": 1075.387827184115,
+          "wins": 8,
+          "draws": 6,
+          "losses": 2,
+          "skipped": 5,
+          "valid_runs": 2,
+          "rank": 2
+        },
+        {
+          "competitor": "Gemini 4 Argon Medium",
+          "elo": 1071.8073080894694,
+          "wins": 9,
+          "draws": 5,
+          "losses": 3,
+          "skipped": 4,
+          "valid_runs": 2,
+          "rank": 3
+        },
+        {
+          "competitor": "Gemini 3.8 Flash Medium",
+          "elo": 1065.0370207528392,
+          "wins": 8,
+          "draws": 6,
+          "losses": 2,
+          "skipped": 5,
+          "valid_runs": 2,
+          "rank": 4
+        },
+        {
+          "competitor": "Claude Sonnet 5.5 Medium",
+          "elo": 984.0517688487953,
+          "wins": 3,
+          "draws": 4,
+          "losses": 5,
+          "skipped": 9,
+          "valid_runs": 1,
+          "rank": 5
+        },
+        {
+          "competitor": "Grok 4.7 Medium",
+          "elo": 891.1110716918117,
+          "wins": 0,
+          "draws": 0,
+          "losses": 10,
+          "skipped": 11,
+          "valid_runs": 0,
+          "rank": 6
+        },
+        {
+          "competitor": "Kimi K3 High",
+          "elo": 882.9890677588279,
+          "wins": 0,
+          "draws": 0,
+          "losses": 10,
+          "skipped": 11,
+          "valid_runs": 0,
+          "rank": 7
+        },
+        {
+          "competitor": "DeepSeek V4 Flash 0423 High",
+          "elo": 881.4184925890464,
+          "wins": 0,
+          "draws": 0,
+          "losses": 10,
+          "skipped": 11,
+          "valid_runs": 0,
+          "rank": 8
+        }
+      ],
+      "matches": [
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 16.0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 1.0,
+          "delta": 15.263693206478006
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -15.263693206478006
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 16.0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": 0.0339081301691877
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -14.565676086414914
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 13.86985385551062
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 15.933947318005803
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 12.446919030068592
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 16.639566862276993
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 14.62782143364053
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -15.452949787519676
+        },
+        {
+          "seed": 1,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": 1.2869564162063014
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 15.340873697407805
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 12.538071054643233
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -1.331067192680262
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": 0.09488012080474029
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -15.91385838140102
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": 1.9843132979580282
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 17.45643916827658
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": -1.2286049212195387
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 13.891454069636431
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 12.133738122744266
+        },
+        {
+          "seed": 2,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -10.200696121223357
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": -1.8719318643535772
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 12.777193198550354
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -11.64794548106088
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 1.0,
+          "delta": 17.42695658911089
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": -0.17431707080884706
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.0,
+          "delta": -9.618148051161448
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 12.300396350668805
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.247064267902953
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 0.5,
+          "delta": -3.5373858205537942
+        },
+        {
+          "seed": 2,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": 0.4474492501003695
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Claude Sonnet 5.5 Medium",
+          "outcome": 1.0,
+          "delta": 12.75408958565085
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 1.0,
+          "delta": 13.823297663488855
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -16.557258007312157
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -11.178298041116065
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 11.742088939603853
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.5,
+          "delta": 0.9663188472207977
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 9.053445268278377
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.5,
+          "delta": -2.7958687170319685
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 10.637574657871063
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "DeepSeek V4 Flash 0423 High",
+          "outcome": 1.0,
+          "delta": 7.664584476211957
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": 3.5093288443718063
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "GPT-6 Astra Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": 0.5,
+          "delta": 0.09211880108107628
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 1.0,
+          "delta": 14.704628429580016
+        },
+        {
+          "seed": 0,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 12.644780762734108
+        },
+        {
+          "seed": 2,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": 0.0,
+          "delta": -8.62727568562741
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": 0.0,
+          "delta": -13.448101807248177
+        },
+        {
+          "seed": 0,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "GPT-6 Astra Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 0,
+          "a": "Grok 4.7 Medium",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "DeepSeek V4 Flash 0423 High",
+          "b": "Kimi K3 High",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 7.717110173117359
+        },
+        {
+          "seed": 1,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 4 Argon Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 3.8 Flash Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 9.830085590593697
+        },
+        {
+          "seed": 2,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 6.717615877168608
+        },
+        {
+          "seed": 2,
+          "a": "Claude Sonnet 5.5 Medium",
+          "b": "Gemini 3.8 Flash Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 6.6907987329831045
+        },
+        {
+          "seed": 0,
+          "a": "Claude Opus 5.5 Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": 1.0,
+          "delta": 6.292292266761855
+        },
+        {
+          "seed": 1,
+          "a": "Gemini 4 Argon Medium",
+          "b": "Grok 4.7 Medium",
+          "outcome": null,
+          "delta": 0
+        },
+        {
+          "seed": 1,
+          "a": "GPT-6 Astra Medium",
+          "b": "Kimi K3 High",
+          "outcome": 1.0,
+          "delta": 8.548909064674415
+        }
+      ]
+    }
+  }
+}

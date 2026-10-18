@@ -20,12 +20,12 @@ export function TaskComparison() {
           return <li key={model.model} className={`family-${modelFamily(model.model)}`}>
             <div className="task-score-label"><span title={`${model.model} · ${model.effort} effort`}>{model.model.replace("Claude ", "").replace("DeepSeek V4 Flash 0423", "DeepSeek V4 Flash")}</span><span>{score === null ? "—" : score.toFixed(0)}</span></div>
             <div className="task-score-track" aria-hidden="true"><span style={{ width: `${(score ?? 0) / scale * 100}%` }} /></div>
-            <span className="sr-only">{score === null ? "Unranked" : `${score.toFixed(1)} Elo`}; {model.tasks[task.id].valid} of 3 valid attempts; {model.effort} effort.</span>
+            <span className="sr-only">{score === null ? "Unavailable" : `${score.toFixed(1)} Elo`}; {model.tasks[task.id].valid} of 3 valid attempts; {model.effort} effort.</span>
           </li>;
         })}</ol>
         <div className="task-score-axis" aria-hidden="true"><span>0</span><span>{scale / 2}</span><span>{scale}</span></div>
       </section>;
     })}</div>
-    <p className="task-comparison-note">Shared scale; three trials per task. A dash denotes an unranked result. Failed attempts remain in matched outcomes; no confidence intervals estimated.</p>
+    <p className="task-comparison-note">Shared scale; three trials per task. Valid predictors beat failed attempts; two failures skip. No confidence intervals estimated.</p>
   </figure>;
 }

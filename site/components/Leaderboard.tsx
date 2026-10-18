@@ -27,7 +27,7 @@ export function Leaderboard() {
     if (process) return row.criteria[criterion].mean;
     if (metric === "validity") return (task ? row.tasks[task].valid / 3 : row.valid / 9) * 100;
     if (metric === "mae") return task ? row.tasks[task].mean_loss : null;
-    return task ? row.tasks[task].elo : row.suite_elo;
+    return task ? row.tasks[task].elo : row.overall_elo;
   }
   function format(v: number) {
     if (process) return `${v.toFixed(2)} / 4`;
@@ -50,7 +50,7 @@ export function Leaderboard() {
       ? "Executable predictors as a share of scheduled attempts. Validity does not measure accuracy."
       : metric === "mae"
         ? "Lower is better. Error averaged over valid attempts only; failed attempts are excluded from this mean."
-        : "Higher is better. Elo is relative to this model pool; unranked entries have no valid matched suite or task.";
+        : "Higher is better. Overall Elo pools matched attempts across all three tasks. Valid predictors beat failed attempts; two failures skip.";
 
   return (
     <div className="research-board">
@@ -76,7 +76,7 @@ export function Leaderboard() {
             const v = value(row);
             const count = process ? `${row.criteria[criterion].count} observed · ${row.reviews}/9 reviewed` : `${task ? row.tasks[task].valid : row.valid}/${denominator} valid`;
             return <div className={`ranking-row family-${modelFamily(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
-              <div className="ranking-label"><span className="provider-glyph" aria-hidden="true">{row.model.startsWith("Claude") ? "A" : row.model.startsWith("Gemini") ? "G" : row.model.startsWith("GPT") ? "O" : row.model.charAt(0)}</span><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unranked" : format(v)}</span></div>
+              <div className="ranking-label"><span className="provider-glyph" aria-hidden="true">{row.model.startsWith("Claude") ? "A" : row.model.startsWith("Gemini") ? "G" : row.model.startsWith("GPT") ? "O" : row.model.charAt(0)}</span><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unavailable" : format(v)}</span></div>
               <div className="ranking-track" aria-hidden="true">{v !== null && <div className="ranking-fill" style={{ "--bar-width": `${v / scale * 100}%` } as CSSProperties} />}</div>
               <div className="ranking-evidence">{count}</div>
             </div>;
@@ -89,11 +89,11 @@ export function Leaderboard() {
       <details className="score-details"><summary>View exact scores and coverage</summary>
         <div className="results-scroll" tabIndex={0} role="region" aria-label={`${LABELS[view]} exact scores`}>
           <table className="results-table"><thead><tr><th scope="col">Model</th>{process ? <>{CRITERIA.map(c => <th scope="col" key={c}>{CRITERION_LABELS[c]}</th>)}<th scope="col">Reviews</th></> : <><th scope="col">Prediction Elo</th><th scope="col">Valid attempts</th>{task && <th scope="col">Mean MAE · {UNITS[task]}</th>}</>}</tr></thead>
-            <tbody>{rows.map(row => <tr key={row.model}><th scope="row">{row.model}<small>{row.effort} effort</small></th>{process ? <>{CRITERIA.map(c => <td key={c}>{row.criteria[c].mean === null ? "Unobserved" : `${row.criteria[c].mean.toFixed(2)} (${row.criteria[c].count})`}</td>)}<td>{row.reviews}/9</td></> : <><td>{(task ? row.tasks[task].elo : row.suite_elo)?.toFixed(1) ?? "Unranked"}</td><td>{task ? `${row.tasks[task].valid}/3` : `${row.valid}/9`}</td>{task && <td>{row.tasks[task].mean_loss?.toFixed(task === "heat" ? 3 : 2) ?? "Unavailable"}</td>}</>}</tr>)}</tbody>
+            <tbody>{rows.map(row => <tr key={row.model}><th scope="row">{row.model}<small>{row.effort} effort</small></th>{process ? <>{CRITERIA.map(c => <td key={c}>{row.criteria[c].mean === null ? "Unobserved" : `${row.criteria[c].mean.toFixed(2)} (${row.criteria[c].count})`}</td>)}<td>{row.reviews}/9</td></> : <><td>{(task ? row.tasks[task].elo : row.overall_elo)?.toFixed(1) ?? "Unavailable"}</td><td>{task ? `${row.tasks[task].valid}/3` : `${row.valid}/9`}</td>{task && <td>{row.tasks[task].mean_loss?.toFixed(task === "heat" ? 3 : 2) ?? "Unavailable"}</td>}</>}</tr>)}</tbody>
           </table>
         </div>
       </details>
-      <div className="board-source"><span>8 models · 3 trials per task · 18 Oct 2026</span><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
+      <div className="board-source"><span>8 models · 3 trials per task · 18 Oct 2026</span><a href="/results/pooled-task-elo-v1.json" download>Match audit ↗</a><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
     </div>
   );
 }
