@@ -20,20 +20,9 @@ from .episodes import exertion_mask
 from .scoring import score, validate_predictions
 from .workspace import Episode, run_submission
 
-SYSTEM_PROMPT = """You are a computational physiologist working in a sandboxed Python workspace.
-Your job: build an executable, personalized heart-rate predictor for one participant, improve it
-with evidence, and submit it with an honest experiment report. Read TASK.md first.
-
-Work like a careful scientist:
-- Inspect data before modeling (units, sampling, missing values, activity coverage).
-- Validate choices with held-out evidence; the hidden test uses activities absent from the
-  participant's own data, so check transfer behaviour on the reference cohort.
-- Consequential actions (dev_feedback, submit, writing files under submission/) require a concise
-  justification that cites concrete evidence.
-- Never access anything outside the workspace. There is no network.
-
-Use the tools. Keep shell output short (print summaries, not whole files). When you are done,
-call submit. Running out of budget without submitting fails the episode."""
+SYSTEM_PROMPT = """You are working in a sandboxed Python workspace. Read TASK.md first.
+The hidden activities are not in your files, including the reference recordings. Quote numbers from those files or from dev_feedback; do not invent measurements.
+Shell output is truncated, so print summaries, not whole files. Call submit when done."""
 
 TOOLS = [
     {"type": "function", "function": {
