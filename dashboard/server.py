@@ -311,6 +311,7 @@ class LiveSource:
 
     def __init__(self, person: Person, address: str | None):
         self.p, self.address = person, address
+        self.ble_t = 0.0
 
     async def run(self, team):
         sys.path.insert(0, str(ROOT.parent / "sensor"))
@@ -320,10 +321,13 @@ class LiveSource:
         def on_hr(_, data):
             bpm, rr = ps.parse_hr(data)
             if bpm:
+                self.ble_t = time.time()
                 self.p.add_hr(bpm)
 
         def on_pmd(_, data):
             kind, samples = ps.decode_pmd(data)
+            if samples:
+                self.ble_t = time.time()
             if kind == ps.PMD_ACC and not self.p.imu_fresh():  # the IMU, when present, supplies movement
                 for x, y, z in samples:
                     self.p.add_acc(x, y, z)
@@ -340,6 +344,7 @@ class LiveSource:
                 self.p.device = f"{dev.name} {dev.address}"
                 team.log("system", self.p.id, f"Connecting to {dev.name}")
                 async with BleakClient(dev) as client:
+                    self.ble_t = time.time()
                     await client.start_notify(ps.HR_MEASUREMENT, on_hr)
                     try:
                         await client.start_notify(ps.PMD_CONTROL, lambda *_: None)
@@ -354,10 +359,9 @@ class LiveSource:
                         team.log("system", self.p.id, f"Optional Polar motion streams unavailable: {error}")
                     self.p.connected = True
                     team.log("system", self.p.id, "Sensor connected")
-                    connected_at = time.time()
                     while client.is_connected:
                         await asyncio.sleep(0.5)
-                        if time.time() - max(self.p.last_sample, connected_at) > STALE_S:
+                        if time.time() - self.ble_t > STALE_S:
                             team.log("system", self.p.id, "No Polar notifications; reconnecting")
                             break
             except (Exception, SystemExit) as e:  # find_device raises SystemExit when nothing is found
