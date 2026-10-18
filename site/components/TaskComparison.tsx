@@ -1,3 +1,4 @@
+import { ModelLogo } from "@/components/ModelLogo";
 import { RESULTS } from "@/lib/data";
 import { modelFamily } from "@/lib/model-family";
 
@@ -18,7 +19,7 @@ export function TaskComparison() {
         <ol>{rows.map(model => {
           const score = model.tasks[task.id].elo;
           return <li key={model.model} className={`family-${modelFamily(model.model)}`}>
-            <div className="task-score-label"><span title={`${model.model} · ${model.effort} effort`}>{model.model.replace("Claude ", "").replace("DeepSeek V4 Flash 0423", "DeepSeek V4 Flash")}</span><span>{score === null ? "—" : score.toFixed(0)}</span></div>
+            <div className="task-score-label"><span className="task-model-name"><ModelLogo model={model.model} /><span title={`${model.model} · ${model.effort} effort`}>{model.model.replace("Claude ", "").replace("DeepSeek V4 Flash 0423", "DeepSeek V4 Flash")}</span></span><span>{score === null ? "—" : score.toFixed(0)}</span></div>
             <div className="task-score-track" aria-hidden="true"><span style={{ width: `${(score ?? 0) / scale * 100}%` }} /></div>
             <span className="sr-only">{score === null ? "Unavailable" : `${score.toFixed(1)} Elo`}; {model.tasks[task.id].valid} of 3 valid attempts; {model.effort} effort.</span>
           </li>;

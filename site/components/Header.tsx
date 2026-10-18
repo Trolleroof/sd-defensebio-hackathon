@@ -18,7 +18,7 @@ export function Header() {
       <div className="wrap">
         <Link href="/" className="brand">
           <span className="brand-mark" aria-hidden="true" />
-          PhysBench
+          soliderphys-bench
         </Link>
         <nav className="nav">
           {LINKS.map((l) => {

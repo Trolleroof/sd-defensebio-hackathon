@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { RESULTS } from "@/lib/data";
+import { ModelLogo } from "@/components/ModelLogo";
 import { modelFamily } from "@/lib/model-family";
 
 const VIEWS = ["suite", "pulse", "heat", "load", "process"] as const;
@@ -76,7 +77,7 @@ export function Leaderboard() {
             const v = value(row);
             const count = process ? `${row.criteria[criterion].count} observed · ${row.reviews}/9 reviewed` : `${task ? row.tasks[task].valid : row.valid}/${denominator} valid`;
             return <div className={`ranking-row family-${modelFamily(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
-              <div className="ranking-label"><span className="provider-glyph" aria-hidden="true">{row.model.startsWith("Claude") ? "A" : row.model.startsWith("Gemini") ? "G" : row.model.startsWith("GPT") ? "O" : row.model.charAt(0)}</span><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unavailable" : format(v)}</span></div>
+              <div className="ranking-label"><ModelLogo model={row.model} /><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unavailable" : format(v)}</span></div>
               <div className="ranking-track" aria-hidden="true">{v !== null && <div className="ranking-fill" style={{ "--bar-width": `${v / scale * 100}%` } as CSSProperties} />}</div>
               <div className="ranking-evidence">{count}</div>
             </div>;

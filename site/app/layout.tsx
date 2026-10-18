@@ -8,7 +8,7 @@ const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], 
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "PhysBench",
+  title: "soliderphys-bench",
   description: "Measured pilot of coding agents building pulse, core-temperature and metabolic-cost predictors.",
 };
 
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
         <footer className="site-footer">
           <div className="wrap">
-            <span>PhysBench · DefenseBio</span>
+            <span>soliderphys-bench · DefenseBio</span>
             <span style={{ display: "flex", gap: 20 }}>
               <a href="/blog/physbench/">Report</a>
               <a href="/tasks/">Tasks</a>

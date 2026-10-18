@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Reveal } from "@/components/Reveal";
 import { TASKS } from "@/lib/data";
 
-export const metadata: Metadata = { title: "Tasks · PhysBench" };
+export const metadata: Metadata = { title: "Tasks · soliderphys-bench" };
 
 export default function Tasks() {
   return (

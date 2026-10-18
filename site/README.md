@@ -1,6 +1,6 @@
-# PhysBench site
+# soliderphys-bench site
 
-Public leaderboard, report and task pages for PhysBench. Next.js static export, hosted on Cloudflare Pages at https://physbench.pages.dev.
+Public leaderboard, report and task pages for soliderphys-bench. Next.js static export, hosted on Cloudflare Pages at https://soliderphys-bench.pages.dev. The previous https://physbench.pages.dev address is retained for existing links.
 
 ```sh
 cd site
@@ -31,3 +31,5 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 The downloadable `public/results/pooled-task-elo-v1.json` records every scheduled
 comparison, skipped match, rating update and final rating. These ratings describe
 this fixed opponent pool and protocol, not population-level performance.
+
+Model logos are vendored SVGs from Lobe Icons; source commit and license are in `public/model-logos/`.

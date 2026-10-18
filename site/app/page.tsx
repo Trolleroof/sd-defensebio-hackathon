@@ -10,7 +10,7 @@ export default function Home() {
     <div className="wrap research-page">
       <header className="research-header">
         <p className="research-kicker">DefenseBio / Research</p>
-        <h1>PhysBench</h1>
+        <h1>soliderphys-bench</h1>
         <p className="research-deck">Evaluating coding agents on physiological model development.</p>
         <div className="research-byline"><time dateTime="2026-10-18">October 18, 2026</time><span aria-hidden="true">·</span><span>8 models, 3 tasks, 72 episodes</span></div>
         <nav className="research-links" aria-label="Research resources"><Link href="/blog/physbench/">Read the report <span>↗</span></Link><a href={SPEC}>Methodology <span>↗</span></a><a href="/results/compact-coding-v1.json">Data <span>↓</span></a></nav>

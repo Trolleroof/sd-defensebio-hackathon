@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Reveal } from "@/components/Reveal";
 import { DASHBOARD_URL } from "@/lib/data";
 
-export const metadata: Metadata = { title: "Dashboard · PhysBench" };
+export const metadata: Metadata = { title: "Dashboard · soliderphys-bench" };
 
 const SOURCES = [
   { label: "Live", body: "Polar Verity Sense over BLE." },
