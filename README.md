@@ -6,6 +6,7 @@ The shared project contains these connected implementations:
 - [Operator dashboard](dashboard/README.md): team views and response tracking.
 - [PhysBench](PHYSBENCH.md): the existing PPG-DaLiA real-data agent environment, Linux execution, provider loop and separate judge.
 - [Structural research campaigns](docs/CAMPAIGNS.md): local synthetic Build → Investigate → Transfer → Sustain tests and Elo summaries.
+- [Site](site/README.md): leaderboard, report and task pages, deployed to https://physbench.pages.dev.
 
 The `physbench` and `benchmark` packages are complementary runners with different data/execution contracts. The structural fixtures do not replace the real-data pipeline. Both are packaged; `physbench-benchmark` is equivalent to `python -m benchmark`.
 

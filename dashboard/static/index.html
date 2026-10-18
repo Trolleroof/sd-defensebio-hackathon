@@ -37,6 +37,8 @@ header {
 header h1 { font-size: 15px; font-weight: 600; margin: 0; }
 header .meta { color: var(--muted); font-size: 13px; display: flex; gap: 20px; }
 header .right { margin-left: auto; display: flex; gap: 20px; align-items: center; color: var(--muted); font-size: 13px; }
+.site-link { color: var(--muted); text-decoration: none; }
+.site-link:hover { color: var(--text); }
 .conn::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); margin-right: 7px; vertical-align: 1px; }
 .conn.on::before { background: #4fb477; }
 
@@ -186,7 +188,7 @@ section { min-height: 0; overflow: auto; }
 <header>
   <h1>Team Monitor</h1>
   <div class="meta"><span id="hSession"></span><span id="hCounts"></span></div>
-  <div class="right"><span id="hClock" class="mono"></span><span id="hConn" class="conn">Connecting</span></div>
+  <div class="right"><a class="site-link" href="https://physbench.pages.dev">PhysBench ↗</a><span id="hClock" class="mono"></span><span id="hConn" class="conn">Connecting</span></div>
 </header>
 
 <main>
