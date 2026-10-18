@@ -80,6 +80,8 @@ uint8_t nodeMac[6]{};
 uint32_t sequenceNumber = 0;
 uint32_t lastSensorStatusMs = 0;
 uint32_t lastSensorDiagMs = 0;
+uint32_t maxMeshSendMs = 0;
+esp_err_t lastMeshSendError = ESP_OK;
 #if NODE_ROLE == ROLE_SENSOR
 int16_t latestHr = -1;
 uint32_t lastHrMs = 0;
@@ -189,9 +191,13 @@ void handleMeshEvent(void *, esp_event_base_t, int32_t eventId, void *eventData)
   } else if (eventId == MESH_EVENT_NO_PARENT_FOUND) {
     Serial.println("{\"type\":\"mesh_no_parent_found\"}");
   } else if (eventId == MESH_EVENT_CHILD_CONNECTED) {
-    Serial.println("{\"type\":\"mesh_child_connected\"}");
+    auto *child = static_cast<mesh_event_child_connected_t *>(eventData);
+    Serial.printf("{\"type\":\"mesh_child_connected\",\"mac\":\"%02X%02X%02X%02X%02X%02X\"}\n",
+                  child->mac[0], child->mac[1], child->mac[2], child->mac[3], child->mac[4], child->mac[5]);
   } else if (eventId == MESH_EVENT_CHILD_DISCONNECTED) {
-    Serial.println("{\"type\":\"mesh_child_disconnected\"}");
+    auto *child = static_cast<mesh_event_child_disconnected_t *>(eventData);
+    Serial.printf("{\"type\":\"mesh_child_disconnected\",\"mac\":\"%02X%02X%02X%02X%02X%02X\"}\n",
+                  child->mac[0], child->mac[1], child->mac[2], child->mac[3], child->mac[4], child->mac[5]);
   }
 }
 
@@ -397,7 +403,10 @@ void sendImuSample() {
     }
   }
 
-  sendToParent(packet);
+  const uint32_t sendStartedMs = millis();
+  lastMeshSendError = sendToParent(packet);
+  const uint32_t sendMs = millis() - sendStartedMs;
+  if (sendMs > maxMeshSendMs) maxMeshSendMs = sendMs;
 }
 }  // namespace
 
@@ -478,16 +487,24 @@ void loop() {
   if (static_cast<uint32_t>(now - lastSensorDiagMs) >= 5000) {
     lastSensorDiagMs = now;
     mesh_addr_t parent{};
+    const bool parentConnected = copyParent(parent);
+    wifi_ap_record_t parentAp{};
+    char parentRssi[8] = "null";
+    if (parentConnected && esp_wifi_sta_get_ap_info(&parentAp) == ESP_OK)
+      snprintf(parentRssi, sizeof(parentRssi), "%d", parentAp.rssi);
 #if HR_SOURCE_SPARKFUN
     Serial.printf(
-        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"sparkfun_hr_ready\":%s,\"sparkfun_hr_error\":%u,\"hr_valid\":%s,\"parent_connected\":%s}\n",
+        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"sparkfun_hr_ready\":%s,\"sparkfun_hr_error\":%u,\"hr_valid\":%s,\"parent_connected\":%s,\"parent_rssi_dbm\":%s,\"mesh_send_max_ms\":%lu,\"mesh_send_error\":%d}\n",
         imuReady ? "true" : "false", sparkfunReady ? "true" : "false",
-        sparkfunError, latestHr > 0 ? "true" : "false", copyParent(parent) ? "true" : "false");
+        sparkfunError, latestHr > 0 ? "true" : "false", parentConnected ? "true" : "false", parentRssi,
+        static_cast<unsigned long>(maxMeshSendMs), static_cast<int>(lastMeshSendError));
 #else
     Serial.printf(
-        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"parent_connected\":%s}\n",
-        imuReady ? "true" : "false", copyParent(parent) ? "true" : "false");
+        "{\"type\":\"sensor_status\",\"imu_ok\":%s,\"parent_connected\":%s,\"parent_rssi_dbm\":%s,\"mesh_send_max_ms\":%lu,\"mesh_send_error\":%d}\n",
+        imuReady ? "true" : "false", parentConnected ? "true" : "false", parentRssi,
+        static_cast<unsigned long>(maxMeshSendMs), static_cast<int>(lastMeshSendError));
 #endif
+    maxMeshSendMs = 0;
   }
   delay(20);
 #else
