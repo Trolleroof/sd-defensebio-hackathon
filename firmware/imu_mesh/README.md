@@ -1,11 +1,12 @@
 # Nano ESP32 IMU mesh prototype
 
-This is the first transport milestone: two wearable Nano ESP32 boards sample their LSM6DSOX and send packets through an ESP-WIFI-MESH relay to a third Nano acting as the USB serial root. The root prints one JSON telemetry record per received sample. Verity Sense heart rate is reserved as `hr_bpm: null` until the BLE stage.
+Two wearable Nano ESP32 boards sample their LSM6DSOX and Polar Verity Sense and send packets through ESP-WIFI-MESH to a Nano USB serial root. A fourth Nano runs `../mesh_router/mesh_router.ino` as the local Wi-Fi access point required by this SDK's mesh configuration. The root prints one JSON telemetry record per received sample.
 
 ## Flash and run
 
-1. In `imu_mesh.ino`, set `NODE_ROLE` to `ROLE_ROOT`; flash that sketch to the command Nano.
-2. Set `NODE_ROLE` to `ROLE_SENSOR`; flash the same sketch to both wearable Nanos.
+1. Flash the router sketch to the AP Nano and power it.
+2. Compile `imu_mesh.ino` with `compiler.cpp.extra_flags=-DNODE_ROLE=1` for the root Nano.
+3. Compile the sensor sketch separately for each wearable with `compiler.cpp.extra_flags=-DPOLAR_ID=0x12345678`, replacing the example hex ID with the trailing Polar ID in that wearer's advertised name. The default build has BLE disabled until an ID is assigned.
 3. Select **Arduino Nano ESP32** in Arduino IDE. Install **Adafruit LSM6DS**, **Adafruit Unified Sensor**, and **Adafruit BusIO**.
 4. Connect the root Nano to the laptop over USB and open its serial monitor at **115200 baud**. Power the root, then the first wearable, then the second.
 5. Keep the mesh ID, channel, and password identical on all three boards. The prototype uses a fixed demo password in the sketch.
@@ -24,4 +25,4 @@ The root emits a `mesh_status` JSON line every two seconds with the total mesh n
 
 `node_id` is the source board's Wi-Fi MAC; `sequence` is per node; `uptime_ms` is the source timestamp; `received_ms` is the root timestamp. Acceleration is m/s² and gyro is rad/s, matching the Adafruit sensor events. If the IMU is unavailable, sensor fields are `null`. Root boot and ESP-IDF log messages may also appear on the serial port, so the laptop reader should accept only lines that parse as JSON telemetry.
 
-The sensor firmware also emits a `sensor_status` JSON line every two seconds with IMU and parent-link state; a node with no parent emits `mesh_no_parent_found`. The binary payload is for matching Nano ESP32 firmware only. There is no offline queue: packets sent while a parent is unavailable are dropped. This prototype does not yet include BLE, GPS, or position estimation, and the fixed mesh credentials are for a hackathon bench setup only.
+The sensor firmware also emits a `sensor_status` JSON line every two seconds with IMU and parent-link state; a node with no parent emits `mesh_no_parent_found`. The BLE client selects the configured Polar ID, uses the standard heart-rate service, and reconnects after a disconnect. HR becomes null when no notification arrives for five seconds. The binary payload is for matching Nano ESP32 firmware only. There is no offline queue: packets sent while a parent is unavailable are dropped. GPS and position estimation are not implemented, and the fixed mesh credentials are for a hackathon bench setup only.

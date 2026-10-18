@@ -11,6 +11,14 @@ sensor/.venv/bin/python dashboard/server.py --imu /dev/cu.usbmodem1101   # add t
 
 Open http://127.0.0.1:8765.
 
+For the Nano mesh on Windows, run:
+
+```powershell
+python dashboard/server.py --mesh-port COM11 --mesh-node Wearer1=206EF1316774 --mesh-node Wearer2=SECOND_NODE_ID --replay '' --synthetic 0
+```
+
+Use the 12-digit Wi-Fi `node_id` from root telemetry for each wearable; colons are accepted. Close the serial monitor before starting the dashboard because only one program can open COM11 at a time. Accepted telemetry is saved to `mesh.jsonl` in the session directory. Mesh reconnects resume automatically.
+
 Every person is labeled with where their data comes from: **LIVE** (Polar over BLE), **REPLAY** (a recorded `sensor/<prefix>_*.csv` session, looped), or **SYNTHETIC** (simulated). The simulated team has scripted events for the demo: a distress press (Okafor, ~75 s), HR above expected (Alvarez, ~75 s), and a sensor dropout (Patel, 120–150 s).
 
 **Attention items**

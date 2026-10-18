@@ -17,6 +17,12 @@
 #ifndef NODE_ROLE
 #define NODE_ROLE ROLE_SENSOR
 #endif
+#ifndef POLAR_ID
+#define POLAR_ID 0
+#endif
+#if NODE_ROLE == ROLE_SENSOR
+#include <BLEDevice.h>
+#endif
 
 namespace {
 constexpr uint32_t kPacketMagic = 0x494D5531;  // "IMU1"
@@ -30,6 +36,8 @@ constexpr int kMeshRxTimeoutMs = 1000;
 // These values must be identical on all three boards.
 constexpr uint8_t kMeshId[6] = {0x44, 0x42, 0x50, 0x48, 0x59, 0x31};
 constexpr char kMeshPassword[] = "demoMeshPass";
+constexpr char kRouterSsid[] = "DBP_NO_ROUTER";
+constexpr char kRouterPassword[] = "unusedPass";
 
 struct __attribute__((packed)) MeshPacket {
   uint32_t magic;
@@ -44,7 +52,7 @@ struct __attribute__((packed)) MeshPacket {
   float gyro_rad_s[3];
   float imu_temp_c;
   uint32_t steps;
-  int16_t hr_bpm;       // -1 until the Verity Sense BLE stream is added.
+  int16_t hr_bpm;
   uint8_t hr_valid;
 };
 
@@ -60,6 +68,70 @@ uint8_t nodeMac[6]{};
 uint32_t sequenceNumber = 0;
 uint32_t lastSensorStatusMs = 0;
 uint32_t lastSensorDiagMs = 0;
+#if NODE_ROLE == ROLE_SENSOR
+portMUX_TYPE hrMux = portMUX_INITIALIZER_UNLOCKED;
+int16_t latestHr = -1;
+uint32_t lastHrMs = 0;
+volatile bool polarConnected = false;
+
+void onHeartRate(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
+  if (length < 2 || ((data[0] & 1) && length < 3)) return;
+  int16_t bpm = (data[0] & 1) ? (data[1] | (data[2] << 8)) : data[1];
+  portENTER_CRITICAL(&hrMux);
+  latestHr = bpm;
+  lastHrMs = millis();
+  portEXIT_CRITICAL(&hrMux);
+}
+
+class PolarCallbacks : public BLEClientCallbacks {
+  void onConnect(BLEClient *) override { polarConnected = true; }
+  void onDisconnect(BLEClient *) override { polarConnected = false; }
+};
+
+void polarTask(void *) {
+  BLEDevice::init("");
+  BLEScan *scan = BLEDevice::getScan();
+  scan->setActiveScan(true);
+  BLEClient *client = BLEDevice::createClient();
+  static PolarCallbacks callbacks;
+  client->setClientCallbacks(&callbacks);
+  const BLEUUID hrService((uint16_t)0x180D);
+  const BLEUUID hrMeasurement((uint16_t)0x2A37);
+  while (true) {
+    BLEScanResults results = scan->start(4, false);
+    for (int i = 0; i < results.getCount(); ++i) {
+      BLEAdvertisedDevice device = results.getDevice(i);
+      if (!device.haveName()) continue;
+      const std::string name = device.getName();
+      const size_t idStart = name.find_last_of(' ');
+      if (name.rfind("Polar", 0) != 0 || idStart == std::string::npos ||
+          strtoul(name.c_str() + idStart + 1, nullptr, 16) != POLAR_ID) continue;
+      if (client->connect(&device)) {
+        BLERemoteService *service = client->getService(hrService);
+        BLERemoteCharacteristic *measurement = service ? service->getCharacteristic(hrMeasurement) : nullptr;
+        if (measurement && measurement->canNotify()) {
+          measurement->registerForNotify(onHeartRate);
+          Serial.printf("{\"type\":\"polar_connected\",\"id\":\"%08lX\"}\n", static_cast<unsigned long>(POLAR_ID));
+          while (client->isConnected()) vTaskDelay(pdMS_TO_TICKS(500));
+        }
+        client->disconnect();
+      }
+      break;
+    }
+    scan->clearResults();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+  }
+}
+#endif
+
+void checkInit(const char *stage, esp_err_t err) {
+  if (err == ESP_OK) return;
+
+  Serial.printf("{\"type\":\"init_error\",\"stage\":\"%s\",\"err\":%d}\n",
+                stage, static_cast<int>(err));
+  Serial.flush();
+  while (true) delay(1000);
+}
 
 void handleMeshEvent(void *, esp_event_base_t, int32_t eventId, void *eventData) {
   if (eventId == MESH_EVENT_PARENT_CONNECTED) {
@@ -86,48 +158,52 @@ void handleMeshEvent(void *, esp_event_base_t, int32_t eventId, void *eventData)
 void initNvs() {
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
+    checkInit("nvs_erase", nvs_flash_erase());
     err = nvs_flash_init();
   }
-  ESP_ERROR_CHECK(err);
+  checkInit("nvs_init", err);
 }
 
 void initMesh() {
   esp_err_t netifErr = esp_netif_init();
   if (netifErr != ESP_OK && netifErr != ESP_ERR_INVALID_STATE) {
-    ESP_ERROR_CHECK(netifErr);
+    checkInit("netif_init", netifErr);
   }
   esp_err_t eventLoopErr = esp_event_loop_create_default();
   if (eventLoopErr != ESP_OK && eventLoopErr != ESP_ERR_INVALID_STATE) {
-    ESP_ERROR_CHECK(eventLoopErr);
+    checkInit("event_loop_init", eventLoopErr);
   }
 
   static esp_netif_t *meshStaNetif = nullptr;
-  ESP_ERROR_CHECK(esp_netif_create_default_wifi_mesh_netifs(&meshStaNetif, nullptr));
+  checkInit("mesh_netifs_create",
+            esp_netif_create_default_wifi_mesh_netifs(&meshStaNetif, nullptr));
 
   wifi_init_config_t wifiConfig = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&wifiConfig));
-  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
-  ESP_ERROR_CHECK(esp_wifi_start());
+  checkInit("wifi_init", esp_wifi_init(&wifiConfig));
+  checkInit("wifi_storage", esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+  checkInit("wifi_start", esp_wifi_start());
 
-  ESP_ERROR_CHECK(esp_mesh_init());
-  ESP_ERROR_CHECK(esp_event_handler_register(
+  checkInit("mesh_init", esp_mesh_init());
+  checkInit("mesh_event_register", esp_event_handler_register(
       MESH_EVENT, ESP_EVENT_ANY_ID, &handleMeshEvent, nullptr));
-  ESP_ERROR_CHECK(esp_mesh_set_topology(MESH_TOPO_CHAIN));
-  ESP_ERROR_CHECK(esp_mesh_set_max_layer(3));
-  ESP_ERROR_CHECK(esp_mesh_fix_root(true));
-  ESP_ERROR_CHECK(esp_mesh_set_type(NODE_ROLE == ROLE_ROOT ? MESH_ROOT : MESH_NODE));
-  ESP_ERROR_CHECK(esp_mesh_set_ap_authmode(WIFI_AUTH_WPA2_PSK));
+  checkInit("mesh_topology", esp_mesh_set_topology(MESH_TOPO_CHAIN));
+  checkInit("mesh_max_layer", esp_mesh_set_max_layer(3));
+  checkInit("mesh_fix_root", esp_mesh_fix_root(true));
+  checkInit("mesh_type", esp_mesh_set_type(NODE_ROLE == ROLE_ROOT ? MESH_ROOT : MESH_IDLE));
+  checkInit("mesh_authmode", esp_mesh_set_ap_authmode(WIFI_AUTH_WPA2_PSK));
 
   mesh_cfg_t meshConfig = MESH_INIT_CONFIG_DEFAULT();
   memcpy(meshConfig.mesh_id.addr, kMeshId, sizeof(kMeshId));
   meshConfig.channel = kMeshChannel;
-  meshConfig.router.ssid_len = 0;  // Self-networking: no Wi-Fi router required.
+  // This SDK rejects an empty router SSID even with a fixed root and no router.
+  meshConfig.router.ssid_len = sizeof(kRouterSsid) - 1;
+  memcpy(meshConfig.router.ssid, kRouterSsid, meshConfig.router.ssid_len);
+  memcpy(meshConfig.router.password, kRouterPassword, sizeof(kRouterPassword) - 1);
   meshConfig.mesh_ap.max_connection = 1;
   meshConfig.mesh_ap.nonmesh_max_connection = 0;
   memcpy(meshConfig.mesh_ap.password, kMeshPassword, sizeof(kMeshPassword) - 1);
-  ESP_ERROR_CHECK(esp_mesh_set_config(&meshConfig));
-  ESP_ERROR_CHECK(esp_mesh_start());
+  checkInit("mesh_config", esp_mesh_set_config(&meshConfig));
+  checkInit("mesh_start", esp_mesh_start());
 }
 
 bool copyParent(mesh_addr_t &out) {
@@ -244,6 +320,14 @@ void sendImuSample() {
   packet.uptime_ms = millis();
   memcpy(packet.node_mac, nodeMac, sizeof(nodeMac));
   packet.hr_bpm = -1;
+#if NODE_ROLE == ROLE_SENSOR
+  portENTER_CRITICAL(&hrMux);
+  if (polarConnected && static_cast<uint32_t>(millis() - lastHrMs) < 5000 && latestHr > 0) {
+    packet.hr_bpm = latestHr;
+    packet.hr_valid = 1;
+  }
+  portEXIT_CRITICAL(&hrMux);
+#endif
 
   if (imuReady) {
     sensors_event_t accel, gyro, temp;
@@ -268,9 +352,10 @@ void sendImuSample() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+  Serial.println("{\"type\":\"boot\",\"stage\":\"start\"}");
 
   esp_err_t macErr = esp_read_mac(nodeMac, ESP_MAC_WIFI_STA);
-  ESP_ERROR_CHECK(macErr);
+  checkInit("read_mac", macErr);
   initNvs();
 
   meshSendMutex = xSemaphoreCreateMutex();
@@ -284,10 +369,15 @@ void setup() {
 #endif
 
   initMesh();
-  if (xTaskCreate(meshReceiveTask, "mesh_rx", 6144, nullptr, 5, nullptr) != pdPASS) {
+  if (xTaskCreate(meshReceiveTask, "mesh_rx", 12288, nullptr, 5, nullptr) != pdPASS) {
     Serial.println("Could not start mesh receive task.");
     while (true) delay(1000);
   }
+#if NODE_ROLE == ROLE_SENSOR
+  if (POLAR_ID && xTaskCreate(polarTask, "polar", 8192, nullptr, 2, nullptr) != pdPASS) {
+    Serial.println("{\"type\":\"init_error\",\"stage\":\"polar_task\"}");
+  }
+#endif
 }
 
 void loop() {
