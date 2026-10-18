@@ -125,13 +125,21 @@ class DashboardLocationTest(unittest.TestCase):
         with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
             for uptime in (1000, 4000, 7000):
                 now[0] = person.last_sample = person.imu_t = 1000 + (uptime - 4000) / 1000
-                person.advance(0, uptime, 0, (0, -0.7, 9.78), (0, 0, 0))
+                person.advance(0, uptime, 0, (0, -0.7, 9.78), (-1.579, -0.023, -0.032))
             self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 27)
         with patch("dashboard.server.time.time", return_value=1005):
             self.assertEqual(team.tick()["people"][0]["location_calibration_remaining_s"], 25)
         for uptime in range(10000, 35000, 3000):
-            person.advance(0, uptime, 0, (0, -0.7, 9.78), (0, 0, 0))
+            person.advance(0, uptime, 0, (0, -0.7, 9.78), (-1.579, -0.023, -0.032))
         self.assertIsNotNone(person.accel_bias)
+
+    def test_gyro_change_restarts_stationary_calibration(self):
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
+        for uptime in (1000, 4000):
+            person.advance(0, uptime, 0, (0, 0, 9.80665), (0.65, -0.45, -0.07))
+        self.assertEqual(person.calibration_start_ms, 4000)
+        person.advance(0, 7000, 0, (0, 0, 9.80665), (0.65, 0.1, -0.07))
+        self.assertIsNone(person.calibration_start_ms)
 
     def test_calibration_restarts_after_long_packet_gap(self):
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
