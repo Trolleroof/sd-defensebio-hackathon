@@ -80,10 +80,12 @@ class Person:
     source: str                       # LIVE | REPLAY | SYNTHETIC
     device: str = ""
     hr: float | None = None
+    hr_t: float = 0.0
     last_sample: float = 0.0          # wall time of the last sample from the device
     connected: bool = False
     contact: bool | None = None       # skin contact flag, when the sensor reports it
-    acc: deque = field(default_factory=lambda: deque(maxlen=52 * 2))   # recent |a| in mG
+    acc: deque = field(default_factory=lambda: deque(maxlen=52 * 2))   # (time, |a| in mG)
+    acc_xyz: tuple | None = None
     rr: deque = field(default_factory=lambda: deque(maxlen=60))         # recent good intervals, ms
     ppi_seen: deque = field(default_factory=lambda: deque(maxlen=20))   # 1 = rejected
     model: Kinetic = field(default_factory=Kinetic)
@@ -99,12 +101,14 @@ class Person:
     steps_seen: int | None = None
     uptime_seen: int | None = None
     imu: bool = False                 # has a gyroscope/IMU source
-    gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # recent |w| in dps
+    gyro: deque = field(default_factory=lambda: deque(maxlen=52 * 2))  # (time, |w| in dps)
+    gyro_xyz: tuple | None = None
     imu_temp: float | None = None     # IMU die temperature, °C (not body temperature)
     imu_t: float = 0.0                # wall time of the last IMU sample
 
     def add_hr(self, bpm: float, t: float | None = None):
         self.hr = bpm
+        self.hr_t = t or time.time()
         self.last_sample = t or time.time()
         if self.model.rest is None:
             self.early_hr.append(bpm)
@@ -112,13 +116,15 @@ class Person:
                 self.model.rest = statistics.quantiles(self.early_hr, n=5)[0]
 
     def add_acc(self, x: float, y: float, z: float):
-        self.acc.append(math.sqrt(x * x + y * y + z * z))
+        self.acc_xyz = (x, y, z)
+        self.acc.append((time.time(), math.sqrt(x * x + y * y + z * z)))
         self.last_sample = time.time()
 
     def add_imu(self, acc: tuple, gyro: tuple, temp: float | None):
         """One LSM6DSOX sample: acc in mG, gyro in dps, die temperature in °C."""
         self.add_acc(*acc)
-        self.gyro.append(math.sqrt(sum(g * g for g in gyro)))
+        self.gyro_xyz = gyro
+        self.gyro.append((time.time(), math.sqrt(sum(g * g for g in gyro))))
         if temp is not None:
             self.imu_temp = temp
         self.imu_t = self.last_sample
@@ -142,7 +148,7 @@ class Person:
         self.loc, self.loc_t = "estimated", time.time()
 
     def imu_fresh(self, now: float | None = None) -> bool:
-        return self.imu and (now or time.time()) - self.imu_t <= STALE_S
+        return self.imu and (now or time.time()) - self.imu_t <= 2
 
     def add_ppi(self, ppi: float, blocker: int, contact: int):
         self.contact = bool(contact)
@@ -156,11 +162,13 @@ class Person:
         self.last_sample = time.time()
 
     def movement(self) -> float | None:
-        return statistics.pstdev(self.acc) if len(self.acc) > 5 else None
+        samples = [value for t, value in self.acc if time.time() - t <= 2]
+        return statistics.pstdev(samples) if len(samples) >= 2 else None
 
     def rotation(self) -> float | None:
-        """Mean angular speed over the last ~2 s, dps."""
-        return statistics.fmean(self.gyro) if len(self.gyro) > 5 else None
+        """Mean angular speed over the last 2 s, dps."""
+        samples = [value for t, value in self.gyro if time.time() - t <= 2]
+        return statistics.fmean(samples) if samples else None
 
     def rmssd(self) -> float | None:
         rr = list(self.rr)[-30:]
@@ -331,14 +339,25 @@ class LiveSource:
                 team.log("system", self.p.id, f"Connecting to {dev.name}")
                 async with BleakClient(dev) as client:
                     await client.start_notify(ps.HR_MEASUREMENT, on_hr)
-                    await client.start_notify(ps.PMD_DATA, on_pmd)
-                    for k in (ps.PMD_ACC, ps.PMD_PPI):
-                        await client.write_gatt_char(ps.PMD_CONTROL, ps.START_CMD[k], response=True)
-                        await asyncio.sleep(0.5)
+                    try:
+                        await client.start_notify(ps.PMD_CONTROL, lambda *_: None)
+                        await client.start_notify(ps.PMD_DATA, on_pmd)
+                        for k in (ps.PMD_ACC, ps.PMD_PPI):
+                            try:
+                                await client.write_gatt_char(ps.PMD_CONTROL, ps.START_CMD[k], response=True)
+                                await asyncio.sleep(0.5)
+                            except Exception as error:
+                                team.log("system", self.p.id, f"Optional Polar stream {k} unavailable: {error}")
+                    except Exception as error:
+                        team.log("system", self.p.id, f"Optional Polar motion streams unavailable: {error}")
                     self.p.connected = True
                     team.log("system", self.p.id, "Sensor connected")
+                    connected_at = time.time()
                     while client.is_connected:
                         await asyncio.sleep(0.5)
+                        if time.time() - max(self.p.last_sample, connected_at) > STALE_S:
+                            team.log("system", self.p.id, "No Polar notifications; reconnecting")
+                            break
             except (Exception, SystemExit) as e:  # find_device raises SystemExit when nothing is found
                 self.p.connected = False
                 msg = f"Sensor unavailable: {e}"
@@ -554,7 +573,8 @@ class Team:
             fresh = now - p.last_sample <= STALE_S and p.connected
             exp = p.model.step(mv, TICK_S) if fresh else p.model.state
             dev = None
-            if fresh and p.hr is not None and exp is not None:
+            hr_fresh = fresh and now - p.hr_t <= STALE_S
+            if hr_fresh and p.hr is not None and exp is not None:
                 dev = p.hr - exp
                 if abs(dev) > DEVIATION_BPM:
                     p.dev_since = p.dev_since or now
@@ -576,12 +596,16 @@ class Team:
                 word = "above" if dev > 0 else "below"
                 self.open_alert(p.id, "deviation", f"HR {abs(dev):.0f} bpm {word} expected for {DEVIATION_HOLD_S}+ s", "warning")
             st = self.status(p, now, dev)
-            row = {"t": round(now, 1), "hr": p.hr if fresh else None, "exp": round(exp, 1) if exp else None,
+            row = {"t": round(now, 1), "hr": p.hr if hr_fresh else None, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
+            if p.acc and now - p.acc[-1][0] <= 2:
+                row["acc_xyz"] = [round(v) for v in p.acc_xyz]
+                row["acc_mag"] = round(p.acc[-1][1])
             if p.imu_fresh(now):
                 rot = p.rotation()
                 row.update(rot=round(rot) if rot is not None else None,
+                           gyro_xyz=[round(v, 1) for v in p.gyro_xyz] if p.gyro_xyz else None,
                            temp=round(p.imu_temp, 1) if p.imu_temp is not None else None)
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
