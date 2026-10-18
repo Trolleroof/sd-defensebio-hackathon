@@ -1,25 +1,106 @@
 "use client";
-import { useState } from "react";
+
+import { useState, type CSSProperties } from "react";
 import { RESULTS } from "@/lib/data";
+
 const VIEWS = ["suite", "pulse", "heat", "load", "process"] as const;
-type View = typeof VIEWS[number];
+type View = (typeof VIEWS)[number];
 const CRITERIA = ["evidence", "experiment", "feedback", "repro", "selection"] as const;
-const LABELS = {suite:"Overall suite",pulse:"Pulse · bpm",heat:"Heat · °C",load:"Load · W",process:"Process review"};
+type Criterion = (typeof CRITERIA)[number];
+type Metric = "elo" | "validity" | "mae";
+type Model = (typeof RESULTS.models)[number];
+const LABELS = { suite: "Overall", pulse: "Pulse", heat: "Heat", load: "Load", process: "Process" };
+const CRITERION_LABELS = { evidence: "Evidence use", experiment: "Experiment choice", feedback: "Feedback integration", repro: "Reproducibility", selection: "Final selection" };
+const UNITS = { pulse: "bpm", heat: "°C", load: "W" };
+
+function family(model: string) {
+  if (model.startsWith("Claude")) return "anthropic";
+  if (model.startsWith("Gemini")) return "google";
+  if (model.startsWith("GPT")) return "openai";
+  if (model.startsWith("Kimi")) return "moonshot";
+  if (model.startsWith("DeepSeek")) return "deepseek";
+  return "xai";
+}
+
 export function Leaderboard() {
- const [view,setView]=useState<View>("suite");
- const rows=[...RESULTS.models].sort((a,b)=>{
-  const av=view==="suite"?a.suite_elo:view==="process"?a.reviews:a.tasks[view].elo;
-  const bv=view==="suite"?b.suite_elo:view==="process"?b.reviews:b.tasks[view].elo;
-  return (bv??-Infinity)-(av??-Infinity)||a.model.localeCompare(b.model);
- });
- return <div>
-  <div className="board-bar"><div className="tabs" role="group" aria-label="Leaderboard view">{VIEWS.map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)}>{LABELS[v]}</button>)}</div></div>
-  <p className="board-note" style={{marginBottom:20}}>{view==="suite"?"Overall rank requires a valid three-task repeat. No confidence intervals estimated.":view==="process"?"Separate 0–4 criteria · mean (observable count) · 65/72 episode reviews available":"Lower MAE is better. Mean MAE includes valid attempts only; validity is shown alongside it."}</p>
-  <div className="results-scroll" tabIndex={0} role="region" aria-label={LABELS[view]}>
-   <table className="results-table"><thead><tr><th scope="col">Model</th>{view==="process"? <>{CRITERIA.map(c=><th scope="col" key={c}>{c==="repro"?"Reproducibility":c.charAt(0).toUpperCase()+c.slice(1)}</th>)}<th scope="col">Reviews</th></>:<><th scope="col">Prediction Elo</th><th scope="col">Valid attempts</th>{view!=="suite"&&<th scope="col">Mean MAE</th>}</>}</tr></thead>
-    <tbody>{rows.map(r=><tr key={r.model}><th scope="row">{r.model}<small>{r.effort} effort</small></th>{view==="process"?<>{CRITERIA.map(c=><td key={c}>{r.criteria[c].mean===null?"Unobserved":`${r.criteria[c].mean.toFixed(2)} (${r.criteria[c].count})`}</td>)}<td>{r.reviews}/9</td></>:<><td>{(view==="suite"?r.suite_elo:r.tasks[view].elo)?.toFixed(1)??"Unranked"}</td><td>{view==="suite"?`${r.valid}/9`:`${r.tasks[view].valid}/3`}</td>{view!=="suite"&&<td>{r.tasks[view].mean_loss?.toFixed(view==="heat"?3:2)??"Unavailable"}</td>}</>}</tr>)}</tbody>
-   </table>
-  </div>
-  <p className="board-note" style={{marginTop:18}}>Elo is relative to this eight-model pool. Failed attempts remain included in matched outcomes. <a href="/results/compact-coding-v1.json" download>Download scores and coverage ↗</a></p>
- </div>;
+  const [view, setView] = useState<View>("suite");
+  const [metric, setMetric] = useState<Metric>("elo");
+  const [criterion, setCriterion] = useState<Criterion>("evidence");
+  const process = view === "process";
+  const task = view === "pulse" || view === "heat" || view === "load" ? view : null;
+  const denominator = view === "suite" ? 9 : 3;
+  const metricLabel = process ? CRITERION_LABELS[criterion] : metric === "elo" ? "Prediction Elo" : metric === "validity" ? "Valid attempts" : `Mean MAE · ${task ? UNITS[task] : ""}`;
+  function value(row: Model): number | null {
+    if (process) return row.criteria[criterion].mean;
+    if (metric === "validity") return (task ? row.tasks[task].valid / 3 : row.valid / 9) * 100;
+    if (metric === "mae") return task ? row.tasks[task].mean_loss : null;
+    return task ? row.tasks[task].elo : row.suite_elo;
+  }
+  function format(v: number) {
+    if (process) return `${v.toFixed(2)} / 4`;
+    if (metric === "validity") return `${v.toFixed(1)}%`;
+    if (metric === "mae") return `${v.toFixed(task === "heat" ? 3 : 2)} ${task ? UNITS[task] : ""}`;
+    return v.toFixed(1);
+  }
+  const rows = [...RESULTS.models].sort((a, b) => {
+    const av = value(a), bv = value(b);
+    if (av === null && bv === null) return a.model.localeCompare(b.model);
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return (metric === "mae" && !process ? av - bv : bv - av) || a.model.localeCompare(b.model);
+  });
+  const maximum = Math.max(1, ...rows.map(r => value(r) ?? 0));
+  const scale = process ? 4 : metric === "validity" ? 100 : metric === "elo" ? Math.ceil(maximum / 100) * 100 : Number((maximum * 1.1).toPrecision(2));
+  const chartDescription = process
+    ? `Mean criterion score, 0–4. ${RESULTS.reviews}/${RESULTS.review_target} episode reviews available; n is the observable count.`
+    : metric === "validity"
+      ? "Executable predictors as a share of scheduled attempts. Validity does not measure accuracy."
+      : metric === "mae"
+        ? "Lower is better. Error averaged over valid attempts only; failed attempts are excluded from this mean."
+        : "Higher is better. Elo is relative to this model pool; unranked entries have no valid matched suite or task.";
+
+  return (
+    <div className="research-board">
+      <div className="board-controls">
+        <div className="board-views" role="group" aria-label="Leaderboard view">
+          {VIEWS.map(v => <button key={v} aria-pressed={view === v} onClick={() => { setView(v); setMetric("elo"); }}>{LABELS[v]}</button>)}
+        </div>
+        <label className="metric-picker">
+          <span className="sr-only">{process ? "Process criterion" : "Chart metric"}</span>
+          {process ? <select aria-label="Process criterion" value={criterion} onChange={e => setCriterion(e.target.value as Criterion)}>
+            {CRITERIA.map(c => <option key={c} value={c}>{CRITERION_LABELS[c]}</option>)}
+          </select> : <select aria-label="Chart metric" value={metric} onChange={e => setMetric(e.target.value as Metric)}>
+            <option value="elo">Prediction Elo</option><option value="validity">Valid attempts</option>
+            {task && <option value="mae">Mean MAE</option>}
+          </select>}
+        </label>
+      </div>
+
+      <figure className="ranking-figure" aria-label={`${LABELS[view]} — ${metricLabel}`}>
+        <figcaption className="ranking-heading"><span>Model</span><span>{metricLabel}<small>{!process && metric === "mae" ? "Lower is better" : "Higher is better"}</small></span></figcaption>
+        <div className="ranking-rows">
+          {rows.map(row => {
+            const v = value(row);
+            const count = process ? `${row.criteria[criterion].count} observed · ${row.reviews}/9 reviewed` : `${task ? row.tasks[task].valid : row.valid}/${denominator} valid`;
+            return <div className={`ranking-row family-${family(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
+              <div className="ranking-label"><span className="provider-glyph" aria-hidden="true">{row.model.startsWith("Claude") ? "A" : row.model.startsWith("Gemini") ? "G" : row.model.startsWith("GPT") ? "O" : row.model.charAt(0)}</span><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unranked" : format(v)}</span></div>
+              <div className="ranking-track" aria-hidden="true">{v !== null && <div className="ranking-fill" style={{ "--bar-width": `${v / scale * 100}%` } as CSSProperties} />}</div>
+              <div className="ranking-evidence">{count}</div>
+            </div>;
+          })}
+        </div>
+        <div className="ranking-axis" aria-hidden="true">{[0, .25, .5, .75, 1].map(t => <span key={t}>{process ? (t * scale).toFixed(0) : metric === "validity" ? `${t * scale}%` : (t * scale).toLocaleString("en-US", {maximumFractionDigits: task === "heat" && metric === "mae" ? 2 : 1})}</span>)}</div>
+        <p className="figure-note">{chartDescription} No confidence intervals estimated.</p>
+      </figure>
+
+      <details className="score-details"><summary>View exact scores and coverage</summary>
+        <div className="results-scroll" tabIndex={0} role="region" aria-label={`${LABELS[view]} exact scores`}>
+          <table className="results-table"><thead><tr><th scope="col">Model</th>{process ? <>{CRITERIA.map(c => <th scope="col" key={c}>{CRITERION_LABELS[c]}</th>)}<th scope="col">Reviews</th></> : <><th scope="col">Prediction Elo</th><th scope="col">Valid attempts</th>{task && <th scope="col">Mean MAE · {UNITS[task]}</th>}</>}</tr></thead>
+            <tbody>{rows.map(row => <tr key={row.model}><th scope="row">{row.model}<small>{row.effort} effort</small></th>{process ? <>{CRITERIA.map(c => <td key={c}>{row.criteria[c].mean === null ? "Unobserved" : `${row.criteria[c].mean.toFixed(2)} (${row.criteria[c].count})`}</td>)}<td>{row.reviews}/9</td></> : <><td>{(task ? row.tasks[task].elo : row.suite_elo)?.toFixed(1) ?? "Unranked"}</td><td>{task ? `${row.tasks[task].valid}/3` : `${row.valid}/9`}</td>{task && <td>{row.tasks[task].mean_loss?.toFixed(task === "heat" ? 3 : 2) ?? "Unavailable"}</td>}</>}</tr>)}</tbody>
+          </table>
+        </div>
+      </details>
+      <div className="board-source"><span>8 models · 3 trials per task · 18 Oct 2026</span><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
+    </div>
+  );
 }

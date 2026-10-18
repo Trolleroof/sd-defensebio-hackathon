@@ -1,14 +1,31 @@
 import Link from "next/link";
 import { Leaderboard } from "@/components/Leaderboard";
-import { Reveal } from "@/components/Reveal";
-import { RELEASE, RESULTS, TASKS } from "@/lib/data";
-export default function Home(){return <>
- <section className="hero"><div className="wrap"><div className="rise" style={{display:"flex",gap:10,flexWrap:"wrap"}}><span className="tag olive">{RELEASE.version}</span><span className="tag">{RELEASE.status}</span></div>
- <h1 className="rise">Agents that build <span>physiology</span> predictors</h1>
- <p className="lede rise">Eight coding models. Three measured-data tasks. Agents train and select executable predictors; hidden replay measures their outputs, and a separate judge reviews their experiment decisions.</p>
- <div className="hero-meta rise"><div><span className="eyebrow">Episodes sealed</span><strong>72/72</strong></div><div><span className="eyebrow">Valid predictors</span><strong>{RESULTS.valid}/72</strong></div><div><span className="eyebrow">Judge reviews</span><strong>65/72</strong></div><div><span className="eyebrow">Trials per task</span><strong>3</strong></div><div><span className="eyebrow">Updated</span><strong style={{fontSize:15}}>{RELEASE.updated}</strong></div></div>
- <p className="results-notice">This short-budget pilot completed all episodes. Only 33 produced valid predictors; seven judge reviews are missing. Rankings reflect these execution and protocol failures as well as predictive performance. Pulse ECG references remain provisional.</p></div></section>
- <section className="section" id="leaderboard"><div className="wrap"><Reveal className="section-head"><div><span className="eyebrow">Measured pilot</span><h2>Leaderboard</h2></div><p>Three trials per task, nine episodes per model. Explore individual tasks and separate process criteria.</p></Reveal><Leaderboard/></div></section>
- <section className="section"><div className="wrap"><Reveal className="section-head"><div><span className="eyebrow">Protocol</span><h2>Two experiments. One selection.</h2></div><Link href="/blog/physbench/" className="tag olive">Read the report →</Link></Reveal><div className="grid-3"><div className="cell"><span className="num">01</span><h3>Write and train</h3><p>Each episode allows two Python training experiments, with development feedback. Generated programs run offline on CPU.</p></div><div className="cell"><span className="num">02</span><h3>Replay and compare</h3><p>The selected predictor runs on hidden people. Person-balanced MAE determines prediction Elo; interval scores determine separate uncertainty Elo.</p></div><div className="cell"><span className="num">03</span><h3>Review the evidence</h3><p>Five process criteria scored 0–4 or unobserved, with evidence citations. These scores do not replace numerical outcomes.</p></div></div></div></section>
- <section className="section"><div className="wrap"><Reveal className="section-head"><div><span className="eyebrow">Tasks</span><h2>Three fixed cohorts</h2></div><Link href="/tasks/" className="tag">Task contracts →</Link></Reveal><div className="grid-3">{TASKS.map((t,i)=><Link key={t.id} href={`/tasks/#${t.id}`} className="cell"><span className="num">0{i+1} · {t.data}</span><h3>{t.name}</h3><p>{t.summary}</p></Link>)}</div></div></section>
- </>}
+import { TASKS } from "@/lib/data";
+
+const SPEC = "https://github.com/Trolleroof/sd-defensebio-hackathon/blob/main/benchmarks/compact-coding-v1/SPEC.md";
+
+export default function Home() {
+  return (
+    <div className="wrap research-page">
+      <header className="research-header">
+        <p className="research-kicker">DefenseBio / Research</p>
+        <h1>PhysBench</h1>
+        <p className="research-deck">Evaluating coding agents on physiological model development.</p>
+        <div className="research-byline"><time dateTime="2026-10-18">October 18, 2026</time><span aria-hidden="true">·</span><span>8 models, 3 tasks, 72 episodes</span></div>
+        <nav className="research-links" aria-label="Research resources"><Link href="/blog/physbench/">Read the report <span>↗</span></Link><a href={SPEC}>Methodology <span>↗</span></a><a href="/results/compact-coding-v1.json">Data <span>↓</span></a></nav>
+      </header>
+
+      <section className="research-results" id="leaderboard" aria-labelledby="results-heading">
+        <div className="research-section-title"><h2 id="results-heading">Results</h2><Link href="/blog/physbench/#methodology">Evaluation protocol ↗</Link></div>
+        <Leaderboard />
+      </section>
+
+      <section className="research-context" aria-labelledby="evaluation-heading">
+        <h2 id="evaluation-heading">The evaluation</h2>
+        <p>Agents train two predictors, evaluate on development data, and select one for hidden replay. Person-balanced error determines prediction Elo; a separate judge assesses the experiment decisions.</p>
+        <div className="research-task-list">{TASKS.map((task, i) => <Link key={task.id} href={`/tasks/#${task.id}`}><span className="research-task-number">0{i + 1}</span><span><strong>{task.name}</strong><small>{task.data}</small></span><span aria-hidden="true">↗</span></Link>)}</div>
+        <details className="research-notes"><summary>Scope and coverage</summary><p>This retrospective pilot produced 33 valid predictors from 72 attempts, with 65 of 72 process reviews available. Failed attempts remain in the matched outcomes. Pulse ECG references are provisional; fixed cohorts and three agent seeds do not establish population-level ranking confidence.</p></details>
+      </section>
+    </div>
+  );
+}
