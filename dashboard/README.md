@@ -26,6 +26,8 @@ Every person is labeled with where their data comes from: **LIVE** (Polar over B
 
 For live Polar heart rate, the dashboard shows the average of the last five readings. It holds that display value through gaps of up to 30 seconds and blends new readings into the same average when the sensor reconnects. Sensor freshness and attention items still use the actual arrival time; after 10 seconds without heart-rate data, quality reports `no data` even while the display holds its last value.
 
+For mesh wearers, the dashboard keeps the latest displayed heart rate, motion, and IMU values between packets and eases numeric changes when a new packet arrives. The Signal percentage estimates freshness from the latest packet and real heart-rate reading: it stays at 100% for five seconds, then falls to 0% over the next 30 seconds. It is not radio RSSI. Baselines and physiology alerts continue to use real incoming samples.
+
 **Attention items**
 
 | Type | Trigger |

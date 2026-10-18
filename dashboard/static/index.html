@@ -411,7 +411,8 @@ function renderDetail() {
     r.heading == null ? null : `Calibrated heading estimate: ${r.heading}° clockwise from north`,
   ].filter(Boolean).join(" · ");
   set("#mTemp", r.temp == null ? "—" : `${fmt(r.temp, 1)}<small>°C</small>`);
-  set("#mQ", r.quality ?? "—", r.quality && r.quality !== "good" ? "device" : "");
+  set("#mQ", p.id.startsWith("mesh_") && r.signal != null ? `${r.signal}%` : r.quality ?? "—",
+      p.id.startsWith("mesh_") ? r.signal < 50 ? "device" : "" : r.quality && r.quality !== "good" ? "device" : "");
   root.querySelector("#mAge").textContent = r.age == null ? "—" : `${fmt(r.age, 1)} s ago`;
   root.querySelector("#mLoc").textContent = locText(r);
   const pb = root.querySelector("#placeBtn");

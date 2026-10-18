@@ -51,6 +51,34 @@ def test_live_heart_rate_smooths_short_dropouts_and_expires():
     assert team.tick()["people"][0]["hr"] == 90
 
 
+def test_mesh_display_holds_values_while_signal_fades():
+    person = Person("mesh_206EF1316774", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+    team = Team(None, (0, 0))
+    team.add(person)
+    person.add_hr(80)
+    person.add_imu((0, 0, 1000), (0, 0, 10), 26)
+    first = team.tick()["people"][0]
+    assert first["hr"] == 80 and first["acc_xyz"] == [0, 0, 1000]
+    assert first["signal"] == 100
+
+    person.connected = False
+    person.hr_t -= 40
+    person.last_sample -= 40
+    person.imu_t -= 40
+    held = team.tick()["people"][0]
+    assert held["hr"] == 80 and held["acc_xyz"] == [0, 0, 1000]
+    assert held["signal"] == 0 and held["status"] == "ok"
+    assert not team.alerts
+
+    person.connected = True
+    person.add_hr(120)
+    person.add_imu((0, 0, 1100), (0, 0, 20), 27)
+    resumed = team.tick()["people"][0]
+    assert resumed["hr"] == 100
+    assert resumed["acc_xyz"] == [0.0, 0.0, 1050.0]
+    assert resumed["signal"] == 100
+
+
 def test_polar_reconnects_when_imu_continues_without_ble():
     class FakeClient:
         is_connected = True
@@ -111,7 +139,9 @@ def test_nonfinite_imu_samples_are_ignored():
                   "imu_temp_c": 25, "hr_bpm": float("inf")}
 
         async def nodes(_):
-            return web.json_response({"nodes": {node_id: {"online": True, "received_at": time.time(), "latest": packet}}})
+            return web.json_response({"nodes": {node_id: {"online": packet["sequence"] != 3,
+                                                        "received_at": time.time() - (40 if packet["sequence"] == 3 else 0),
+                                                        "latest": packet}}})
 
         app = web.Application()
         app.router.add_get("/api/nodes", nodes)
@@ -128,6 +158,14 @@ def test_nonfinite_imu_samples_are_ignored():
                         break
                     await asyncio.sleep(0.05)
                 assert person.hr == 80 and person.acc and person.imu_temp is None
+                packet = {**packet, "sequence": 3, "hr_bpm": 90}
+                for _ in range(10):
+                    if person.hr == 90:
+                        break
+                    await asyncio.sleep(0.05)
+                row = team.tick()["people"][0]
+                assert row["hr"] == 85 and row["signal"] == 0
+                assert row["acc_xyz"] == [0, 0, 1000]
             finally:
                 task.cancel()
                 try:

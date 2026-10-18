@@ -45,7 +45,7 @@ ROOT = Path(__file__).resolve().parent
 TICK_S = 1.0
 HISTORY_S = 600          # seconds of history kept per person and sent on connect
 STALE_S = 10             # no samples for this long -> "no data"
-HR_HOLD_S = 30           # keep the last displayed live HR through brief BLE gaps
+HR_HOLD_S = 30           # live Polar display hold outside mesh mode
 DEVIATION_BPM = 20       # |measured - expected| above this ...
 DEVIATION_HOLD_S = 30    # ... for this long -> attention item
 MODEL_VERSION = "activity baselines for IMU; kinetic-v0 otherwise (not validated)"
@@ -83,6 +83,8 @@ class Person:
     hr: float | None = None
     hr_t: float = 0.0
     hr_window: deque = field(default_factory=lambda: deque(maxlen=5))
+    display: dict = field(default_factory=dict)
+    display_t: float = 0.0
     last_sample: float = 0.0          # wall time of the last sample from the device
     connected: bool = False
     contact: bool | None = None       # skin contact flag, when the sensor reports it
@@ -116,7 +118,7 @@ class Person:
     def add_hr(self, bpm: float, t: float | None = None):
         sample_t = t or time.time()
         if self.source == "LIVE":
-            if sample_t - self.hr_t > HR_HOLD_S:
+            if not self.id.startswith("mesh_") and sample_t - self.hr_t > HR_HOLD_S:
                 self.hr_window.clear()
             self.hr_window.append(bpm)
         self.hr = bpm
@@ -160,7 +162,7 @@ class Person:
         self.loc, self.loc_t = "estimated", time.time()
 
     def imu_fresh(self, now: float | None = None) -> bool:
-        return self.imu and (now or time.time()) - self.imu_t <= 2
+        return self.imu and (now or time.time()) - self.imu_t <= (STALE_S if self.id.startswith("mesh_") else 2)
 
     def add_ppi(self, ppi: float, blocker: int, contact: int):
         self.contact = bool(contact)
@@ -174,12 +176,14 @@ class Person:
         self.last_sample = time.time()
 
     def movement(self) -> float | None:
-        samples = [value for t, value in self.acc if time.time() - t <= 2]
+        recent = list(self.acc)[-2:] if self.id.startswith("mesh_") else self.acc
+        samples = [value for t, value in recent if time.time() - t <= (STALE_S if self.id.startswith("mesh_") else 2)]
         return statistics.pstdev(samples) if len(samples) >= 2 else None
 
     def rotation(self) -> float | None:
         """Mean angular speed over the last 2 s, dps."""
-        samples = [value for t, value in self.gyro if time.time() - t <= 2]
+        recent = list(self.gyro)[-2:] if self.id.startswith("mesh_") else self.gyro
+        samples = [value for t, value in recent if time.time() - t <= (STALE_S if self.id.startswith("mesh_") else 2)]
         return statistics.fmean(samples) if samples else None
 
     def motion_activity(self, now: float, movement: float | None) -> str | None:
@@ -481,7 +485,7 @@ class MeshApiSource:
                         entry = nodes.get(node_id, {})
                         p.connected = bool(entry.get("online"))
                         data = entry.get("latest")
-                        if not p.connected or not isinstance(data, dict):
+                        if not isinstance(data, dict):
                             continue
                         marker = (data.get("uptime_ms"), data.get("sequence"))
                         if self.seen.get(node_id) == marker:
@@ -491,15 +495,18 @@ class MeshApiSource:
                         bpm = data.get("hr_bpm")
                         if type(bpm) in (int, float) and math.isfinite(bpm) and bpm > 0:
                             p.add_hr(bpm, entry["received_at"])
-                        else:
-                            p.hr = None
+                        # Keep the last real HR for display; hr_t still tracks its actual age.
                         acc, gyro = data.get("accel_m_s2"), data.get("gyro_rad_s")
                         if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3 and all(type(v) in (int, float) and math.isfinite(v) for v in acc + gyro):
                             temp = data.get("imu_temp_c")
                             p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro),
                                       temp if type(temp) in (int, float) and math.isfinite(temp) else None)
+                            p.imu_t = entry["received_at"]
+                            p.acc[-1] = (p.imu_t, p.acc[-1][1])
+                            p.gyro[-1] = (p.imu_t, p.gyro[-1][1])
                             if type(data.get("steps")) is int and 0 <= data["steps"] < 65536 and type(data.get("uptime_ms")) is int and data["uptime_ms"] >= 0 and type(data.get("yaw_delta_rad")) in (int, float) and math.isfinite(data["yaw_delta_rad"]):
                                 p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"])
+                        p.last_sample = entry["received_at"]
                     last_error = None
                 except Exception as error:
                     for p in self.people.values():
@@ -591,7 +598,7 @@ class Team:
         if any(a["person"] == p.id and a["kind"] == "distress" and a["state"] != "resolved" for a in self.alerts.values()):
             return "distress"
         q = p.quality(now)
-        if q in ("no data", "no contact"):
+        if q == "no contact" or (q == "no data" and not p.id.startswith("mesh_")):
             return q
         if dev is not None and p.dev_since and now - p.dev_since >= DEVIATION_HOLD_S:
             return "deviation"
@@ -605,7 +612,9 @@ class Team:
             fresh = now - p.last_sample <= STALE_S and p.connected
             hr_fresh = fresh and now - p.hr_t <= STALE_S
             q = p.quality(now)
-            activity = p.motion_activity(now, mv) if fresh and p.imu else None
+            activity = p.motion_activity(now, mv) if fresh and p.imu else p.activity if p.id.startswith("mesh_") else None
+            if activity is None and p.id.startswith("mesh_"):
+                activity = p.activity
             if p.imu:
                 if activity != p.activity:
                     p.activity, p.activity_since, p.dev_since = activity, now, None
@@ -629,7 +638,7 @@ class Team:
                     p.dev_since = None
             else:
                 p.dev_since = None
-            if q == "no data" and p.last_sample:
+            if q == "no data" and p.last_sample and not p.id.startswith("mesh_"):
                 self.open_alert(p.id, "stale", "No data from sensor", "device")
             elif q == "no contact":
                 self.open_alert(p.id, "contact", "Sensor lost skin contact", "device")
@@ -645,31 +654,50 @@ class Team:
             st = self.status(p, now, dev)
             display_hr = p.hr if hr_fresh else None
             if p.source == "LIVE":
-                display_hr = round(statistics.fmean(p.hr_window), 1) if p.hr_window and now - p.hr_t <= HR_HOLD_S else None
+                display_hr = round(statistics.fmean(p.hr_window), 1) if p.hr_window and (p.id.startswith("mesh_") or now - p.hr_t <= HR_HOLD_S) else None
             row = {"t": round(now, 1), "hr": display_hr, "exp": round(exp, 1) if exp else None,
                    "mv": round(mv) if mv is not None and fresh else None,
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
             if p.imu:
                 row.update(activity=activity, baselines={k: round(v, 1) for k, v in p.activity_baselines.items()},
                            baseline_samples=len(p.activity_samples[activity]) if activity else 0)
-            if p.acc and now - p.acc[-1][0] <= 2:
+            if p.acc and (p.id.startswith("mesh_") or now - p.acc[-1][0] <= 2):
                 row["acc_xyz"] = [round(v) for v in p.acc_xyz]
                 row["acc_mag"] = round(p.acc[-1][1])
-            if p.imu_fresh(now):
+            if p.imu_fresh(now) or (p.id.startswith("mesh_") and p.gyro_xyz):
                 rot = p.rotation()
                 row.update(rot=round(rot) if rot is not None else None,
                            gyro_xyz=[round(v, 1) for v in p.gyro_xyz] if p.gyro_xyz else None,
                            temp=round(p.imu_temp, 1) if p.imu_temp is not None else None)
             if p.loc:
                 row.update(lat=round(p.lat, 6), lon=round(p.lon, 6))
+            if p.id.startswith("mesh_"):
+                for key in ("hr", "mv", "rmssd", "activity", "acc_xyz", "acc_mag", "rot", "gyro_xyz", "temp"):
+                    value = row.get(key)
+                    previous = p.display.get(key)
+                    if value is None:
+                        if previous is not None:
+                            row[key] = previous
+                    elif p.last_sample != p.display_t:
+                        if key != "hr" and isinstance(value, (int, float)) and isinstance(previous, (int, float)):
+                            value = round((value + previous) / 2, 1)
+                        elif isinstance(value, list) and isinstance(previous, list):
+                            value = [round((a + b) / 2, 1) for a, b in zip(value, previous)]
+                        row[key] = p.display[key] = value
+                p.display_t = p.last_sample
             p.history.append(row)
             if self.samples_w:
                 self.samples_w.writerow([row["t"], p.id, p.source, row["hr"], row["exp"], row["mv"], row["rmssd"], row.get("rot"), row.get("temp"), q, st,
                                          row.get("lat"), row.get("lon"), p.loc, activity])
+            signal = None
+            if p.id.startswith("mesh_") and p.last_sample:
+                age = max(now - p.last_sample, now - p.hr_t) if p.hr_t else 35
+                signal = max(0, min(100, round(100 * (1 - max(0, age - 5) / 30))))
             rows.append({"id": p.id, **row, "quality": q, "status": st, "loc": p.loc, "loc_t": p.loc_t,
                          "heading": round(p.heading) if p.heading_set else None,
                          "loc_quality": "low" if p.loc == "estimated" and p.heading_set else "uncalibrated" if p.loc == "estimated" else None,
-                         "age": round(now - p.last_sample, 1) if p.last_sample else None})
+                         "age": round(now - p.last_sample, 1) if p.last_sample else None,
+                         "signal": signal})
         if self.samples:
             self.samples.flush()
         return {"type": "tick", "t": now, "people": rows, "alerts": list(self.alerts.values()),
