@@ -388,6 +388,60 @@ class ImuSource:
                 await asyncio.sleep(3)
 
 
+class MeshSource:
+    """Read the root Nano's JSON lines and save the original telemetry for replay."""
+
+    def __init__(self, people: dict[str, Person], port: str, session_dir: Path):
+        self.people, self.port = people, port
+        self.out = open(session_dir / "mesh.jsonl", "a")
+
+    def take(self, line: str):
+        try:
+            data = json.loads(line)
+            if data.get("type") != "telemetry":
+                return
+            p = self.people.get(data.get("node_id"))
+            if p is None:
+                return
+            p.connected = True
+            p.last_sample = time.time()
+            bpm = data.get("hr_bpm")
+            if isinstance(bpm, (int, float)) and bpm > 0:
+                p.add_hr(bpm)
+            else:
+                p.hr = None
+            acc = data.get("accel_m_s2")
+            gyro = data.get("gyro_rad_s")
+            if data.get("sensor_ok") and isinstance(acc, list) and len(acc) == 3 and isinstance(gyro, list) and len(gyro) == 3:
+                p.add_imu(tuple(v * 1000 / 9.80665 for v in acc), tuple(v * 180 / math.pi for v in gyro), data.get("imu_temp_c"))
+            self.out.write(json.dumps({"t": time.time(), **data}) + "\n")
+            self.out.flush()
+        except (ValueError, TypeError, KeyError):
+            return
+
+    async def run(self, team):
+        import serial
+        last_error = None
+        while True:
+            try:
+                port = await asyncio.to_thread(serial.Serial, self.port, 115200, timeout=1)
+                team.log("system", None, f"Mesh connected on {self.port}")
+                last_error = None
+                with port:
+                    while True:
+                        raw = await asyncio.to_thread(port.readline)
+                        if raw:
+                            self.take(raw.decode(errors="ignore"))
+            except Exception as e:
+                for p in self.people.values():
+                    p.connected = False
+                msg = f"Mesh unavailable: {e}"
+                if msg != last_error:
+                    team.log("system", None, msg)
+                last_error = msg
+                await asyncio.sleep(3)
+
+
 # ---------------------------------------------------------------- team, attention, actions
 
 class Team:
@@ -580,6 +634,19 @@ def build(args) -> web.Application:
             p, owns = Person("imu", args.live_name, "Wearer", src, device=f"LSM6DSOX ({Path(args.imu).name})"), True
             team.add(p)
         sources.append(ImuSource(p, args.imu, team.session_dir, owns))
+    if args.mesh_port:
+        mesh_people = {}
+        for spec in args.mesh_node:
+            name, sep, node_id = spec.partition("=")
+            node_id = node_id.upper().replace(":", "")
+            if not sep or not name or len(node_id) != 12 or any(c not in "0123456789ABCDEF" for c in node_id) or node_id in mesh_people:
+                raise SystemExit(f"Invalid --mesh-node {spec!r}; expected NAME=12_HEX_DIGIT_NODE_ID")
+            p = Person(f"mesh_{node_id}", name, "Wearer", "LIVE", device=f"Mesh node {node_id}", imu=True)
+            team.add(p)
+            mesh_people[node_id] = p
+        if not mesh_people:
+            raise SystemExit("--mesh-port requires at least one --mesh-node NAME=NODE_ID")
+        sources.append(MeshSource(mesh_people, args.mesh_port, team.session_dir))
     roster = [("Alvarez", "Rifleman", "elevated"), ("Chen", "Medic", None), ("Okafor", "Radio", "distress"),
               ("Patel", "Team lead", "dropout"), ("Brooks", "Rifleman", None), ("Novak", "Grenadier", None)]
     for i, (name, role, script) in enumerate(roster[:args.synthetic]):
@@ -597,6 +664,9 @@ def build(args) -> web.Application:
     async def stop(app):
         for t in app["tasks"]:
             t.cancel()
+        for s in sources:
+            if isinstance(s, MeshSource):
+                s.out.close()
         team.samples.close(); team.events_f.close()
 
     app.on_startup.append(start)
@@ -610,6 +680,8 @@ def main():
     p.add_argument("--live", action="store_true", help="stream a Polar Verity Sense as a live person")
     p.add_argument("--live-name", default="Live wearer")
     p.add_argument("--imu", help="LSM6DSOX serial port (e.g. /dev/cu.usbmodem1101) or a saved imu_*.csv to replay")
+    p.add_argument("--mesh-port", help="root Nano serial port, e.g. COM11")
+    p.add_argument("--mesh-node", action="append", default=[], help="wearer and Wi-Fi node ID, e.g. Alex=206EF1316774; repeat per node")
     p.add_argument("--address", help="BLE address of the sensor (default: first 'Polar…' found)")
     default_replay = ROOT.parent / "sensor" / "test4"
     p.add_argument("--replay", default=str(default_replay) if (default_replay.parent / "test4_hr.csv").exists() else None,

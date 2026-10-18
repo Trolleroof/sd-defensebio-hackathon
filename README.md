@@ -80,3 +80,7 @@ python3 -m benchmark rate .benchmark-runs/linked-demo/report.json .benchmark-run
 ## Real-statistics campaign pilot
 
 The PPG-DaLiA-grounded synthetic generator and four-stage campaign pilot are described in [the generator and fidelity report](docs/SYNTHETIC_DALIA.md) and [the development results](docs/DALIA_CAMPAIGN_RESULTS.md). These small development results do not establish physiological validity, clinical performance, untouched-participant transfer, or training benefit; the pilot did not update model weights.
+
+## Pulse research environment (Set 1)
+
+The causal GalaxyPPG waveform task and shared CPU research runner live in `research_env/`. See [setup, participant protocol and reproduction commands](docs/SET1_PULSE_ENVIRONMENT.md) and [executed results and remaining gates](docs/SET1_RESULTS.md). This is separate from the recovery prototype and uses provisional ECG references.
