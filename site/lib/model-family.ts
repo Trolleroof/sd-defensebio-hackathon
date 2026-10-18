@@ -6,4 +6,3 @@ export function modelFamily(model: string) {
   if (model.startsWith("DeepSeek")) return "deepseek";
   return "xai";
 }
-
