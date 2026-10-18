@@ -110,6 +110,7 @@ class Person:
     steps_seen: int | None = None
     uptime_seen: int | None = None
     calibration_start_ms: int | None = None
+    calibration_start_t: float | None = None
     calibration_samples: int = 0
     calibration_acc_sum: tuple = (0.0, 0.0)
     calibration_yaw_sum: float = 0.0
@@ -156,6 +157,7 @@ class Person:
 
     def reset_location_calibration(self):
         self.calibration_start_ms = None
+        self.calibration_start_t = None
         self.calibration_samples = 0
         self.calibration_acc_sum = (0.0, 0.0)
         self.calibration_yaw_sum = self.calibration_dt = 0.0
@@ -170,19 +172,22 @@ class Person:
             self.reset_location_calibration()
         dt = (uptime_ms - self.uptime_seen) / 1000 if self.uptime_seen is not None else 0
         continuous = 0 < dt <= 0.6
-        delta = (steps - self.steps_seen) % 65536 if continuous and self.steps_seen is not None else 0
+        calibration_continuous = 0 < dt <= STALE_S
+        delta = (steps - self.steps_seen) % 65536 if calibration_continuous and self.steps_seen is not None else 0
         self.steps_seen, self.uptime_seen = steps, uptime_ms
         if not continuous:
             self.velocity_n = self.velocity_e = 0.0
-            if self.accel_bias is None:
+            if self.accel_bias is None and not calibration_continuous:
                 self.calibration_start_ms = None
+                self.calibration_start_t = None
 
         if self.accel_bias is None:
-            stationary = (continuous and delta == 0 and 8.8 < math.sqrt(sum(a * a for a in acc)) < 10.8
+            stationary = (calibration_continuous and delta == 0 and 8.8 < math.sqrt(sum(a * a for a in acc)) < 10.8
                           and math.sqrt(sum(g * g for g in gyro)) < 0.08
                           and (self.calibration_reference is None or math.dist(acc, self.calibration_reference) < 0.25))
             if not stationary:
                 self.calibration_start_ms = None
+                self.calibration_start_t = None
                 self.calibration_samples = 0
                 self.calibration_acc_sum = (0.0, 0.0)
                 self.calibration_yaw_sum = self.calibration_dt = 0.0
@@ -190,12 +195,13 @@ class Person:
                 return
             if self.calibration_start_ms is None:
                 self.calibration_start_ms = uptime_ms
+                self.calibration_start_t = self.imu_t or time.time()
                 self.calibration_reference = acc
             self.calibration_samples += 1
             self.calibration_acc_sum = (self.calibration_acc_sum[0] + acc[0], self.calibration_acc_sum[1] + acc[1])
             self.calibration_yaw_sum += yaw_delta
             self.calibration_dt += dt
-            if uptime_ms - self.calibration_start_ms < 30000 or self.calibration_samples < 100:
+            if uptime_ms - self.calibration_start_ms < 30000 or self.calibration_samples < 5:
                 return
             self.accel_bias = tuple(value / self.calibration_samples for value in self.calibration_acc_sum)
             self.yaw_bias = self.calibration_yaw_sum / self.calibration_dt
@@ -748,7 +754,7 @@ class Team:
             if p.id.startswith("mesh_"):
                 row["speed_m_s"] = round(math.hypot(p.velocity_n, p.velocity_e), 2) if p.accel_bias is not None and fresh else None
                 row["location_calibration"] = "ready" if p.accel_bias is not None else "calibrating" if p.calibration_start_ms is not None and fresh else "hold still" if fresh else "waiting for IMU"
-                row["location_calibration_remaining_s"] = max(0, math.ceil((30000 - (p.uptime_seen - p.calibration_start_ms)) / 1000)) if p.accel_bias is None and p.calibration_start_ms is not None and p.uptime_seen is not None else None
+                row["location_calibration_remaining_s"] = max(1, math.ceil(30 - (now - p.calibration_start_t))) if p.accel_bias is None and p.calibration_start_t is not None else None
                 for key in ("hr", "mv", "rmssd", "activity", "acc_xyz", "acc_mag", "rot", "gyro_xyz", "temp"):
                     value = row.get(key)
                     previous = p.display.get(key)
