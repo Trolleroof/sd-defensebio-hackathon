@@ -46,7 +46,7 @@ class DashboardLocationTest(unittest.TestCase):
             self.assertIsNone(row["exp"])
             self.assertEqual(row["status"], "ok")
 
-    def test_origin_steps_turn_and_correction(self):
+    def test_velocity_calibration_turn_and_correction(self):
         team = Team(None, (32.7157, -117.1611))
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
         team.add(person)
@@ -54,17 +54,21 @@ class DashboardLocationTest(unittest.TestCase):
         self.assertEqual((person.lat, person.lon, person.loc), (32.0, -117.0, "origin"))
 
         person.heading, person.heading_set = 90, True
-        person.advance(100, 1000, 0)
-        person.advance(102, 2000, 0)
+        for i in range(152):
+            person.advance(100, 1000 + i * 200, 0, (0.12, -0.08, 9.80665), (0, 0, 0))
+        self.assertIsNotNone(person.accel_bias)
+        self.assertEqual(person.loc, "origin")
+        person.advance(100, 31400, 0, (1.12, -0.08, 9.80665), (0, 0, 0))
         self.assertEqual(person.loc, "estimated")
         self.assertAlmostEqual(person.lat, 32.0, places=6)
         self.assertGreater(person.lon, -117.0)
 
-        person.advance(104, 3000, math.pi / 2)
+        person.advance(100, 31600, math.pi / 2, (1.12, -0.08, 9.80665), (0, 0, 0))
         self.assertGreater(person.lat, 32.0)
         team.place(person.id, 32.1, -117.1)
         self.assertEqual(person.loc, "corrected")
-        person.advance(105, 4000, 0)
+        self.assertEqual((person.velocity_n, person.velocity_e), (0, 0))
+        person.advance(100, 31800, 0, (1.12, -0.08, 9.80665), (0, 0, 0))
         self.assertEqual(person.loc, "estimated")
         self.assertGreater(person.lat, 32.1)
 
@@ -75,13 +79,25 @@ class DashboardLocationTest(unittest.TestCase):
         team.set_origin(float("nan"), 10, "browser")
         self.assertIsNone(team.origin)
         team.set_origin(0, 0, "manual")
-        person.advance(65535, 1000, 0)
-        person.advance(1, 2000, 0)
-        self.assertAlmostEqual(person.lat, math.degrees(1.4 / 6371000))
+        for i in range(152):
+            person.advance(65535, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+        person.advance(1, 31400, 0, (1, 0, 9.80665), (0, 0, 0))
+        self.assertAlmostEqual(person.lat, math.degrees(0.02 / 6371000))
         before = person.lat
-        person.advance(500, 10000, 0)
-        person.advance(1, 1000, 0)
+        person.advance(500, 40000, 0, (1, 0, 9.80665), (0, 0, 0))
+        person.advance(1, 1000, 0, (1, 0, 9.80665), (0, 0, 0))
         self.assertEqual(person.lat, before)
+        self.assertIsNone(person.accel_bias)
+
+    def test_motion_restarts_thirty_second_calibration(self):
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True)
+        for i in range(100):
+            person.advance(0, 1000 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+        person.advance(1, 21000, 0, (0, 0, 9.80665), (0, 0, 0))
+        self.assertIsNone(person.calibration_start_ms)
+        for i in range(152):
+            person.advance(1, 21200 + i * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+        self.assertIsNotNone(person.accel_bias)
 
 
 class DashboardOriginApiTest(unittest.IsolatedAsyncioTestCase):
@@ -131,14 +147,15 @@ class DashboardOriginApiTest(unittest.IsolatedAsyncioTestCase):
                         break
                     await asyncio.sleep(0.05)
                 self.assertEqual(person.steps_seen, 10)
-                packet = {**packet, "sequence": 2, "uptime_ms": 2000, "steps": 12}
+                person.accel_bias = (0, 0)
+                packet = {**packet, "sequence": 2, "uptime_ms": 1200, "accel_m_s2": [1, 0, 9.80665]}
                 for _ in range(40):
                     if person.loc == "estimated":
                         break
                     await asyncio.sleep(0.05)
                 row = team.tick()["people"][0]
                 self.assertEqual((row["loc"], row["loc_quality"]), ("estimated", "low"))
-                self.assertGreater(row["lon"], -117)
+                self.assertGreater(person.lon, -117)
             finally:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
