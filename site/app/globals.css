@@ -406,3 +406,58 @@ button:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visib
  .research-header h1 { overflow-wrap: anywhere; }
 }
 @media (max-width: 360px) { .header-cta { display: none; } }
+
+/* Episode review and its cited controller evidence. */
+.trace-browser { padding: 28px 0 72px; }
+.trace-intro { max-width: 780px; font-size: 13px; color: var(--muted); }
+.trace-intro p { margin: 0 0 12px; }
+.trace-intro strong { color: var(--bone); font-weight: 500; }
+.trace-intro > a { display: inline-block; margin-top: 3px; color: var(--olive); }
+.trace-filters { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 12px; padding: 24px 0 12px; }
+.trace-filters label { display: grid; gap: 7px; color: var(--faint); font: 10px var(--mono); }
+.trace-filters select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--ink); color: var(--bone); font: 12px var(--sans); }
+.trace-count { color: var(--faint); font: 10px var(--mono); margin: 0 0 20px; }
+.trace-workspace { display: grid; grid-template-columns: 240px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 5px; align-items: start; }
+.trace-episode-list { max-height: 680px; overflow-y: auto; position: sticky; top: 76px; }
+.trace-episode-list button { display: block; width: 100%; text-align: left; padding: 15px 13px; border: 0; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; font: 11px var(--sans); }
+.trace-episode-list button:hover { background: var(--raised); }
+.trace-episode-list button[aria-pressed="true"] { border-left-color: var(--olive); background: var(--olive-dim); color: var(--bone); }
+.trace-episode-model { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 7px; }
+.trace-episode-model .model-logo { width: 16px; height: 16px; }
+.trace-episode-status { float: right; color: var(--faint); font-size: 10px; }
+.trace-inspector { border-left: 1px solid var(--line); min-width: 0; padding: 25px; }
+.trace-inspector-header { border-bottom: 1px solid var(--line); padding-bottom: 21px; }
+.trace-inspector-header h2 { margin: 0 0 8px; font: 400 27px Georgia, serif; }
+.trace-inspector-header p { font-size: 11px; color: var(--muted); margin: 0 0 12px; }
+.trace-inspector-header a { font-size: 11px; color: var(--olive); }
+.trace-inspector h3 { margin: 28px 0 15px; font: 400 21px Georgia, serif; }
+.trace-criterion { border-top: 1px solid var(--line); padding: 17px 0; }
+.trace-criterion-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.trace-criterion h4 { margin: 0; font-size: 13px; font-weight: 500; }
+.trace-criterion-heading > span { color: var(--olive); white-space: nowrap; font: 11px var(--mono); }
+.trace-criterion p, .trace-event p, .trace-missing { font-size: 13px; line-height: 1.8; color: var(--muted); margin: 10px 0; overflow-wrap: anywhere; }
+.trace-citations { display: flex; flex-wrap: wrap; gap: 9px; }
+.trace-citations a { color: var(--olive); font: 10px var(--mono); border-bottom: 1px solid var(--line); }
+.trace-event { margin-top: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 3px; scroll-margin-top: 85px; }
+.trace-event:target { border-color: var(--olive); background: var(--olive-dim); }
+.trace-event-heading { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.trace-event-heading code { font: 11px var(--mono); color: var(--olive); }
+.trace-event-heading span { font-size: 11px; color: var(--faint); text-transform: capitalize; }
+.trace-code-reference, .trace-muted { color: var(--faint); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.trace-raw { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+.trace-raw summary { color: var(--muted); font-size: 12px; cursor: pointer; }
+.trace-raw pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.8 var(--mono); color: var(--muted); padding: 14px 0 0; }
+.trace-raw dl { font: 10px/1.8 var(--mono); }
+.trace-raw dt { color: var(--faint); margin-top: 15px; }
+.trace-raw dd { margin: 4px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.trace-empty { padding: 24px; color: var(--muted); font-size: 13px; }
+.ranking-evidence a { color: var(--olive); }
+@media (max-width: 1000px) { .nav { display: none; } }
+@media (max-width: 600px) {
+ .trace-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+ .trace-workspace { grid-template-columns: 1fr; }
+ .trace-episode-list { max-height: 205px; position: static; }
+ .trace-inspector { border-left: 0; border-top: 1px solid var(--line); padding: 18px 15px; }
+ .trace-criterion-heading { flex-wrap: wrap; gap: 5px; }
+ .trace-inspector-header h2 { font-size: 24px; }
+}

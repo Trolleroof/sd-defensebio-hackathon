@@ -28,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span style={{ display: "flex", gap: 20 }}>
               <a href="/blog/physbench/">Report</a>
               <a href="/tasks/">Tasks</a>
+              <a href="/traces/">Judge traces</a>
               <a href={DASHBOARD_URL}>Operator dashboard ↗</a>
             </span>
           </div>
