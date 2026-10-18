@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/", label: "Leaderboard" },
   { href: "/blog/physbench/", label: "Report" },
   { href: "/tasks/", label: "Tasks" },
+  { href: "/traces/", label: "Judge traces" },
   { href: "/dashboard/", label: "Dashboard" },
 ];
 

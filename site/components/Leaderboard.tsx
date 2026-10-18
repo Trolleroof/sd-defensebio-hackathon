@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { RESULTS } from "@/lib/data";
 import { ModelLogo } from "@/components/ModelLogo";
@@ -79,7 +80,7 @@ export function Leaderboard() {
             return <div className={`ranking-row family-${modelFamily(row.model)} ${v === null ? "is-unranked" : ""}`} key={row.model}>
               <div className="ranking-label"><ModelLogo model={row.model} /><span className="ranking-name">{row.model}<small>{row.effort}</small></span><span className="ranking-value">{v === null ? process ? "Unobserved" : metric === "mae" ? "Unavailable" : "Unavailable" : format(v)}</span></div>
               <div className="ranking-track" aria-hidden="true">{v !== null && <div className="ranking-fill" style={{ "--bar-width": `${v / scale * 100}%` } as CSSProperties} />}</div>
-              <div className="ranking-evidence">{count}</div>
+              <div className="ranking-evidence">{count}{process && <> · <Link href={`/traces/?model=${encodeURIComponent(row.model)}`}>Read judge traces ↗</Link></>}</div>
             </div>;
           })}
         </div>
@@ -94,7 +95,7 @@ export function Leaderboard() {
           </table>
         </div>
       </details>
-      <div className="board-source"><span>10 models · 3 trials per task · 18 Oct 2026</span><a href="/results/pooled-task-elo-v1.json" download>Match audit ↗</a><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
+      <div className="board-source"><span>10 models · 3 trials per task · 18 Oct 2026</span><Link href="/traces/">Judge traces ↗</Link><a href="/results/pooled-task-elo-v1.json" download>Match audit ↗</a><a href="/results/compact-coding-v1.json" download>Download data ↗</a></div>
     </div>
   );
 }

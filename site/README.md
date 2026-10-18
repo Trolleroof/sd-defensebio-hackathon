@@ -33,3 +33,24 @@ comparison, skipped match, rating update and final rating. These ratings describ
 this fixed opponent pool and protocol, not population-level performance.
 
 Model logos are vendored SVGs from Lobe Icons; source commit and license are in `public/model-logos/`.
+
+## Judge traces
+
+`/traces/` publishes the exact compressed packets and saved verdicts used for the
+process means. It covers all 72 episodes, with 65 validated reviews and 7 explicit
+missing entries. Filter by model, task, trial seed or review status; each scored
+criterion links to the event IDs cited by the judge. Development MAE in a packet
+is labeled separately from the hidden-test outcome.
+
+Re-export from the authorized local evidence directory without making API calls:
+
+```sh
+python3 site/scripts/export_judge_traces.py /absolute/path/to/compact-eight /absolute/path/to/judge.json
+```
+
+Run that command from the repository root. The exporter verifies sealed receipt,
+trajectory, transcript, run-status, judge packet and configuration bindings, then
+checks that the saved verdicts reproduce the published criterion means/counts.
+Only allowlisted compact packets, verdicts and provenance hashes are exported.
+`lib/judge-traces.json` and `public/results/judge-traces.json` stay byte-identical.
+Raw API transcripts, full executable code and hidden test losses are not exported.
