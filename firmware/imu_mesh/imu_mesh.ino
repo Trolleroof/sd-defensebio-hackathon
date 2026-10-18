@@ -36,6 +36,7 @@ constexpr uint8_t kMaxRelayHops = 1;
 constexpr uint8_t kMeshChannel = 6;
 constexpr uint32_t kSamplePeriodMs = 200;
 constexpr uint32_t kSensorStatusPeriodMs = 5000;
+constexpr uint32_t kParentRecoveryMs = 20000;
 constexpr int kMeshRxTimeoutMs = 1000;
 
 // These values must be identical on all three boards.
@@ -454,6 +455,18 @@ void setup() {
 void loop() {
 #if NODE_ROLE == ROLE_SENSOR
   const uint32_t now = millis();
+  static uint32_t parentMissingSinceMs = 0;
+  mesh_addr_t parent{};
+  if (copyParent(parent)) {
+    parentMissingSinceMs = 0;
+  } else if (!parentMissingSinceMs) {
+    parentMissingSinceMs = now;
+  } else if (static_cast<uint32_t>(now - parentMissingSinceMs) >= kParentRecoveryMs) {
+    // shortcut: a blocked send delays this timer; move mesh sending off loop for faster recovery.
+    Serial.println("{\"type\":\"mesh_rebooting\",\"reason\":\"parent_timeout\"}");
+    Serial.flush();
+    ESP.restart();
+  }
 #if HR_SOURCE_SPARKFUN
   if (sparkfunReady && static_cast<uint32_t>(now - lastBioReadMs) >= 1000) {
     lastBioReadMs = now;
