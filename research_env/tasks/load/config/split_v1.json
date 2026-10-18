@@ -1,0 +1,67 @@
+{
+  "split_id": "evobreath-person-split-v1",
+  "salt": "load-evobreath-v1/person-split",
+  "sizes": {
+    "train": 28,
+    "development": 10,
+    "test": 10
+  },
+  "splits": {
+    "train": [
+      "BE0003",
+      "BE0008",
+      "BE0015",
+      "BE0019",
+      "BE0024",
+      "BE0025",
+      "BE0028",
+      "BE0029",
+      "BE0031",
+      "BE0032",
+      "BE0034",
+      "BE0036",
+      "BE0037",
+      "BE0038",
+      "BE0043",
+      "BE0044",
+      "BE0045",
+      "BE0048",
+      "BE0049",
+      "BE0050",
+      "BE0051",
+      "BE0055",
+      "BE0056",
+      "BE0057",
+      "BE0058",
+      "BE0062",
+      "BE0065",
+      "BE0066"
+    ],
+    "development": [
+      "BE0004",
+      "BE0005",
+      "BE0026",
+      "BE0027",
+      "BE0030",
+      "BE0040",
+      "BE0042",
+      "BE0046",
+      "BE0060",
+      "BE0061"
+    ],
+    "test": [
+      "BE0002",
+      "BE0016",
+      "BE0033",
+      "BE0035",
+      "BE0039",
+      "BE0041",
+      "BE0047",
+      "BE0059",
+      "BE0063",
+      "BE0064"
+    ]
+  },
+  "frozen_on": "2026-10-17",
+  "quality_audit": "No person excluded. Three 15 kg targets are missing in source (BE0002, BE0058, BE0063) and are ineligible records, not excluded people. Flags in dataset manifest do not exclude data."
+}

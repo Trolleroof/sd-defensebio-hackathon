@@ -1,0 +1,63 @@
+{
+  "task_id": "load-evobreath-v1",
+  "status": "pilot; retrospective public data; not clinically or field validated",
+  "dataset_manifest": "produced by `python -m research_env.tasks.load prepare`",
+  "split_manifest": "config/split_v1.json",
+  "target": {
+    "name": "gross metabolic power",
+    "unit": "W",
+    "convention": "gross, RMR not subtracted",
+    "conversion": "kcal_per_day * 4184 / 86400"
+  },
+  "scope": {
+    "speed_m_s": 1.1111111111111112,
+    "grade_fraction": 0.0,
+    "loads_kg": [
+      0,
+      5,
+      10,
+      15
+    ],
+    "out_of_scope": "other speeds, grades, terrain, loads above 15 kg, continuous sensor streams"
+  },
+  "tracks": {
+    "primary": "unseen people, loads 0/5/10/15 kg, inputs mass/stature/age/load (+ optional declared sex)",
+    "calibration": "unseen people; the person's measured 0 kg power is revealed; scored on 5/10/15 kg only; reported separately",
+    "holdout15": "15 kg rows withheld from training; scored on 15 kg for unseen people; reported separately"
+  },
+  "budget": {
+    "wall_clock_s": 7200,
+    "dev_calls": 30,
+    "cpu_cores": 8,
+    "ram_gb": 32,
+    "gpu": false,
+    "status": "provisional design defaults; profiled baselines use far less (see docs/LOAD_TASK.md)"
+  },
+  "skill": {
+    "formula": "1 - agent_loss / max(frozen_baseline_loss, epsilon_w)",
+    "frozen_baseline_id": "ridge",
+    "epsilon_w": 1.0,
+    "frozen_baseline_loss_w": {
+      "calibration": {
+        "development": 23.5091,
+        "test": 32.8483
+      },
+      "holdout15": {
+        "development": 17.2018,
+        "test": 38.3299
+      },
+      "primary": {
+        "development": 23.9447,
+        "test": 32.2739
+      }
+    },
+    "frozen_on": "2026-10-17, from the seed-0 ridge baseline run before any participant run"
+  },
+  "checkpoints_min": [
+    15,
+    30,
+    60,
+    120
+  ],
+  "ranking_policy": "valid runs rank above invalid runs; raw metrics retained; LLM process score never combined with numerical score"
+}
