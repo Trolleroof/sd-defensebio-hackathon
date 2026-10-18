@@ -36,7 +36,8 @@ class MockEnv:
     constructed = []
 
     def __init__(self, prepared_roots, run_root, *, backend='docker', image=None,
-                 reward_version='physiology-reward-v1', max_turns=40, history_chars=60_000):
+                 reward_version='physiology-reward-v1', max_turns=40, history_chars=60_000,
+                 tool_result_chars=8000):
         self.kwargs = dict(prepared_roots=prepared_roots, backend=backend, image=image,
                            reward_version=reward_version, max_turns=max_turns, history_chars=history_chars)
         self.run_root = run_root

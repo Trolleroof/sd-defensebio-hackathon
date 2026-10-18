@@ -15,14 +15,18 @@ set -euo pipefail
 CONFIRM=0
 [ "${1:-}" = "--yes" ] && CONFIRM=1
 
-: "${PHYS_GRPO_IMAGE:?set PHYS_GRPO_IMAGE (image built from training/runpod/Dockerfile)}"
+# Stock RunPod image: the repo, data and verl are installed on the pod by push.sh/bootstrap.sh,
+# so no custom image or registry is needed. A custom image from training/runpod/Dockerfile also works.
+PHYS_GRPO_IMAGE="${PHYS_GRPO_IMAGE:-runpod/pytorch:1.0.3-cu1281-torch291-ubuntu2404}"
+# verl v0.9.1 pins torch 2.11 / CUDA 13.0 wheels: only schedule on hosts whose driver supports it.
+MIN_CUDA="${PHYS_GRPO_MIN_CUDA:-13.0}"
 : "${PHYS_GRPO_GPU_ID:?set PHYS_GRPO_GPU_ID (see: runpodctl gpu list)}"
 POD_NAME="${PHYS_GRPO_POD_NAME:-physiology-grpo}"
 GPU_COUNT="${PHYS_GRPO_GPU_COUNT:-1}"
 CLOUD_TYPE="${PHYS_GRPO_CLOUD_TYPE:-SECURE}"
 DISK_GB="${PHYS_GRPO_CONTAINER_DISK_GB:-100}"
 VOLUME_GB="${PHYS_GRPO_VOLUME_GB:-200}"
-MODE="${PHYS_GRPO_MODE:-smoke}"
+MODE="${PHYS_GRPO_MODE:-shell}"
 
 if [ "$MODE" = "train" ] && [[ "${PHYS_GRPO__model__base_model:-CHOOSE_BASE_MODEL}" == CHOOSE_BASE_MODEL* ]]; then
   echo "refusing: PHYS_GRPO__model__base_model is still the placeholder (base model not chosen)" >&2
@@ -34,13 +38,13 @@ fi
 ENV_JSON="$(python3 - <<'PY'
 import json, os
 env = {k: v for k, v in os.environ.items() if k.startswith('PHYS_GRPO__')}
-env['PHYS_GRPO_MODE'] = os.environ.get('PHYS_GRPO_MODE', 'smoke')
+env['PHYS_GRPO_MODE'] = os.environ.get('PHYS_GRPO_MODE', 'shell')  # shell: wait for push.sh
+# Sandbox caps: concurrent episodes x memory must fit the pod with room for the trainer.
+for key, default in (('PHYSIOLOGY_SANDBOX_MAX_CPUS', '2'), ('PHYSIOLOGY_SANDBOX_MAX_MEMORY_GB', '4')):
+    env[key] = os.environ.get(key, default)
 hf = os.environ.get('PHYS_GRPO_HF_SECRET_NAME')
-beam = os.environ.get('PHYS_GRPO_BEAM_SECRET_NAME')
 if hf:
     env['HF_TOKEN'] = '{{ RUNPOD_SECRET_%s }}' % hf
-if beam:
-    env['BEAM_TOKEN'] = '{{ RUNPOD_SECRET_%s }}' % beam
 print(json.dumps(env, sort_keys=True))
 PY
 )"
@@ -51,6 +55,7 @@ CMD=(runpodctl pod create
   --gpu-id "$PHYS_GRPO_GPU_ID"
   --gpu-count "$GPU_COUNT"
   --cloud-type "$CLOUD_TYPE"
+  --min-cuda-version "$MIN_CUDA"
   --container-disk-in-gb "$DISK_GB"
   --ports "22/tcp"
   --env "$ENV_JSON")
@@ -69,5 +74,6 @@ fi
 command -v runpodctl >/dev/null || { echo "runpodctl not installed" >&2; exit 1; }
 [ -n "${RUNPOD_API_KEY:-}" ] || echo "note: RUNPOD_API_KEY not set; runpodctl will use its own configured key" >&2
 "${CMD[@]}"
+echo "next:         training/runpod/push.sh <pod-id>   (copies repo + data, runs bootstrap.sh)"
 echo "follow logs:  runpodctl pod logs <pod-id> --follow"
 echo "stop billing: runpodctl pod stop <pod-id>   (delete with: runpodctl pod delete <pod-id>)"

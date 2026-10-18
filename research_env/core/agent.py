@@ -11,9 +11,9 @@ from research_env.core.evaluation import evaluate
 class ResearchEnvironment:
     def __init__(self, controller, workspace, development_manifest, *, backend='docker', image=None,
                  wall_s=7200, development_calls=30, adapter=None, replay='strict', scorer=None,
-                 task_path='research_env/tasks/pulse/TASK.md'):
+                 task_path='research_env/tasks/pulse/TASK.md', clock=time.time):
         # Budgets apply only when the controller is created; Session caps them at 7200 s / 30 calls.
-        self.session = Session(controller, wall_s=wall_s, development_calls=development_calls)
+        self.session = Session(controller, wall_s=wall_s, development_calls=development_calls, clock=clock)
         self.adapter, self.replay, self.scorer = adapter, replay, scorer
         self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)

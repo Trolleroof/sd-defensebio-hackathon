@@ -11,7 +11,7 @@ import sys
 import tempfile
 import time
 from research_env.core.common import digest, invalid_score, read, tree_hashes
-from research_env.core.worker import execute
+from research_env.core.worker import execute, worker_python
 from research_env.tasks.load.scoring import score, validate_prediction
 
 
@@ -39,7 +39,7 @@ def evaluate(artifact_dir, private_manifest, *, backend='docker', image=None, wa
             root = Path(tmp)
             shutil.copytree(artifact_dir, root/'artifact')
             shutil.copyfile(Path(__file__).with_name('inference_entry.py'), root/'entry.py')
-            python = sys.executable if backend == 'macos-development' else 'python'
+            python = worker_python(backend)
             remaining = wall_s-(time.monotonic()-start)
             if remaining <= 0:
                 return invalid_score('replay_wall_budget'), {}

@@ -71,9 +71,26 @@ def validate(cfg: dict) -> dict:
             raise ValueError(f'tasks.{key}=agent_final_evaluation is forbidden for training')
     if int(cfg['env']['max_turns']) < 1:
         raise ValueError('env.max_turns must be >= 1')
+    worst = worst_case_response_tokens(cfg)
+    if worst > int(cfg['generation']['max_response_tokens']):
+        raise ValueError(f'Context budget: env.max_turns x (generation.max_tokens_per_turn + tool result) is about '
+                         f'{worst} tokens, above generation.max_response_tokens='
+                         f"{cfg['generation']['max_response_tokens']}. Episodes would hit the context limit and "
+                         'score as unsubmitted. Lower max_turns / max_tokens_per_turn / env.tool_result_chars.')
     if not isinstance(cfg['model'].get('base_model'), str) or not cfg['model']['base_model']:
         raise ValueError('model.base_model must be a Hugging Face id or local path')
     return cfg
+
+
+CHARS_PER_TOKEN = 3.0  # conservative for JSON/code-heavy tool output
+STATUS_LINE_CHARS = 200  # env.render_step budget/status header
+
+
+def worst_case_response_tokens(cfg: dict) -> int:
+    """Upper estimate of all-turn response length: model tokens plus (masked) tool-result tokens."""
+    per_turn = int(cfg['generation']['max_tokens_per_turn']) + \
+        (int(cfg['env'].get('tool_result_chars', 8000))+STATUS_LINE_CHARS)/CHARS_PER_TOKEN
+    return int(int(cfg['env']['max_turns'])*per_turn)
 
 
 def base_model_is_placeholder(cfg: dict) -> bool:

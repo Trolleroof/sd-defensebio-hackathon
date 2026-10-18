@@ -19,7 +19,7 @@ import sys
 import time
 import re
 from research_env.core.common import digest, invalid_score, tree_hashes, validate_prediction
-from research_env.core.worker import execute
+from research_env.core.worker import execute, worker_python
 
 REPLAY_MODES = ('strict', 'batched')
 BOUT_START = '__bout_start__'
@@ -118,7 +118,7 @@ def evaluate(artifact_dir, private_manifest, *, backend='docker', image=None, wa
         raise ValueError('Artifact must include inference.py with predict(artifact_dir, request)')
     start = time.monotonic()
     references, predictions, resources = [], {}, []
-    python = sys.executable if backend == 'macos-development' else 'python'
+    python = worker_python(backend)
     if replay == 'strict':
         groups = ([bout] for _, bout in adapter.bouts(private_manifest))
     else:

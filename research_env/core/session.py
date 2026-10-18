@@ -13,7 +13,9 @@ class Session:
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.clock = clock
-        self.db = sqlite3.connect(self.root/'controller.sqlite')
+        # One episode's calls are sequential but may arrive on different threads (the GRPO trainer
+        # uses asyncio.to_thread); sqlite's own locking still serializes writers across processes.
+        self.db = sqlite3.connect(self.root/'controller.sqlite', check_same_thread=False)
         self.db.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)')
         self.db.execute('CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, payload TEXT NOT NULL)')
         with self.db:

@@ -289,8 +289,13 @@ class Episode(unittest.TestCase):
         env = self.make(profiles={'fast': {'wall_s': 1}})
         budgets = [env.reset(self.spec, seed=s)['budgets'] for s in (0, 1)]
         self.assertEqual(budgets[0], budgets[1])
-        time.sleep(1.1)
+        time.sleep(1.1)  # policy "generating": excluded from the episode clock
         obs, reward, done, info = env.step({'operation': 'edit', 'path': 'a.py', 'text': 'x'})
+        self.assertFalse(done)
+        self.assertGreaterEqual(info['policy_idle_s'], 1.0)
+        # Time spent executing actions does count.
+        obs, reward, done, info = env.step({'operation': 'command', 'decision': DECISION,
+                                            'argv': [sys.executable, '-c', 'import time; time.sleep(1.5)']})
         self.assertTrue(done)
         self.assertEqual(info['done_reason'], 'wall_budget_exhausted')
         self.assertEqual((reward, info['invalid_actions']), (-2.0, 0))

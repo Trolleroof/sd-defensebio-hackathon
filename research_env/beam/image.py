@@ -16,7 +16,7 @@ def participant_image(cfg: BeamConfig, sdk):
     return (sdk.Image.from_registry(cfg.base_image)
             .add_commands([f'python -m pip install --timeout 120 --retries 5 pip=={PIP_VERSION}'])
             .add_python_packages(str(cfg.requirements_lock))
-            .with_envs({'CUDA_VISIBLE_DEVICES': '', 'MPLCONFIGDIR': '/tmp/matplotlib',
+            .with_envs({'CUDA_VISIBLE_DEVICES': '-1', 'MPLCONFIGDIR': '/tmp/matplotlib',
                         'PYTHONDONTWRITEBYTECODE': '1'}))
 
 

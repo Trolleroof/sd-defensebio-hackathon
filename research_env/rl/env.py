@@ -7,6 +7,7 @@ Private feedback manifests are written at reset; reward manifests only at termin
 from __future__ import annotations
 import copy
 import json
+import time
 from pathlib import Path
 from research_env.core.agent import ResearchEnvironment
 from research_env.rl.api import PROFILES, TaskSpec, get_family, validate_against_splits, validate_spec
@@ -44,13 +45,15 @@ SYSTEM_PROMPT = ('You are a physiology research agent working in an offline, CPU
 
 class PhysiologyResearchEnv:
     def __init__(self, prepared_roots, run_root, *, backend='docker', image=None,
-                 reward_version=REWARD_VERSION, max_turns=40, history_chars=60_000, profiles=None):
+                 reward_version=REWARD_VERSION, max_turns=40, history_chars=60_000, profiles=None,
+                 tool_result_chars=8000):
         if reward_version != REWARD_VERSION:
             raise ValueError(f'Unsupported reward version {reward_version!r}')
         self.prepared_roots = {k: Path(v).resolve() for k, v in prepared_roots.items()}
         self.run_root = Path(run_root).resolve()
         self.backend, self.image, self.reward_version = backend, image, reward_version
         self.max_turns, self.history_chars = int(max_turns), int(history_chars)
+        self.tool_result_chars = int(tool_result_chars)
         # Environment-wide budget overrides (e.g. tests); never per episode.
         self.profiles = copy.deepcopy(PROFILES)
         for name, values in (profiles or {}).items():
@@ -60,10 +63,28 @@ class PhysiologyResearchEnv:
                 raise ValueError(f'Profile {name} budgets outside 0<wall_s<=7200, 0<=calls<=30')
         self.environment = None
         self._episodes = 0
+        self._idle_total, self._idle_since = 0., None
+
+    # The episode clock runs only while the env executes an action. Time the policy spends
+    # generating between steps is excluded, so a busy shared vLLM server cannot shrink one
+    # group member's budget relative to another's.
+    def _clock(self):
+        now = time.time()
+        idle = self._idle_total + ((now-self._idle_since) if self._idle_since is not None else 0.)
+        return now-idle
+
+    def _resume_clock(self):
+        if self._idle_since is not None:
+            self._idle_total += time.time()-self._idle_since
+            self._idle_since = None
+
+    def _pause_clock(self):
+        self._idle_since = time.time()
 
     # ---- lifecycle -------------------------------------------------------
     def reset(self, task: TaskSpec, seed: int):
         self.close()
+        self._idle_total, self._idle_since = 0., None  # fresh episode clock (new Session below)
         validate_spec(task)
         family = get_family(task.task_family)
         if task.task_family not in self.prepared_roots:
@@ -81,6 +102,9 @@ class PhysiologyResearchEnv:
         self.episode_dir.mkdir(parents=True, exist_ok=False)
         workspace, controller, private = (self.episode_dir/k for k in ('workspace', 'controller', 'private'))
         workspace.mkdir()
+        for private_dir in (controller, private):  # unreadable to the linux-pod sandbox uid
+            private_dir.mkdir(mode=0o700)
+            private_dir.chmod(0o700)
         family.stage_workspace(task, root, workspace)
         feedback = family.private_manifest(task, root, 'feedback', private)
         if Path(feedback).resolve().is_relative_to(workspace.resolve()):
@@ -89,10 +113,14 @@ class PhysiologyResearchEnv:
         def scorer(artifact, manifest, *, backend, image, wall_s, on_tick=None):
             return family.score(artifact, manifest, backend=backend, image=image, wall_s=wall_s,
                                 profile=task.profile)
+        task_path = getattr(family, 'task_path', None) or 'TASK.md'
+        if not (workspace/task_path).is_file():
+            raise ValueError(f'{family.name}: staged workspace has no task description at {task_path}')
         self.environment = ResearchEnvironment(
             controller, workspace, feedback, backend=self.backend, image=self.image,
             wall_s=profile['wall_s'], development_calls=profile['development_calls'], scorer=scorer,
-            task_path=getattr(family, 'task_path', f'research_env/tasks/{family.name}/TASK.md'))
+            task_path=task_path,
+            clock=self._clock)
         self.turns, self.invalid_actions, self.done, self.done_reason = 0, 0, False, None
         self.reward_info = None
         self.messages = [{'role': 'system', 'content': SYSTEM_PROMPT.format(budgets=json.dumps(self.budgets)),
@@ -100,6 +128,7 @@ class PhysiologyResearchEnv:
         obs = self._observation(None, None)
         self.messages.append({'role': 'user', 'content': self.render_observation(obs),
                               'tool_calls': [], 'tool_call_id': None})
+        self._pause_clock()
         return obs
 
     def close(self):
@@ -109,6 +138,13 @@ class PhysiologyResearchEnv:
 
     # ---- stepping --------------------------------------------------------
     def step(self, action, *, assistant_message=None):
+        self._resume_clock()
+        try:
+            return self._step(action, assistant_message)
+        finally:
+            self._pause_clock()
+
+    def _step(self, action, assistant_message):
         if self.environment is None:
             raise RuntimeError('Call reset() before step()')
         if self.done:
@@ -135,12 +171,19 @@ class PhysiologyResearchEnv:
         elif self.turns >= self.max_turns:
             self.done, self.done_reason = True, 'max_turns'
         obs = self._observation(result, error)
-        self.messages.append({'role': 'tool', 'content': self._render_result(result, error),
+        self.messages.append({'role': 'tool', 'content': self.render_step(obs),
                               'tool_calls': [], 'tool_call_id': self._last_call_id})
         reward = self._terminal_reward() if self.done else 0.0
         return obs, reward, self.done, self._info()
 
     def terminate(self, reason):
+        self._resume_clock()
+        try:
+            return self._terminate(reason)
+        finally:
+            self._pause_clock()
+
+    def _terminate(self, reason):
         """End the episode without a further action (e.g. policy context exhausted); scores as unsubmitted."""
         if self.environment is None:
             raise RuntimeError('Call reset() before terminate()')
@@ -201,15 +244,41 @@ class PhysiologyResearchEnv:
                 'done': self.done, 'last_result': result, 'error': error,
                 'history': base['history'], 'protocol': base['protocol']}
 
+    # Fields the policy needs to act on a result; never dropped when a result is shortened.
+    _KEEP = ('event_id', 'candidate_id', 'execution_valid', 'primary_loss', 'failure_reason', 'exit_code',
+             'content_sha256', 'kind')
+
     def _render_result(self, result, error, limit=8000):
+        """Valid JSON within `limit` chars: essential fields first, bulky fields dropped whole (and listed)."""
         if error is not None:
-            return json.dumps({'error': error})
+            return json.dumps({'error': str(error)[:limit-20]})
         result = dict(result or {})
         for key in ('stdout', 'stderr'):
             if isinstance(result.get(key), str) and len(result[key]) > 2000:
                 result[key] = '...[truncated]\n'+result[key][-2000:]
         text = json.dumps(result, default=str, sort_keys=True)
-        return text if len(text) <= limit else text[:limit]+'...[truncated]'
+        if len(text) <= limit:
+            return text
+        out = {k: result[k] for k in self._KEEP if k in result}
+        dropped = []
+        for key in sorted(result, key=lambda k: len(json.dumps(result[k], default=str))):
+            if key in out:
+                continue
+            trial = {**out, key: result[key]}
+            if len(json.dumps({**trial, '_omitted': dropped+['x'*12]}, default=str)) <= limit:
+                out = trial
+            else:
+                dropped.append(key)
+        if dropped:
+            out['_omitted'] = sorted(dropped)
+        return json.dumps(out, default=str, sort_keys=True)
+
+    def render_step(self, obs):
+        """Compact per-step tool message: budget status line + this action's capped result (no history)."""
+        head = {k: obs.get(k) for k in ('turn', 'max_turns', 'remaining_wall_s', 'development_calls_remaining',
+                                        'selected_candidate_id', 'done')}
+        return json.dumps(head, sort_keys=True)+'\n'+self._render_result(obs.get('last_result'), obs.get('error'),
+                                                                          self.tool_result_chars)
 
     def render_observation(self, obs):
         head = {k: obs[k] for k in ('task', 'turn', 'max_turns', 'remaining_wall_s',
@@ -268,6 +337,7 @@ class PhysiologyResearchEnv:
     def _info(self):
         s = self.environment.session
         info = {'invalid_actions': self.invalid_actions, 'turns': self.turns,
+                'policy_idle_s': self._idle_total,
                 'development_calls_used': s.get('used'), 'budgets': dict(self.budgets),
                 'done_reason': self.done_reason, 'task_id': self.task.task_id, 'seed': self.seed,
                 'reward_version': self.reward_version}

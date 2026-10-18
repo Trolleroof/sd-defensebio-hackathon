@@ -9,7 +9,8 @@ model:
 
 env:
   max_turns: 6
-  backend: docker
+  tool_result_chars: 1000
+  backend: linux-pod
 
 grpo:
   group_size: 2

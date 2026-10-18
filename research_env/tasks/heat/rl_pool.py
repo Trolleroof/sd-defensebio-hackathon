@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from research_env.core.common import canonical, digest, tree_hashes
-from research_env.core.worker import execute
+from research_env.core.worker import execute, worker_python
 
 from . import requests as rq
 from . import scoring
@@ -333,7 +333,7 @@ def replay(artifact_dir, manifest, *, backend="docker", image=None, wall_s=7200.
     rids = {r["request_id"] for g in groups for r in g}
     targets = [t for t in body["targets"] if t["request_id"] in rids]
     predictions, workers = {}, []
-    python = sys.executable if backend == "macos-development" else "python"
+    python = worker_python(backend)
     for group in groups:
         remaining = wall_s - (time.monotonic() - start)
         if remaining <= 0:

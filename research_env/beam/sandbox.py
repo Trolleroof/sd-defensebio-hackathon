@@ -33,7 +33,7 @@ def _load_sdk():
 def sandbox_env(cpus, cfg: BeamConfig):
     threads = str(max(1, int(cpus)))
     return {'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': cfg.workdir, 'TMPDIR': '/tmp',
-            'CUDA_VISIBLE_DEVICES': '', 'PYTHONDONTWRITEBYTECODE': '1', 'MPLCONFIGDIR': '/tmp/matplotlib',
+            'CUDA_VISIBLE_DEVICES': '-1', 'PYTHONDONTWRITEBYTECODE': '1', 'MPLCONFIGDIR': '/tmp/matplotlib',
             **{k: threads for k in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS')},
             **cfg.extra_env}
 

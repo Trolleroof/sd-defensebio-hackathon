@@ -14,18 +14,21 @@ model:
 
 env:
   # Paths are on the env orchestrator host (RunPod pod or a CPU box reachable from it).
-  prepared_roots:
+  prepared_roots:            # chmod 700 by training/runpod/bootstrap.sh (sandbox uid cannot read)
+    heat: /workspace/data/prepared/heat
+    load: /workspace/data/prepared/load
     pulse: /workspace/data/prepared/pulse
   run_root: /workspace/runs/rl
-  backend: beam            # docker | beam (beam backend is owned by the beam builder)
+  backend: linux-pod       # in-pod sandbox (RunPod cannot nest docker); docker | beam also supported
   image: null
   reward_version: physiology-reward-v1
-  max_turns: 40            # identical for every episode of a group (contract)
+  max_turns: 16            # identical for every episode of a group; must fit max_response_tokens (validated)
+  tool_result_chars: 2500  # tool output kept per turn (stdout/stderr tails already capped)
   history_chars: 60000
   profile: fast            # training rollouts use the fast profile (contract table)
 
 tasks:
-  families: [pulse]
+  families: [heat, load]     # add pulse once GalaxyPPG is prepared on the pod
   pool_seed: 0
   outer_split: agent_training   # agent_final_evaluation is always refused
   dev_outer_split: agent_development
@@ -39,7 +42,7 @@ grpo:
   max_concurrent_episodes: 16
 
 generation:
-  max_tokens_per_turn: 2048
+  max_tokens_per_turn: 1024
   temperature: 1.0
   top_p: 1.0
   max_prompt_tokens: 8192        # verl data.max_prompt_length

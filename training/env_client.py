@@ -75,6 +75,7 @@ class EnvSettings:
     reward_version: str = 'physiology-reward-v1'
     max_turns: int = 40
     history_chars: int = 60_000
+    tool_result_chars: int = 8000
 
 
 def make_env(settings: EnvSettings, factory: Callable[..., Any] | None = None) -> Any:
@@ -84,7 +85,8 @@ def make_env(settings: EnvSettings, factory: Callable[..., Any] | None = None) -
         factory = PhysiologyResearchEnv
     return factory({k: Path(v) for k, v in settings.prepared_roots.items()}, Path(settings.run_root),
                    backend=settings.backend, image=settings.image, reward_version=settings.reward_version,
-                   max_turns=settings.max_turns, history_chars=settings.history_chars)
+                   max_turns=settings.max_turns, history_chars=settings.history_chars,
+                   tool_result_chars=settings.tool_result_chars)
 
 
 def reset(env: Any, task: Any, seed: int) -> dict:
@@ -125,6 +127,16 @@ def tool_schemas(env: Any) -> list[dict]:
 
 def tool_names(schemas: list[dict]) -> set[str]:
     return {s['function']['name'] if 'function' in s else s['name'] for s in schemas}
+
+
+def render_step(env: Any, obs: dict) -> str:
+    """Per-step tool message. Uses the env's compact renderer (no ledger history) when available."""
+    if hasattr(env, 'render_step'):
+        try:
+            return env.render_step(obs)
+        except Exception as exc:
+            return json.dumps({'error': f'render failed: {type(exc).__name__}: {exc}'})
+    return render(env, obs)
 
 
 def render(env: Any, obs: dict) -> str:

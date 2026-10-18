@@ -144,7 +144,7 @@ async def run_episode(*, env: Any, task: Any, seed: int, policy: Policy, setting
         for call in parse_tool_calls(turn, names, turn_index):
             parse_errors += call.error is not None
             obs, reward, done, info = await asyncio.to_thread(env_client.step, env, call.action)
-            text = env_client.render(env, obs)
+            text = env_client.render_step(env, obs)
             if call.tool_call_id:
                 messages.append(message('tool', text, tool_call_id=call.tool_call_id))
             else:  # no tool call at all: feedback goes back as a user turn
@@ -225,7 +225,8 @@ def settings_from_config(cfg: dict) -> env_client.EnvSettings:
     e = cfg['env']
     return env_client.EnvSettings(prepared_roots=dict(e['prepared_roots']), run_root=e['run_root'],
                                   backend=e['backend'], image=e.get('image'), reward_version=e['reward_version'],
-                                  max_turns=int(e['max_turns']), history_chars=int(e['history_chars']))
+                                  max_turns=int(e['max_turns']), history_chars=int(e['history_chars']),
+                                  tool_result_chars=int(e.get('tool_result_chars', 8000)))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
