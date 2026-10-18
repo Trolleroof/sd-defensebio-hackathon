@@ -26,10 +26,10 @@
 
 namespace {
 constexpr uint32_t kPacketMagic = 0x494D5531;  // "IMU1"
-constexpr uint8_t kSchemaVersion = 1;
+constexpr uint8_t kSchemaVersion = 2;
 constexpr uint8_t kMaxRelayHops = 1;
 constexpr uint8_t kMeshChannel = 6;
-constexpr uint32_t kSamplePeriodMs = 1000;
+constexpr uint32_t kSamplePeriodMs = 200;
 constexpr uint32_t kSensorStatusPeriodMs = 5000;
 constexpr int kMeshRxTimeoutMs = 1000;
 
@@ -50,6 +50,7 @@ struct __attribute__((packed)) MeshPacket {
   uint8_t node_mac[6];
   float accel_m_s2[3];
   float gyro_rad_s[3];
+  float yaw_delta_rad;
   float imu_temp_c;
   uint32_t steps;
   int16_t hr_bpm;
@@ -60,6 +61,10 @@ static_assert(sizeof(MeshPacket) < MESH_MTU, "Mesh packet exceeds ESP-WIFI-MESH 
 
 Adafruit_LSM6DSOX imu;
 bool imuReady = false;
+float yawSincePacket = 0;
+uint32_t lastImuReadMs = 0;
+sensors_event_t latestAccel{}, latestGyro{}, latestTemp{};
+bool latestImuValid = false;
 portMUX_TYPE parentMux = portMUX_INITIALIZER_UNLOCKED;
 SemaphoreHandle_t meshSendMutex = nullptr;
 bool parentReady = false;
@@ -85,13 +90,22 @@ void onHeartRate(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) 
 
 class PolarCallbacks : public BLEClientCallbacks {
   void onConnect(BLEClient *) override { polarConnected = true; }
-  void onDisconnect(BLEClient *) override { polarConnected = false; }
+  void onDisconnect(BLEClient *) override {
+    polarConnected = false;
+    portENTER_CRITICAL(&hrMux);
+    latestHr = -1;
+    lastHrMs = 0;
+    portEXIT_CRITICAL(&hrMux);
+    Serial.println("{\"type\":\"polar_disconnected\"}");
+  }
 };
 
 void polarTask(void *) {
   BLEDevice::init("");
   BLEScan *scan = BLEDevice::getScan();
   scan->setActiveScan(true);
+  scan->setInterval(160);
+  scan->setWindow(80);
   BLEClient *client = BLEDevice::createClient();
   static PolarCallbacks callbacks;
   client->setClientCallbacks(&callbacks);
@@ -253,15 +267,16 @@ void printTelemetry(const MeshPacket &packet) {
 
   if (packet.sample_valid) {
     Serial.printf(
-        "\"accel_m_s2\":[%.3f,%.3f,%.3f],\"gyro_rad_s\":[%.3f,%.3f,%.3f],"
+        "\"accel_m_s2\":[%.3f,%.3f,%.3f],\"gyro_rad_s\":[%.3f,%.3f,%.3f],\"yaw_delta_rad\":%.4f,"
         "\"imu_temp_c\":%.2f,\"steps\":%lu,\"wake\":%s,",
         packet.accel_m_s2[0], packet.accel_m_s2[1], packet.accel_m_s2[2],
         packet.gyro_rad_s[0], packet.gyro_rad_s[1], packet.gyro_rad_s[2],
+        packet.yaw_delta_rad,
         packet.imu_temp_c, static_cast<unsigned long>(packet.steps),
         packet.wake ? "true" : "false");
   } else {
     Serial.print(
-        "\"accel_m_s2\":null,\"gyro_rad_s\":null,\"imu_temp_c\":null,"
+        "\"accel_m_s2\":null,\"gyro_rad_s\":null,\"yaw_delta_rad\":null,\"imu_temp_c\":null,"
         "\"steps\":null,\"wake\":null,");
   }
 
@@ -333,16 +348,17 @@ void sendImuSample() {
 #endif
 
   if (imuReady) {
-    sensors_event_t accel, gyro, temp;
-    packet.sample_valid = imu.getEvent(&accel, &gyro, &temp);
+    packet.sample_valid = latestImuValid;
     if (packet.sample_valid) {
-      packet.accel_m_s2[0] = accel.acceleration.x;
-      packet.accel_m_s2[1] = accel.acceleration.y;
-      packet.accel_m_s2[2] = accel.acceleration.z;
-      packet.gyro_rad_s[0] = gyro.gyro.x;
-      packet.gyro_rad_s[1] = gyro.gyro.y;
-      packet.gyro_rad_s[2] = gyro.gyro.z;
-      packet.imu_temp_c = temp.temperature;
+      packet.accel_m_s2[0] = latestAccel.acceleration.x;
+      packet.accel_m_s2[1] = latestAccel.acceleration.y;
+      packet.accel_m_s2[2] = latestAccel.acceleration.z;
+      packet.gyro_rad_s[0] = latestGyro.gyro.x;
+      packet.gyro_rad_s[1] = latestGyro.gyro.y;
+      packet.gyro_rad_s[2] = latestGyro.gyro.z;
+      packet.yaw_delta_rad = yawSincePacket;
+      yawSincePacket = 0;
+      packet.imu_temp_c = latestTemp.temperature;
       packet.steps = imu.readPedometer();
       packet.wake = imu.shake();
     }
@@ -386,6 +402,18 @@ void setup() {
 void loop() {
 #if NODE_ROLE == ROLE_SENSOR
   const uint32_t now = millis();
+  if (imuReady && static_cast<uint32_t>(now - lastImuReadMs) >= 20) {
+    sensors_event_t accel, gyro, temp;
+    latestImuValid = imu.getEvent(&accel, &gyro, &temp);
+    if (latestImuValid) {
+      if (lastImuReadMs && static_cast<uint32_t>(now - lastImuReadMs) < 200)
+        yawSincePacket += gyro.gyro.z * (now - lastImuReadMs) / 1000.0f;
+      latestAccel = accel;
+      latestGyro = gyro;
+      latestTemp = temp;
+    }
+    lastImuReadMs = now;
+  }
   const uint32_t interval = imuReady ? kSamplePeriodMs : kSensorStatusPeriodMs;
   if (static_cast<uint32_t>(now - lastSensorStatusMs) >= interval) {
     lastSensorStatusMs = now;

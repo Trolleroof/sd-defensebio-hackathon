@@ -96,6 +96,9 @@ section { min-height: 0; overflow: auto; }
 .pin.distress { background: var(--crit); width: 14px; height: 14px; }
 .pin.no-data, .pin.no-contact { background: var(--bg); border-color: var(--device); }
 .pin.placed { border-radius: 2px; }
+.pin.corrected { border-radius: 2px; }
+.pin.estimated { border: 2px dashed var(--text); }
+.origin-input { width: 94px; background: var(--raised); border: 1px solid var(--line); color: var(--text); padding: 5px; }
 .pin-label { font-size: 12px; color: var(--text); background: rgba(13,15,17,.85); padding: 1px 5px; border-radius: 3px; }
 .sel-pin .pin { outline: 2px solid var(--text); outline-offset: 2px; }
 .sel-pin .pin-label { background: var(--text); color: var(--bg); }
@@ -201,7 +204,11 @@ section { min-height: 0; overflow: auto; }
   <section id="center">
     <div class="map-head">
       <span class="title">Map</span>
-      <span class="key-dot">Simulated</span><span class="key-dot sq">Placed by operator</span><span>No GPS</span>
+      <span class="key-dot">Simulated</span><span class="key-dot sq">Corrected</span><span>Dashed: IMU estimate</span>
+      <button class="btn" id="originBtn">Use this computer's location</button>
+      <input class="origin-input" id="originLat" type="number" step="any" min="-90" max="90" placeholder="Latitude" aria-label="Origin latitude">
+      <input class="origin-input" id="originLon" type="number" step="any" min="-180" max="180" placeholder="Longitude" aria-label="Origin longitude">
+      <button class="btn" id="manualOriginBtn">Set origin</button><span id="originStatus"></span>
       <span class="hint" id="mapHint"></span>
       <div class="right"><span id="unplaced"></span><button class="btn" id="fitBtn">Fit team</button></div>
     </div>
@@ -222,7 +229,7 @@ section { min-height: 0; overflow: auto; }
 </main>
 
 <script>
-const S = { people: new Map(), order: [], alerts: [], events: [], sel: null, range: 300, meta: {}, last: {}, placing: null };
+const S = { people: new Map(), order: [], alerts: [], events: [], sel: null, range: 300, meta: {}, last: {}, placing: null, originKey: null };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -247,15 +254,18 @@ const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
 
 function onSnapshot(m) {
   S.meta = m; S.people.clear(); S.order = [];
-  for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = { ...(p.history.at(-1) || {}), loc: p.loc, loc_t: p.loc_t }; }
+  for (const p of m.people) { S.people.set(p.id, p); S.order.push(p.id); S.last[p.id] = { ...(p.history.at(-1) || {}), loc: p.loc, loc_t: p.loc_t, loc_quality: p.loc_quality }; }
   S.alerts = m.alerts; S.events = m.events;
   if (!S.sel || !S.people.has(S.sel)) S.sel = S.order[0];
   $("#hSession").textContent = m.session ? `Session ${m.session}` : "Live (not recording)";
   initMap(m.base);
+  showOrigin(m);
+  if (!m.origin && S.order.some((id) => id.startsWith("mesh_"))) locateOrigin();
   renderAll();
 }
 
 function onTick(m) {
+  showOrigin(m);
   for (const r of m.people) {
     const p = S.people.get(r.id);
     if (!p) continue;
@@ -267,6 +277,34 @@ function onTick(m) {
   if (m.events.length) S.events.push(...m.events);
   renderAll();
 }
+
+function showOrigin(m) {
+  if (m.origin) {
+    const key = m.origin.join(",");
+    if (key === S.originKey) return;
+    S.originKey = key;
+    $("#originStatus").textContent = `Origin: ${m.origin_source} (${m.origin.map((v) => v.toFixed(5)).join(", ")})`;
+    $("#originLat").value = m.origin[0]; $("#originLon").value = m.origin[1];
+    map?.setView(m.origin, 16);
+  }
+}
+
+function locateOrigin() {
+  if (!navigator.geolocation) { $("#originStatus").textContent = "Location unavailable; enter the origin."; return; }
+  $("#originStatus").textContent = "Locating command center…";
+  navigator.geolocation.getCurrentPosition(
+    (position) => { if (!S.originKey) send({ type: "origin", source: "browser", lat: position.coords.latitude, lon: position.coords.longitude }); },
+    () => { $("#originStatus").textContent = "Location unavailable; enter the origin."; },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+}
+$("#originBtn").onclick = locateOrigin;
+$("#manualOriginBtn").onclick = () => {
+  const lat = $("#originLat").value, lon = $("#originLon").value;
+  if (!lat || !lon || !Number.isFinite(+lat) || !Number.isFinite(+lon) || +lat < -90 || +lat > 90 || +lon < -180 || +lon > 180) {
+    $("#originStatus").textContent = "Enter valid latitude and longitude."; return;
+  }
+  send({ type: "origin", source: "manual", lat: +lat, lon: +lon });
+};
 
 // ---------------------------------------------------------------- render
 function renderAll() { renderHeader(); renderRoster(); renderDetail(); renderMap(); renderQueue(); renderLog(); }
@@ -311,7 +349,7 @@ function renderDetail() {
     root.innerHTML = `
       <div class="d-head">
         <h2>${esc(p.name)}</h2><span class="sub">${esc(p.role)}</span><span class="tag ${p.source}">${p.source}</span>
-        <div class="actions">${p.source !== "SYNTHETIC" ? `<button class="btn" id="placeBtn">Place on map</button>` : ""}<button class="btn danger" id="markDistress">Mark distress</button></div>
+        <div class="actions">${p.id.startsWith("mesh_") ? `<input class="origin-input" id="headingInput" type="number" min="0" max="359" step="1" placeholder="Heading °" aria-label="Heading in degrees clockwise from north"><button class="btn" id="headingBtn">Set heading</button>` : ""}${p.source !== "SYNTHETIC" ? `<button class="btn" id="placeBtn">Correct position</button>` : ""}<button class="btn danger" id="markDistress">Mark distress</button></div>
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
@@ -323,14 +361,15 @@ function renderDetail() {
         <div class="metric"><div class="k">IMU temp (chip)</div><div class="v" id="mTemp"></div></div>
         <div class="metric"><div class="k">Signal</div><div class="v" id="mQ"></div></div>
       </div>
+      <p class="note" id="motionDetail"></p>
       <div class="chart-head">
         <span class="title">Heart rate</span><span class="key">Measured</span><span class="key exp">Expected</span><span class="key gap">No data</span>
         <div class="range">${[120, 300, 600].map((s) => `<button data-r="${s}">${s / 60} min</button>`).join("")}</div>
       </div>
       <canvas id="hrChart"></canvas>
-      <div class="chart-head"><span class="title">Movement</span><span>std of acceleration, mG</span></div>
+      <div class="chart-head"><span class="title">Movement</span><span>2 s variation in acceleration magnitude, mG</span></div>
       <canvas id="mvChart"></canvas>
-      ${p.imu ? `<div class="chart-head"><span class="title">Rotation</span><span>mean angular speed from the gyroscope, °/s</span></div>
+      ${p.imu ? `<div class="chart-head"><span class="title">Rotation</span><span>2 s mean angular speed, °/s</span></div>
       <canvas id="rotChart"></canvas>` : ""}
       <div class="foot">
         <span>Device <b>${esc(p.device || "—")}</b></span>
@@ -338,10 +377,15 @@ function renderDetail() {
         <span>Last sample <b id="mAge">—</b></span>
         <span>Location <b id="mLoc">—</b></span>
       </div>
-      <p class="note">A difference from expected means check this person or the sensor. It is not a diagnosis.${p.imu ? " IMU temp is the LSM6DSOX chip's own temperature, not skin or body temperature." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
+      <p class="note">A difference from expected means check this person or the sensor. It is not a diagnosis.${p.imu ? " IMU temp is the LSM6DSOX chip's own temperature, not skin or body temperature." : ""}${p.id.startsWith("mesh_") ? " For direction, mount the IMU level with +Z up and +X forward, then set its heading clockwise from north. Step length is assumed 0.7 m. Positions drift; correct them on the map." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
     root.querySelector("#markDistress").onclick = () => send({ type: "distress", person: p.id });
     const pb = root.querySelector("#placeBtn");
     if (pb) pb.onclick = () => startPlacing(p.id);
+    const hb = root.querySelector("#headingBtn");
+    if (hb) hb.onclick = () => {
+      const degrees = root.querySelector("#headingInput").value;
+      if (degrees !== "" && +degrees >= 0 && +degrees < 360) send({ type: "heading", person: p.id, degrees: +degrees });
+    };
     root.querySelectorAll(".range button").forEach((b) => b.onclick = () => { S.range = +b.dataset.r; renderDetail(); });
   }
   root.querySelectorAll(".range button").forEach((b) => b.classList.toggle("on", +b.dataset.r === S.range));
@@ -354,12 +398,17 @@ function renderDetail() {
   set("#mRmssd", `${fmt(r.rmssd)}<small>ms</small>`);
   set("#mMv", r.mv == null ? "—" : `${fmt(r.mv)}<small>mG</small>`);
   set("#mRot", r.rot == null ? "—" : `${fmt(r.rot)}<small>°/s</small>`);
+  root.querySelector("#motionDetail").textContent = [
+    r.acc_xyz ? `Acceleration X/Y/Z: ${r.acc_xyz.join(" / ")} mG; magnitude ${r.acc_mag} mG` : "Acceleration: no recent sample",
+    p.imu ? (r.gyro_xyz ? `Gyro X/Y/Z: ${r.gyro_xyz.join(" / ")} °/s` : "Gyro: no recent sample") : null,
+    r.heading == null ? null : `Calibrated heading estimate: ${r.heading}° clockwise from north`,
+  ].filter(Boolean).join(" · ");
   set("#mTemp", r.temp == null ? "—" : `${fmt(r.temp, 1)}<small>°C</small>`);
   set("#mQ", r.quality ?? "—", r.quality && r.quality !== "good" ? "device" : "");
   root.querySelector("#mAge").textContent = r.age == null ? "—" : `${fmt(r.age, 1)} s ago`;
   root.querySelector("#mLoc").textContent = locText(r);
   const pb = root.querySelector("#placeBtn");
-  if (pb) pb.textContent = S.placing === p.id ? "Click the map…" : r.loc ? "Move on map" : "Place on map";
+  if (pb) pb.textContent = S.placing === p.id ? "Click the map…" : r.loc ? "Correct position" : "Place on map";
   hrChart(root.querySelector("#hrChart"), p.history);
   barChart(root.querySelector("#mvChart"), p.history, "mv", 200);
   if (p.imu) barChart(root.querySelector("#rotChart"), p.history, "rot", 60);
@@ -513,7 +562,8 @@ const markers = new Map();
 function locText(r) {
   if (!r.loc) return "none";
   const when = r.loc_t ? ` · ${ago(Date.now() / 1000 + serverOffset - r.loc_t)} ago` : "";
-  return (r.loc === "placed" ? "placed by operator" : "simulated") + when;
+  const label = { simulated: "simulated", origin: "command origin", corrected: "corrected by operator", estimated: `IMU estimate (${r.loc_quality || "low"} confidence)` };
+  return (label[r.loc] || r.loc) + when;
 }
 
 function initMap(base) {
@@ -565,7 +615,7 @@ function renderMap() {
     const st = (r.status || "ok").replace(" ", "-");
     const key = `${st}|${r.loc}|${id === S.sel}`;
     if (!m) {
-      m = L.marker([r.lat, r.lon], { draggable: r.loc === "placed", keyboard: false }).addTo(map);
+      m = L.marker([r.lat, r.lon], { draggable: p.source !== "SYNTHETIC", keyboard: false }).addTo(map);
       m.on("click", () => { S.sel = id; renderAll(); });
       m.on("dragend", () => { const ll = m.getLatLng(); send({ type: "place", person: id, lat: ll.lat, lon: ll.lng }); });
       markers.set(id, m);
@@ -579,7 +629,7 @@ function renderMap() {
         html: `<div class="pin-wrap"><span class="pin ${st} ${r.loc}"></span><span class="pin-label">${esc(p.name)}</span></div>`,
       }));
       m.setZIndexOffset(id === S.sel ? 1000 : st === "distress" ? 500 : 0);
-      r.loc === "placed" ? m.dragging?.enable() : m.dragging?.disable();
+      p.source !== "SYNTHETIC" ? m.dragging?.enable() : m.dragging?.disable();
     }
     m.getElement()?.setAttribute("title", `${p.name}: ${locText(r)}${st === "no-data" ? " (last known)" : ""}`);
   }
