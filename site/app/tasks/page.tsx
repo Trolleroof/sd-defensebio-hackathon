@@ -13,7 +13,7 @@ export default function Tasks() {
             <span className="eyebrow">Tasks</span>
             <h1>Tasks</h1>
             <p>
-              Real and synthetic results are reported separately.
+              The current leaderboard uses three measured-data tasks with fixed person splits. Each model runs three agent trials per task, with two coding experiments per episode.
             </p>
           </Reveal>
         </div>

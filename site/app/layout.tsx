@@ -9,7 +9,7 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variabl
 
 export const metadata: Metadata = {
   title: "PhysBench",
-  description: "Benchmark for agents that build personalized heart-rate predictors.",
+  description: "Measured pilot of coding agents building pulse, core-temperature and metabolic-cost predictors.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

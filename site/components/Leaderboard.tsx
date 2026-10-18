@@ -1,101 +1,25 @@
 "use client";
-
-import { useLayoutEffect, useRef, useState } from "react";
-import { ENTRIES, METRICS, type MetricKey } from "@/lib/data";
-import { useInView } from "@/lib/useInView";
-import { CountUp } from "./CountUp";
-
-const ORDER: MetricKey[] = ["pass", "mae", "judge", "cost"];
-
+import { useState } from "react";
+import { RESULTS } from "@/lib/data";
+const VIEWS = ["suite", "pulse", "heat", "load", "process"] as const;
+type View = typeof VIEWS[number];
+const CRITERIA = ["evidence", "experiment", "feedback", "repro", "selection"] as const;
+const LABELS = {suite:"Overall suite",pulse:"Pulse · bpm",heat:"Heat · °C",load:"Load · W",process:"Process review"};
 export function Leaderboard() {
-  const [metric, setMetric] = useState<MetricKey>("pass");
-  const [ref, inView] = useInView<HTMLDivElement>(0.15);
-  const rowRefs = useRef(new Map<string, HTMLDivElement>());
-  const lastTops = useRef(new Map<string, number>());
-
-  const m = METRICS[metric];
-  const scored = ENTRIES.filter((e) => !e.baseline).sort((a, b) =>
-    m.lowerIsBetter ? a[metric] - b[metric] : b[metric] - a[metric],
-  );
-  // The anchor only has a meaningful value for transfer error; elsewhere it sits last.
-  const anchor = ENTRIES.filter((e) => e.baseline);
-  const rows = [...scored, ...anchor];
-
-  // FLIP: slide rows from their previous position when the sort order changes.
-  useLayoutEffect(() => {
-    rowRefs.current.forEach((el, key) => {
-      const top = el.getBoundingClientRect().top;
-      const prev = lastTops.current.get(key);
-      if (prev !== undefined && prev !== top) {
-        el.style.transition = "none";
-        el.style.transform = `translateY(${prev - top}px)`;
-        requestAnimationFrame(() => {
-          el.style.transition = "";
-          el.style.transform = "";
-        });
-      }
-      lastTops.current.set(key, top);
-    });
-  }, [metric]);
-
-  return (
-    <div ref={ref} className={inView ? "in" : ""}>
-      <div className="board-bar">
-        <div className="tabs" role="group" aria-label="Metric">
-          {ORDER.map((k) => (
-            <button key={k} aria-pressed={metric === k} onClick={() => setMetric(k)}>
-              {METRICS[k].label}
-            </button>
-          ))}
-        </div>
-        <span className="board-note">
-          {m.lowerIsBetter ? "lower is better" : "higher is better"} · {m.unit}
-          {metric === "pass" && " · whisker = Wilson 95% CI"}
-        </span>
-      </div>
-
-      <div className="rows">
-        {rows.map((e, i) => {
-          const applicable = !e.baseline || metric === "mae";
-          const v = e[metric];
-          const scale = applicable ? Math.min(1, v / m.max) : 0;
-          return (
-            <div
-              key={e.model}
-              ref={(el) => {
-                if (el) rowRefs.current.set(e.model, el);
-                else rowRefs.current.delete(e.model);
-              }}
-              className={`row ${e.baseline ? "baseline" : ""}`}
-            >
-              <span className="rank">{e.baseline ? "—" : String(i + 1).padStart(2, "0")}</span>
-              <span className="name">
-                {e.model}
-                <small>{e.effort}</small>
-              </span>
-              <div className="track">
-                <div
-                  className="fill"
-                  style={{
-                    transform: `scaleX(${inView ? scale : 0})`,
-                    transitionDelay: inView ? `${i * 60}ms` : undefined,
-                    ["--s" as string]: scale,
-                  }}
-                />
-                {metric === "pass" && !e.baseline && (
-                  <span
-                    className="ci"
-                    style={{ left: `${e.passCi[0]}%`, width: `${e.passCi[1] - e.passCi[0]}%` }}
-                  />
-                )}
-              </div>
-              <span className="val">
-                {applicable ? <CountUp to={v} run={inView} format={m.format} /> : "n/a"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+ const [view,setView]=useState<View>("suite");
+ const rows=[...RESULTS.models].sort((a,b)=>{
+  const av=view==="suite"?a.suite_elo:view==="process"?a.reviews:a.tasks[view].elo;
+  const bv=view==="suite"?b.suite_elo:view==="process"?b.reviews:b.tasks[view].elo;
+  return (bv??-Infinity)-(av??-Infinity)||a.model.localeCompare(b.model);
+ });
+ return <div>
+  <div className="board-bar"><div className="tabs" role="group" aria-label="Leaderboard view">{VIEWS.map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)}>{LABELS[v]}</button>)}</div></div>
+  <p className="board-note" style={{marginBottom:20}}>{view==="suite"?"Overall rank requires a valid three-task repeat. No confidence intervals estimated.":view==="process"?"Separate 0–4 criteria · mean (observable count) · 65/72 episode reviews available":"Lower MAE is better. Mean MAE includes valid attempts only; validity is shown alongside it."}</p>
+  <div className="results-scroll" tabIndex={0} role="region" aria-label={LABELS[view]}>
+   <table className="results-table"><thead><tr><th scope="col">Model</th>{view==="process"? <>{CRITERIA.map(c=><th scope="col" key={c}>{c==="repro"?"Reproducibility":c.charAt(0).toUpperCase()+c.slice(1)}</th>)}<th scope="col">Reviews</th></>:<><th scope="col">Prediction Elo</th><th scope="col">Valid attempts</th>{view!=="suite"&&<th scope="col">Mean MAE</th>}</>}</tr></thead>
+    <tbody>{rows.map(r=><tr key={r.model}><th scope="row">{r.model}<small>{r.effort} effort</small></th>{view==="process"?<>{CRITERIA.map(c=><td key={c}>{r.criteria[c].mean===null?"Unobserved":`${r.criteria[c].mean.toFixed(2)} (${r.criteria[c].count})`}</td>)}<td>{r.reviews}/9</td></>:<><td>{(view==="suite"?r.suite_elo:r.tasks[view].elo)?.toFixed(1)??"Unranked"}</td><td>{view==="suite"?`${r.valid}/9`:`${r.tasks[view].valid}/3`}</td>{view!=="suite"&&<td>{r.tasks[view].mean_loss?.toFixed(view==="heat"?3:2)??"Unavailable"}</td>}</>}</tr>)}</tbody>
+   </table>
+  </div>
+  <p className="board-note" style={{marginTop:18}}>Elo is relative to this eight-model pool. Failed attempts remain included in matched outcomes. <a href="/results/compact-coding-v1.json" download>Download scores and coverage ↗</a></p>
+ </div>;
 }

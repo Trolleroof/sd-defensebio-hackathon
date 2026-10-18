@@ -1,132 +1,16 @@
 import type { Metadata } from "next";
-import { HorizonChart } from "@/components/HorizonChart";
 import { Leaderboard } from "@/components/Leaderboard";
-import { Reveal } from "@/components/Reveal";
 import { TocSpy } from "@/components/TocSpy";
-import { POST_SECTIONS, RELEASE } from "@/lib/data";
-
-export const metadata: Metadata = {
-  title: "PhysBench report",
-  description: "Setup, methodology and results for PhysBench.",
-};
-
-function H2({ id }: { id: string }) {
-  const s = POST_SECTIONS.find((x) => x.id === id)!;
-  return (
-    <h2 id={s.id}>
-      <span className="n">{s.n}</span>
-      {s.title}
-    </h2>
-  );
-}
-
-export default function Post() {
-  return (
-    <>
-      <header className="post-head">
-        <div className="wrap">
-          <Reveal>
-            <span className="eyebrow">Report · {RELEASE.version}</span>
-            <h1>PhysBench {RELEASE.version}</h1>
-            <p>Setup, methodology and results. Results are placeholders.</p>
-            <div className="byline">
-              <span>DefenseBio</span>
-              <span>{RELEASE.updated}</span>
-            </div>
-          </Reveal>
-        </div>
-      </header>
-
-      <div className="wrap article">
-        <TocSpy />
-        <article className="prose">
-          <H2 id="introduction" />
-          <p>
-            Heart-rate models are usually fit to a population. With weeks of data from one wearer, you can fit a
-            model to that person instead. We test whether an agent can do that, and whether its model still works
-            on activities missing from the training data.
-          </p>
-          <p>
-            The predictor is scored on recordings the agent never sees. A separate judge reads the trace and
-            grades how the agent worked.
-          </p>
-          <p className="placeholder">Placeholder: comparison to related benchmarks.</p>
-
-          <H2 id="environment" />
-          <p>
-            Data comes from PPG-DaLiA: 15 participants, ECG-derived heart rate, wrist and chest accelerometers,
-            labelled activities. Each episode targets one participant. The agent gets a Python workspace, that
-            participant&apos;s support recordings, four reference participants and a fitted baseline.
-          </p>
-          <table>
-            <thead>
-              <tr><th>Phase</th><th>Input</th><th>Action</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><strong>Build</strong></td><td>Support data, reference cohort, baseline</td><td>Fit a predictor</td></tr>
-              <tr><td><strong>Investigate</strong></td><td>Up to 3 dev-feedback calls</td><td>Revise</td></tr>
-              <tr><td><strong>Transfer</strong></td><td>Submit</td><td>Scored on stairs, table soccer, cycling, recovery</td></tr>
-            </tbody>
-          </table>
-          <p>
-            Interface: <code>predict(history, future) → (60,)</code> in bpm. <code>history</code> is the last 60 s
-            of heart rate and inputs. <code>future</code> is the next 120 s of inputs. Dev feedback, submission and
-            writes to <code>submission/</code> need a justification of at least 40 characters.
-          </p>
-
-          <H2 id="methodology" />
-          <h3>Splits</h3>
-          <p>
-            4 reference, 4 development, 6 held-out. S3 moved from held-out to development after its baseline
-            scores were seen during calibration. S6 is excluded because its recording is truncated.
-          </p>
-          <h3>Anchor and pass</h3>
-          <p>
-            The anchor, <code>kinetic_pop_calibrated</code>, uses population heart-rate kinetics with a personal
-            offset and gain fit on support data. A run passes if it executes, beats the anchor by the frozen margin,
-            submits a report and has no integrity flags. Criteria are hashed before any held-out run.
-          </p>
-          <h3>Judge</h3>
-          <p>Seven items scored 0–2, plus two integrity flags. Model name and hidden accuracy are withheld.</p>
-
-          <H2 id="results" />
-          <p className="placeholder">Placeholder: headline result.</p>
-          <Reveal className="figure">
-            <Leaderboard />
-            <figcaption>Figure 1 · Placeholder scores.</figcaption>
-          </Reveal>
-          <Reveal className="figure">
-            <HorizonChart />
-            <figcaption>Figure 2 · Placeholder. MAE (bpm) by horizon, top entry vs anchor.</figcaption>
-          </Reveal>
-          <p className="placeholder">Placeholder: per-activity results and paired differences with bootstrap CIs.</p>
-
-          <H2 id="failures" />
-          <p className="placeholder">Placeholder: failure cases with trace excerpts.</p>
-          <table>
-            <thead>
-              <tr><th>Model</th><th>Failure</th><th>Caught by</th></tr>
-            </thead>
-            <tbody>
-              <tr><td className="mono">model-x</td><td><span className="placeholder">Placeholder</span></td><td className="mono">audit</td></tr>
-              <tr><td className="mono">model-y</td><td><span className="placeholder">Placeholder</span></td><td className="mono">judge</td></tr>
-              <tr><td className="mono">model-z</td><td><span className="placeholder">Placeholder</span></td><td className="mono">hidden score</td></tr>
-            </tbody>
-          </table>
-
-          <H2 id="limitations" />
-          <ul>
-            <li>
-              <strong>Isolation.</strong> Per-episode users, root-only labels and resource limits are enforced. The
-              network block is a Python hook, not a network namespace.
-            </li>
-            <li><strong>Scope.</strong> One dataset, one target: heart rate from movement.</li>
-            <li><strong>Judge.</strong> Agreement with expert reviewers hasn&apos;t been measured.</li>
-            <li><strong>Campaigns.</strong> Synthetic fixtures. They don&apos;t model human physiology.</li>
-          </ul>
-          <p className="placeholder">Placeholder: v0.2 changes.</p>
-        </article>
-      </div>
-    </>
-  );
-}
+import { POST_SECTIONS, RELEASE, RESULTS } from "@/lib/data";
+export const metadata:Metadata={title:"Compact coding pilot · PhysBench",description:"Sealed results and limitations of the 72-episode physiology coding pilot."};
+function H2({id}:{id:string}){const s=POST_SECTIONS.find(x=>x.id===id)!;return <h2 id={id}><span className="n">{s.n}</span>{s.title}</h2>}
+const spec="https://github.com/Trolleroof/sd-defensebio-hackathon/blob/main/benchmarks/compact-coding-v1/SPEC.md";
+export default function Post(){return <><header className="post-head"><div className="wrap"><span className="eyebrow">Measured pilot · {RELEASE.version}</span><h1>Building predictors under a short coding budget</h1><p>72 sealed episodes. 33 valid predictors. 65 process reviews. A retrospective comparison across pulse, heat and load.</p><div className="byline"><span>DefenseBio</span><span>{RELEASE.updated}</span></div></div></header>
+ <div className="wrap article"><TocSpy/><article className="prose">
+ <H2 id="introduction"/><p>This pilot tests whether a coding agent can construct an executable physiological predictor, use development feedback, and select a final artifact. The model being compared is the coding agent. Its output is a separate trained predictor.</p><p>Eight agents each receive three tasks at seeds 0, 1 and 2. These repeats use the same people; they are not independent biological cohorts or evidence of clinical performance.</p>
+ <H2 id="environment"/><p>Pulse uses GalaxyPPG wrist PPG and acceleration with provisional ECG-derived labels, split across 13/5/5 training/development/test people. Heat forecasts measured rectal temperature at +5/+10/+20 minutes in a 24-person cycling cohort, split 14/5/5. Load predicts gross metabolic watts at 4 km/h and 0/5/10/15 kg load in EVOBREATH, split 28/10/10.</p><p>Training labels are public. Development labels and all test recordings stay with the trusted controller. Predictor programs have no network or GPU access. Whole people remain within one split.</p>
+ <H2 id="methodology"/><p>Each episode schedules two open-ended Python training programs, development evaluation, then final selection. Each of the three participant phases has a 1,536-token output limit including reasoning and at most one response repair. The complete participant request body is capped at 4,096 bytes. Model API waits overlap; Docker workers run one at a time under the frozen CPU/memory allocation.</p><p>Six participants use Medium effort. Kimi K3 and DeepSeek V4 Flash use High because their native endpoints did not advertise Medium. Economy provider routes and quantization differ and are recorded in the public configuration.</p><p>Lower person-balanced MAE wins task matches. A valid attempt beats an invalid attempt; two invalid attempts skip. Overall suite matches require a valid result on all three tasks for the same trial seed, then compare equal task votes. A model without any complete valid suite is unranked overall. Elo starts at 1,000 with K=32 and is relative to this opponent pool.</p><p>The separate GPT-6.1 Sol Medium judge reviews compressed experiment decisions, development results and selection evidence. It assigns five 0–4 criteria or null when unobservable, citing event IDs. It receives neither the competitor identity nor hidden test scores, and its packet does not include the full executable code. Seven reviews are missing.</p>
+ <H2 id="results"/><p>All 72 attempts sealed. {RESULTS.valid} produced valid predictors. GPT-6 Astra leads the overall suite table, followed by Opus 5.5 and Sonnet 5.5; the remaining models have no fully valid three-task repeat. Per-task rankings retain their individual valid attempts.</p><Leaderboard/>
+ <H2 id="failures"/><p>39 attempts failed under this short protocol. Failure includes inability to return a valid tool response within the fixed attempt budget or produce an executable predictor. These are not zero-error scores and do not establish unconstrained model incapability. The downloadable results include a failure reason for every invalid attempt.</p><ul>{Object.entries(RESULTS.failure_groups).map(([k,v])=><li key={k}>{k}: {v}</li>)}</ul><p>Infrastructure interruptions also occurred: Docker became unavailable, coordinators restarted from saved state, and the xAI endpoint returned 72,797 completion tokens despite a 1,536-token limit. That response was rejected and its charge retained. The request-cap-based cost estimate consequently stopped being a completion guarantee. These exceptions are documented with the reference protocol.</p>
+ <H2 id="limitations"/><p>This is a retrospective, builder-exposed pilot with small fixed cohorts and provisional pulse reference quality. Three agent seeds do not support population-level ranking confidence. Tight generation limits, native tool compatibility, provider quantization and incomplete review coverage affect the results. Process judgments have not been validated against human expert ratings.</p><p>Confirmed provider charges are ${RESULTS.accounting.provider_reported_usd.toFixed(2)}. Another ${RESULTS.accounting.unconfirmed_reservations_usd.toFixed(2)} is held as conservative accounting for calls with unconfirmed billing; it is not confirmed spend. Neither amount is presented as a per-model cost metric.</p><p><a href={spec}>Exact protocol and source snapshot ↗</a> · <a href="https://github.com/Trolleroof/sd-defensebio-hackathon/blob/main/benchmarks/compact-coding-v1/RUNPOD.md">Evaluate a fine-tuned checkpoint ↗</a> · <a href="/results/compact-coding-v1.json">Download public results</a></p>
+ </article></div></>}

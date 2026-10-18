@@ -264,3 +264,13 @@ a { color: inherit; text-decoration: none; }
   .fill { transform: scaleX(var(--s, 0)); }
   .trace path, .chart .line { stroke-dashoffset: 0; }
 }
+
+/* Measured pilot results, including incomplete coverage. */
+.results-scroll { overflow-x: auto; max-width: 100%; }
+.results-table { border-collapse: collapse; width: 100%; min-width: 600px; text-align: left; font: 13px/1.5 var(--mono); }
+.results-table th, .results-table td { padding: 18px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.results-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.results-table tbody th { font-weight: 500; }
+.results-table small { display: block; margin-top: 3px; font-size: 10px; text-transform: uppercase; color: var(--faint); }
+.results-table tbody tr:hover { background: var(--raised); }
+.results-notice { padding: 20px; border: 1px solid var(--line); border-left: 3px solid var(--olive); color: var(--muted); line-height: 1.65; }
