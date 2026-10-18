@@ -29,12 +29,12 @@ Campaign reports retain raw errors and include a prediction Elo table. `ratings.
 
 External judge outcomes remain a separate pending panel. Elo does not create research-quality evidence where no judgment has been collected.
 
-## Existing real-data PhysBench runs
+## Existing real-data SoliderPhys-Bench runs
 
 ```sh
 python3 -m benchmark rate-physbench runs/pilot-0 runs/pilot-0/elo.json
 ```
 
-This offline adapter reads `results.json` and `run_meta.json` from the existing PhysBench runner. It validates a complete subject/repetition/model batch, applies explicit-submission, executable-validity and the existing integrity gate, then compares hidden phase-balanced MAE. Beating the anchor margin is not an additional ranking gate. Any provider/harness failure excludes the entire matched subject/repetition for all competitors, with exclusions exported; those failures do not become model losses. Development and held-out runs retain their split labels and configuration hashes. No rating is produced for an entirely excluded batch.
+This offline adapter reads `results.json` and `run_meta.json` from the existing SoliderPhys-Bench runner. It validates a complete subject/repetition/model batch, applies explicit-submission, executable-validity and the existing integrity gate, then compares hidden phase-balanced MAE. Beating the anchor margin is not an additional ranking gate. Any provider/harness failure excludes the entire matched subject/repetition for all competitors, with exclusions exported; those failures do not become model losses. Development and held-out runs retain their split labels and configuration hashes. No rating is produced for an entirely excluded batch.
 
-This path neither launches new paid runs nor invents results from the earlier PR's narrative. Repetitions of the same subject are correlated. PhysBench's current contract has no forecast intervals, so no uncertainty Elo is fabricated for it.
+This path neither launches new paid runs nor invents results from the earlier PR's narrative. Repetitions of the same subject are correlated. SoliderPhys-Bench's current contract has no forecast intervals, so no uncertainty Elo is fabricated for it.

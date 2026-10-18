@@ -377,7 +377,7 @@ def write_report(run_id: str) -> Path:
     else:
         diag.append(f"NOT YET DISTINGUISHING at n={len(subjects)} cases per model: no paired MAE difference or Pass@1 gap is resolved by the 95% intervals.")
 
-    L = [f"# PhysBench results — {run_id}", "",
+    L = [f"# SoliderPhys-Bench results — {run_id}", "",
          f"- Split: **{meta['split']}** — subjects {', '.join(subjects)} ({meta['repeats']} run per model per subject)",
          f"- Task config: `{meta['task_config']}` (sha256 `{meta['task_config_sha256'][:12]}`)",
          f"- Pass criteria: {'FROZEN `' + meta['criteria_sha256'][:12] + '`' if meta.get('criteria_sha256') else 'PROVISIONAL (development run)'}"

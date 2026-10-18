@@ -1,4 +1,4 @@
-# PhysBench — agent environment for personalized physiology predictors (MVP)
+# SoliderPhys-Bench — agent environment for personalized physiology predictors (MVP)
 
 An LLM agent gets a sandboxed Python workspace with public wearable recordings, sensor docs, a
 working baseline and fixed budgets. It must inspect the data, build an executable personalized

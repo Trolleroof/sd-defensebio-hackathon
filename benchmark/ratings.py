@@ -91,7 +91,7 @@ def campaign_ratings(runs):
 
 
 def physbench_ratings(results, metadata):
-    """Rate one existing PhysBench run without executing models or changing scores."""
+    """Rate one existing SoliderPhys-Bench run without executing models or changing scores."""
     models = [m['name'] for m in metadata['models']]
     subjects = metadata['subjects']
     repeats = metadata['repeats']
@@ -103,10 +103,10 @@ def physbench_ratings(results, metadata):
     for result in results:
         key = (result['subject'], result['repeat'], result['model'])
         if key in indexed or key not in expected:
-            raise ValueError('duplicate or unexpected PhysBench result')
+            raise ValueError('duplicate or unexpected SoliderPhys-Bench result')
         indexed[key] = result
     if set(indexed) != expected:
-        raise ValueError('incomplete PhysBench run; finish all declared jobs before rating')
+        raise ValueError('incomplete SoliderPhys-Bench run; finish all declared jobs before rating')
     rows, excluded, matched = [], [], []
     for subject in sorted(subjects):
         for repeat in range(repeats):
@@ -126,7 +126,7 @@ def physbench_ratings(results, metadata):
     if not rows:
         return {'version':VERSION,'status':'no_matched_cases','excluded_cases':excluded,'entries':[]}
     board = leaderboard(rows)
-    board['scope'].update(source='PhysBench', metric='hidden phase-balanced MAE',
+    board['scope'].update(source='SoliderPhys-Bench', metric='hidden phase-balanced MAE',
                           split=metadata['split'], run_id=metadata['run_id'],
                           task_config_sha256=metadata.get('task_config_sha256'),
                           criteria_sha256=metadata.get('criteria_sha256'),

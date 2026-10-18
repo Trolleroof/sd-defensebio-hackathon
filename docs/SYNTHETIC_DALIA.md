@@ -4,7 +4,7 @@ The new `benchmark.dalia_synthetic` path fits a statistical generator to real PP
 
 ## Implemented boundary
 
-The dataset preserves **PhysBench's processed feature contract**, rather than the original high-rate waveform pickle format:
+The dataset preserves **SoliderPhys-Bench's processed feature contract**, rather than the original high-rate waveform pickle format:
 
 - One `.npz` and metadata `.json` per synthetic recording; a dataset manifest records synthetic provenance, channel units, source attribution, seeds, and generator/model hashes.
 - Equal-length one-dimensional arrays: `t`, `activity`, `hr_ecg`, `acc_wrist_enmo`, `acc_wrist_std`, `acc_chest_enmo`, `acc_chest_std`, `eda_wrist`, `temp_wrist`, `resp_chest_std`.
@@ -12,11 +12,11 @@ The dataset preserves **PhysBench's processed feature contract**, rather than th
 - Demographic keys exist for compatibility but are explicitly unavailable; demographic values are not invented.
 - The existing activity-conditioned task receives 60 seconds of history (30 samples) and forecasts 120 seconds (60 samples). Future covariates are permitted by that task; future HR is excluded from predictor inputs.
 
-This is the `physbench/` data contract. The separate `benchmark/` four-stage action/predictor protocol has not been unified with PhysBench by this change. The generated dataset is consumable by the real-data runner; these files alone do not create a validated four-stage campaign.
+This is the `physbench/` data contract. The separate `benchmark/` four-stage action/predictor protocol has not been unified with SoliderPhys-Bench by this change. The generated dataset is consumable by the real-data runner; these files alone do not create a validated four-stage campaign.
 
 ## What comes from real data
 
-Fitting reads only explicitly selected reference participants **S1, S4, S8, S12**. The fitting API rejects the development and final-test participants. Each source `.npz` is hashed. The original PhysBench adapter is reused for preprocessing, including its restricted pickle loader; no alternative conversion is invented.
+Fitting reads only explicitly selected reference participants **S1, S4, S8, S12**. The fitting API rejects the development and final-test participants. Each source `.npz` is hashed. The original SoliderPhys-Bench adapter is reused for preprocessing, including its restricted pickle loader; no alternative conversion is invented.
 
 The generator learns empirical channel quantiles, activity-specific cross-channel autoregressive dynamics and innovation covariance, between-reference-recording variation, activity durations, protocol orders/transition structure, and missing fractions. Each output samples a fitted reference dynamics model, resamples durations for a recorded activity order, and evolves new correlated random innovations. It does not copy raw trajectories. There are only four fitted source participants: additional synthetic realizations do not add independently measured people, prove anonymity, or establish unseen-family generalization.
 
@@ -44,11 +44,11 @@ The official UCI archive was downloaded. Only the four reference and four design
 
 Mean absolute difference over the full 8×8 channel correlation matrices is **0.0825** against fit recordings and **0.0885** against development recordings. Real development mean HR is **86.54 bpm**, versus synthetic **78.68 bpm**: fitting four references does not reproduce the wider population automatically. Full reports also include quantiles, missingness, activity occupancy, duration distributions, transition counts, per-activity HR variation, and channel correlations. No fidelity pass threshold or physiological validation is claimed.
 
-All 12 recordings passed the **existing PhysBench** loader, support/development/transfer splits, window shapes, exclusion of future HR from predictor inputs, prediction validation, and numerical scoring using a persistence probe. The emitted `task-synthetic-contract-smoke.json` is an integration profile; all its synthetic seeds have been inspected, so it is not an untouched final-test batch. No LLM comparison, training run, or synthetic-to-real prediction gain has been measured here.
+All 12 recordings passed the **existing SoliderPhys-Bench** loader, support/development/transfer splits, window shapes, exclusion of future HR from predictor inputs, prediction validation, and numerical scoring using a persistence probe. The emitted `task-synthetic-contract-smoke.json` is an integration profile; all its synthetic seeds have been inspected, so it is not an untouched final-test batch. No LLM comparison, training run, or synthetic-to-real prediction gain has been measured here.
 
 ## Reproduce
 
-Dependencies are in `requirements-synthetic.txt`; the executed generator used NumPy 2.4.4, and the compatibility tool used PyYAML 6.0.3. An existing PhysBench checkout is needed only to reuse its source adapter and exercise its runner. Generator fit/generate/audit operate independently on processed `.npz` files.
+Dependencies are in `requirements-synthetic.txt`; the executed generator used NumPy 2.4.4, and the compatibility tool used PyYAML 6.0.3. An existing SoliderPhys-Bench checkout is needed only to reuse its source adapter and exercise its runner. Generator fit/generate/audit operate independently on processed `.npz` files.
 
 ```sh
 python3 -m pip install -r requirements-synthetic.txt

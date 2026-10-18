@@ -1,7 +1,7 @@
-"""Reuse PhysBench's restricted loader and adapter for allowed PPG-DaLiA files.
+"""Reuse SoliderPhys-Bench's restricted loader and adapter for allowed PPG-DaLiA files.
 
 Does not unpickle or convert any final-test participant. Supply the existing
-PhysBench source checkout rather than duplicating its source adapter here.
+SoliderPhys-Bench source checkout rather than duplicating its source adapter here.
 """
 import argparse
 import hashlib

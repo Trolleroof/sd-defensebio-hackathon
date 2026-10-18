@@ -1,7 +1,7 @@
 import json, sys
 from pathlib import Path
 import argparse
-p=argparse.ArgumentParser(description='Exercise existing PhysBench windows and scoring on synthetic recordings')
+p=argparse.ArgumentParser(description='Exercise existing SoliderPhys-Bench windows and scoring on synthetic recordings')
 p.add_argument('processed'); p.add_argument('--physbench-source',required=True); p.add_argument('--output',required=True)
 args=p.parse_args()
 source=Path(args.physbench_source).resolve()
@@ -36,5 +36,5 @@ for subject in [f'SYN{i:04d}' for i in range(1,13)]:
  ex=np.isin(tw.activity,[2,3,4,7]);metrics=score(pred,tw.target,ex,tw.activity,2)
  reports.append({'subject':subject,'support_windows':len(sw),'development_windows':len(dw),'transfer_windows':len(tw),
                  'persistence_phase_balanced_mae_bpm':metrics['phase_balanced_mae_bpm']})
-Path(args.output).write_text(json.dumps({'source':str(source),'config':str(config),'status':'pass','recordings':reports,'claim':'Existing PhysBench loader, splits, windows, validation and numerical scoring executed; no LLM run. All these seeds are inspected smoke cases, not untouched final tests.'},indent=2)+'\n')
+Path(args.output).write_text(json.dumps({'source':str(source),'config':str(config),'status':'pass','recordings':reports,'claim':'Existing SoliderPhys-Bench loader, splits, windows, validation and numerical scoring executed; no LLM run. All these seeds are inspected smoke cases, not untouched final tests.'},indent=2)+'\n')
 print(json.dumps({'compatible_recordings':len(reports),'first_recording':reports[0]},indent=2))

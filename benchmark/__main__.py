@@ -11,7 +11,7 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     demo = sub.add_parser('demo', help='Execute synthetic baselines and scripted revision campaign')
     demo.add_argument('output')
-    real_rate = sub.add_parser('rate-physbench', help='Rate completed existing PhysBench model runs offline')
+    real_rate = sub.add_parser('rate-physbench', help='Rate completed existing SoliderPhys-Bench model runs offline')
     real_rate.add_argument('run_directory')
     real_rate.add_argument('output')
     rate = sub.add_parser('rate', help='Build versioned Elo tables from a complete matched campaign report')
