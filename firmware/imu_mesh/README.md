@@ -15,6 +15,8 @@ The sketch keeps the supplied LSM6DSOX configuration: I²C address `0x6A` with `
 
 ## Packet model
 
+Field-by-field contracts for the packet, serial lines, and gateway API are in [`docs/MESH_DATA_CONTRACTS.md`](../../docs/MESH_DATA_CONTRACTS.md).
+
 The mesh packet is a 57-byte versioned binary struct shared by the Nano boards. Both wearables connect directly to the root (star, max layer 2), so packets arrive with `hop_count: 0`. The relay path that increments `hop_count` is kept but unused.
 
 The root emits a `mesh_status` JSON line every five seconds with the total mesh node count (including the root), emits join/leave events for direct children, and converts each received packet to a telemetry JSON line. Example telemetry:
