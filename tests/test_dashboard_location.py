@@ -12,6 +12,32 @@ from dashboard.server import MeshApiSource, Person, Team, ws_handler
 
 
 class DashboardLocationTest(unittest.TestCase):
+    def test_steady_running_uses_steps_until_gait_stops(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+        team.add(person)
+        now = [1000.0]
+        with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
+            steps = 0
+            person.advance(steps, 1000, 0, (0, 0, 9.80665), (0, 0, 0))
+            for second in range(6):
+                now[0] += 1
+                for offset in range(3):
+                    steps += 1
+                    person.advance(steps, 2000 + second * 1000 + offset * 200, 0, (0, 0, 9.80665), (0, 0, 0))
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_hr(120)
+                row = team.tick()["people"][0]
+            self.assertEqual(row["activity"], "running")
+            for second in range(6, 12):
+                now[0] += 1
+                person.advance(steps, 2000 + second * 1000, 0, (0, 0, 9.80665), (0, 0, 0))
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_hr(120)
+                row = team.tick()["people"][0]
+            self.assertEqual(row["activity"], "still")
+
     def test_activity_baselines_and_sustained_alert(self):
         team = Team(None, (0, 0))
         person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
@@ -43,8 +69,29 @@ class DashboardLocationTest(unittest.TestCase):
             self.assertEqual(person.activity_baselines["running"], 125)
             for _ in range(3):
                 row = sample((1000, 1000), 2, 70)
-            self.assertIsNone(row["exp"])
+            self.assertEqual(row["exp"], 70)
             self.assertEqual(row["status"], "ok")
+
+    def test_baseline_learning_shows_settling_then_sample_progress(self):
+        team = Team(None, (0, 0))
+        person = Person("mesh_1", "Wearer", "Wearer", "LIVE", imu=True, connected=True)
+        team.add(person)
+        now = [1000.0]
+        with patch("dashboard.server.time.time", side_effect=lambda: now[0]):
+            for _ in range(30):
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_hr(70)
+                row = team.tick()["people"][0]
+                now[0] += 1
+            self.assertEqual((row["activity"], row["baseline_wait_s"], row["baseline_samples"]), ("still", 1, 0))
+            for count in (1, 2):
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_imu((0, 0, 1000), (1, 0, 0), 25)
+                person.add_hr(70)
+                row = team.tick()["people"][0]
+                self.assertEqual((row["baseline_wait_s"], row["baseline_samples"]), (0, count))
+                now[0] += 1
 
     def test_velocity_calibration_turn_and_correction(self):
         team = Team(None, (32.7157, -117.1611))

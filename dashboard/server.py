@@ -32,6 +32,7 @@ import csv
 import json
 import math
 import random
+import sqlite3
 import statistics
 import sys
 import time
@@ -40,6 +41,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
+
+if __package__:
+    from .foundry_bridge import Outbox
+else:
+    from foundry_bridge import Outbox
 
 ROOT = Path(__file__).resolve().parent
 TICK_S = 1.0
@@ -108,6 +114,7 @@ class Person:
     heading: float = 0.0             # degrees clockwise from north; north until calibrated
     heading_set: bool = False
     steps_seen: int | None = None
+    step_events: deque = field(default_factory=lambda: deque(maxlen=50))  # (time, step count)
     uptime_seen: int | None = None
     calibration_start_ms: int | None = None
     calibration_start_t: float | None = None
@@ -177,6 +184,8 @@ class Person:
         calibration_continuous = 0 < dt <= STALE_S
         delta = (steps - self.steps_seen) % 65536 if calibration_continuous and self.steps_seen is not None else 0
         self.steps_seen, self.uptime_seen = steps, uptime_ms
+        if 0 < delta <= 10:
+            self.step_events.append((time.time(), delta))
         if not continuous:
             self.velocity_n = self.velocity_e = 0.0
             if self.accel_bias is None and not calibration_continuous:
@@ -272,6 +281,11 @@ class Person:
     def motion_activity(self, now: float, movement: float | None) -> str | None:
         if not self.imu_fresh(now) or movement is None:
             return None
+        cadence = sum(count for t, count in self.step_events if now - t <= 5) * 12
+        if cadence >= 150:
+            return "running"
+        if cadence >= 40:
+            return "walking"
         rotation = self.rotation()
         if movement < 35 and rotation is not None and rotation < 25:
             return "still"
@@ -555,6 +569,8 @@ class MeshApiSource:
     def __init__(self, people: dict[str, Person], url: str):
         self.people, self.url = people, url
         self.seen = {}
+        self.last_bridge_log = 0.0
+        self.last_bridge_state = None
 
     async def run(self, team):
         last_error = None
@@ -563,7 +579,17 @@ class MeshApiSource:
                 try:
                     async with client.get(self.url) as response:
                         response.raise_for_status()
-                        nodes = (await response.json())["nodes"]
+                        gateway = await response.json()
+                        nodes = gateway["nodes"]
+                    bridge = gateway.get("foundry")
+                    if bridge:
+                        state = (bridge.get("error"), bridge.get("dropped"), bridge.get("write_failures"), bridge.get("publishing"))
+                        now = time.time()
+                        if state != self.last_bridge_state or now - self.last_bridge_log >= 60:
+                            team.log("system", None, f"Foundry: {bridge.get('queued', '?')} queued, oldest {bridge.get('oldest_age_s') or 0:.0f}s, {bridge.get('dropped', 0)} dropped, {bridge.get('write_failures', 0)} local write failures" +
+                                     ("; publishing off" if bridge.get("publishing") is False else "") +
+                                     (f"; {bridge['error']}" if bridge.get("error") else ""))
+                            self.last_bridge_state, self.last_bridge_log = state, now
                     for node_id, p in self.people.items():
                         entry = nodes.get(node_id, {})
                         p.connected = bool(entry.get("online"))
@@ -588,7 +614,10 @@ class MeshApiSource:
                             p.acc[-1] = (p.imu_t, p.acc[-1][1])
                             p.gyro[-1] = (p.imu_t, p.gyro[-1][1])
                             if type(data.get("steps")) is int and 0 <= data["steps"] < 65536 and type(data.get("uptime_ms")) is int and data["uptime_ms"] >= 0 and type(data.get("yaw_delta_rad")) in (int, float) and math.isfinite(data["yaw_delta_rad"]):
+                                before = (p.lat, p.lon)
                                 p.advance(data["steps"], data["uptime_ms"], data["yaw_delta_rad"], tuple(acc), tuple(gyro))
+                                if (p.lat, p.lon) != before:
+                                    team.emit_foundry(p, "location")
                         p.last_sample = entry["received_at"]
                     last_error = None
                 except Exception as error:
@@ -603,7 +632,7 @@ class MeshApiSource:
 # ---------------------------------------------------------------- team, attention, actions
 
 class Team:
-    def __init__(self, session_dir: Path | None, base: tuple[float, float]):
+    def __init__(self, session_dir: Path | None, base: tuple[float, float], foundry_outbox: Outbox | None = None):
         self.base = base
         self.origin: tuple[float, float] | None = None
         self.origin_source: str | None = None
@@ -613,6 +642,8 @@ class Team:
         self.clients: set[web.WebSocketResponse] = set()
         self.started = time.time()
         self.session_dir = session_dir
+        self.foundry_outbox = foundry_outbox
+        self.foundry_error = None
         self.samples = self.samples_w = self.events_f = None
         if session_dir:
             session_dir.mkdir(parents=True, exist_ok=True)
@@ -632,6 +663,28 @@ class Team:
             self.events_f.write(json.dumps(ev) + "\n"); self.events_f.flush()
         return ev
 
+    def emit_foundry(self, p: Person, event_type: str, *, activity=None, baseline=None, alert=None):
+        if not self.foundry_outbox or not p.id.startswith("mesh_"):
+            return
+        record = {"observed_at_ms": round(time.time() * 1000), "session_id": str(round(self.started * 1000)),
+                  "node_id": p.id[5:], "wearer_name": p.name, "event_type": event_type,
+                  "activity": activity, "baseline_bpm": baseline,
+                  "alert_id": alert["id"] if alert else None, "alert_kind": alert["kind"] if alert else None,
+                  "alert_state": alert["state"] if alert else None,
+                  "alert_severity": alert["severity"] if alert else None,
+                  "alert_cleared_at_ms": round(alert["cleared"] * 1000) if alert and alert.get("cleared") else None,
+                  "reason": alert["reason"] if alert else None,
+                  "lat": p.lat, "lon": p.lon, "location_source": p.loc,
+                  "location_quality": "low" if p.loc == "estimated" and p.heading_set else "uncalibrated" if p.loc == "estimated" else None}
+        try:
+            self.foundry_outbox.enqueue("events", record)
+            self.foundry_error = None
+        except (OSError, ValueError, sqlite3.Error) as error:
+            message = f"Foundry event queue unavailable: {error}"
+            if message != self.foundry_error:
+                self.log("system", p.id, message)
+            self.foundry_error = message
+
     def open_alert(self, person: str, kind: str, reason: str, severity: str):
         if any(a["person"] == person and a["kind"] == kind and a["state"] != "resolved" for a in self.alerts.values()):
             return
@@ -639,6 +692,8 @@ class Team:
         self.alerts[aid] = {"id": aid, "person": person, "kind": kind, "reason": reason, "severity": severity,
                             "state": "open", "opened": time.time(), "updated": time.time()}
         self.log("alert", person, reason, aid)
+        if person in self.people:
+            self.emit_foundry(self.people[person], "alert", alert=self.alerts[aid])
 
     def place(self, person: str, lat: float, lon: float):
         p = self.people[person]
@@ -648,6 +703,7 @@ class Team:
         p.lat, p.lon, p.loc, p.loc_t = lat, lon, "corrected", time.time()
         p.velocity_n = p.velocity_e = 0.0
         self.log("action", person, f"{p.name} {'placed' if first else 'moved'} on map by operator")
+        self.emit_foundry(p, "location")
 
     def set_origin(self, lat: float, lon: float, source: str):
         if source not in ("browser", "manual") or not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
@@ -658,6 +714,7 @@ class Team:
             if p.id.startswith("mesh_") and p.loc is None:
                 p.lat, p.lon, p.loc, p.loc_t = lat, lon, "origin", time.time()
                 p.velocity_n = p.velocity_e = 0.0
+                self.emit_foundry(p, "location")
         self.log("action", None, f"Command origin set from {source}")
 
     def raise_distress(self, person: str, how: str):
@@ -678,6 +735,8 @@ class Team:
         text = {"request_check": f"Check requested for {name}", "acknowledge": f"{name} acknowledged",
                 "resolve": f"Resolved: {note or a['reason']}"}[action]
         self.log("action", a["person"], text, aid)
+        if a["person"] in self.people:
+            self.emit_foundry(self.people[a["person"]], "alert", alert=a)
 
     def status(self, p: Person, now: float, dev: float | None) -> str:
         if any(a["person"] == p.id and a["kind"] == "distress" and a["state"] != "resolved" for a in self.alerts.values()):
@@ -703,6 +762,7 @@ class Team:
             if p.imu:
                 if activity != p.activity:
                     p.activity, p.activity_since, p.dev_since = activity, now, None
+                    self.emit_foundry(p, "activity", activity=activity)
                 stable_s = now - p.activity_since
                 if activity and stable_s >= 30 and q == "good" and hr_fresh and p.hr is not None and p.hr_t != p.activity_hr_t and activity not in p.activity_baselines:
                     p.activity_hr_t = p.hr_t
@@ -711,7 +771,8 @@ class Team:
                     if len(samples) == 20:
                         # shortcut: first stable 20 readings set the baseline; validate activity thresholds and HR range on hardware.
                         p.activity_baselines[activity] = statistics.median(samples)
-                exp = p.activity_baselines.get(activity) if activity and stable_s >= 30 else None
+                        self.emit_foundry(p, "baseline", activity=activity, baseline=p.activity_baselines[activity])
+                exp = p.activity_baselines.get(activity) if activity else None
             else:
                 exp = p.model.step(mv, TICK_S) if fresh else p.model.state
             dev = None
@@ -732,6 +793,7 @@ class Team:
                         (a["kind"] == "stale" and q != "no data" or a["kind"] == "contact" and q not in ("no data", "no contact")):
                     a["cleared"] = now
                     self.log("system", p.id, f"{p.name}: data resumed" if a["kind"] == "stale" else f"{p.name}: contact restored", a["id"])
+                    self.emit_foundry(p, "alert_cleared", alert=a)
             if p.dev_since and now - p.dev_since >= DEVIATION_HOLD_S:
                 word = "above" if dev > 0 else "below"
                 reference = f"{activity} baseline" if p.imu else "expected"
@@ -745,7 +807,8 @@ class Team:
                    "rmssd": round(p.rmssd(), 1) if p.rmssd() and fresh else None}
             if p.imu:
                 row.update(activity=activity, baselines={k: round(v, 1) for k, v in p.activity_baselines.items()},
-                           baseline_samples=len(p.activity_samples[activity]) if activity else 0)
+                           baseline_samples=len(p.activity_samples[activity]) if activity else 0,
+                           baseline_wait_s=max(0, math.ceil(30 - stable_s)) if activity and exp is None else 0)
             if p.acc and (p.id.startswith("mesh_") or now - p.acc[-1][0] <= 2):
                 row["acc_xyz"] = [round(v) for v in p.acc_xyz]
                 row["acc_mag"] = round(p.acc[-1][1])
@@ -868,7 +931,8 @@ def build(args) -> web.Application:
     lat, lon = (float(x) for x in args.base.split(","))
     if args.mesh_api and args.imu:
         raise SystemExit("--mesh-api cannot be combined with --imu")
-    team = Team(None if args.mesh_api else ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"), (lat, lon))
+    foundry_outbox = Outbox(args.foundry_outbox) if args.mesh_api and getattr(args, "foundry_outbox", None) else None
+    team = Team(None if args.mesh_api else ROOT / "sessions" / time.strftime("%Y%m%d-%H%M%S"), (lat, lon), foundry_outbox)
     sources = []
     if args.live:
         p = Person("live", args.live_name, "Wearer", "LIVE", device="Polar Verity Sense")
@@ -934,6 +998,7 @@ def main():
     p.add_argument("--live-name", default="Live wearer")
     p.add_argument("--imu", help="LSM6DSOX serial port (e.g. /dev/cu.usbmodem1101) or a saved imu_*.csv to replay")
     p.add_argument("--mesh-api", help="local mesh gateway URL, e.g. http://127.0.0.1:8766/api/nodes; disables session recording")
+    p.add_argument("--foundry-outbox", help="same SQLite outbox path used by mesh_api.py; requires --mesh-api")
     p.add_argument("--mesh-node", action="append", default=[], help="wearer and Wi-Fi node ID, e.g. Alex=206EF1316774; repeat per node")
     p.add_argument("--address", help="BLE address of the sensor (default: first 'Polar…' found)")
     default_replay = ROOT.parent / "sensor" / "test4"
@@ -943,6 +1008,8 @@ def main():
     p.add_argument("--base", default="32.7157,-117.1611", help="map center as LAT,LON (default: San Diego)")
     p.add_argument("--port", type=int, default=8765)
     args = p.parse_args()
+    if args.foundry_outbox and not args.mesh_api:
+        p.error("--foundry-outbox requires --mesh-api")
     web.run_app(build(args), host="127.0.0.1", port=args.port, print=lambda *_: print(f"Dashboard: http://127.0.0.1:{args.port}"))
 
 

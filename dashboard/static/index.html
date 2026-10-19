@@ -131,7 +131,6 @@ section { min-height: 0; overflow: auto; }
 .range button + button { border-left: 0; }
 .range button.on { background: var(--raised); color: var(--text); }
 #hrChart { width: 100%; height: 280px; display: block; margin-top: 8px; }
-#mvChart, #rotChart { width: 100%; height: 70px; display: block; margin-top: 4px; }
 .foot { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; color: var(--muted); font-size: 12px; }
 .foot b { color: var(--text); font-weight: 500; }
 .note { margin-top: 10px; color: var(--faint); font-size: 12px; max-width: 70ch; }
@@ -270,7 +269,7 @@ function onTick(m) {
   for (const r of m.people) {
     const p = S.people.get(r.id);
     if (!p) continue;
-    p.history.push({ t: r.t, hr: r.hr, exp: r.exp, mv: r.mv, rmssd: r.rmssd, rot: r.rot, temp: r.temp, lat: r.lat, lon: r.lon });
+    p.history.push({ t: r.t, hr: r.hr, exp: r.exp, lat: r.lat, lon: r.lon });
     if (p.history.length > 600) p.history.shift();
     S.last[r.id] = r;
   }
@@ -336,7 +335,7 @@ function renderRoster() {
     el.querySelector(".name").textContent = p.name;
     el.querySelector(".bpm").textContent = fmt(r.hr);
     const st = r.status || "ok";
-    el.querySelector(".sub").innerHTML = `<span class="tag ${p.source}">${p.source}</span><span>${esc(p.role)}</span><span class="status ${st.replace(" ", "-")}">${STATUS[st]}</span>`;
+    el.querySelector(".sub").innerHTML = `<span class="tag ${p.source}">${p.source}</span><span>${esc(p.role)}</span>${p.imu ? `<span>${esc(r.activity || "Unknown motion")}</span>` : ""}<span class="status ${st.replace(" ", "-")}">${STATUS[st]}</span>`;
     spark(el.querySelector("canvas"), p.history.slice(-120), st);
   });
 }
@@ -354,34 +353,27 @@ function renderDetail() {
       </div>
       <div class="metrics">
         <div class="metric"><div class="k">Heart rate</div><div class="v" id="mHr"></div></div>
+        ${p.imu ? `<div class="metric"><div class="k">Current motion</div><div class="v" id="mActivity"></div></div>` : ""}
         ${p.id.startsWith("mesh_") ? `<div class="metric"><div class="k">Location calibration</div><div class="v" id="mCalibration" role="timer" aria-label="Location calibration countdown"></div></div><div class="metric"><div class="k">Estimated speed</div><div class="v" id="mSpeed"></div></div>` : ""}
         <div class="metric"><div class="k">${p.imu ? "Activity baseline" : "Expected"}</div><div class="v" id="mExp"></div></div>
         <div class="metric"><div class="k">Difference</div><div class="v" id="mDev"></div></div>
-        ${p.imu ? `<div class="metric"><div class="k">Activity</div><div class="v" id="mActivity"></div></div>` : ""}
-        <div class="metric"><div class="k">RMSSD</div><div class="v" id="mRmssd"></div></div>
-        <div class="metric"><div class="k">Movement</div><div class="v" id="mMv"></div></div>
-        <div class="metric"><div class="k">Rotation</div><div class="v" id="mRot"></div></div>
-        <div class="metric"><div class="k">IMU temp (chip)</div><div class="v" id="mTemp"></div></div>
+        ${p.imu ? `<div class="metric"><div class="k">Still baseline</div><div class="v" id="mStill"></div></div>
+        <div class="metric"><div class="k">Walking baseline</div><div class="v" id="mWalking"></div></div>
+        <div class="metric"><div class="k">Running baseline</div><div class="v" id="mRunning"></div></div>` : ""}
         <div class="metric"><div class="k">Signal</div><div class="v" id="mQ"></div></div>
       </div>
-      ${p.imu ? `<p class="note" id="baselineDetail"></p>` : ""}
-      <p class="note" id="motionDetail"></p>
       <div class="chart-head">
         <span class="title">Heart rate</span><span class="key">Measured</span><span class="key exp">${p.imu ? "Activity baseline" : "Expected"}</span><span class="key gap">No data</span>
         <div class="range">${[120, 300, 600].map((s) => `<button data-r="${s}">${s / 60} min</button>`).join("")}</div>
       </div>
       <canvas id="hrChart"></canvas>
-      <div class="chart-head"><span class="title">Movement</span><span>2 s variation in acceleration magnitude, mG</span></div>
-      <canvas id="mvChart"></canvas>
-      ${p.imu ? `<div class="chart-head"><span class="title">Rotation</span><span>2 s mean angular speed, °/s</span></div>
-      <canvas id="rotChart"></canvas>` : ""}
       <div class="foot">
         <span>Device <b>${esc(p.device || "—")}</b></span>
         <span>Model <b>${esc(S.meta.model)}</b></span>
         <span>Last sample <b id="mAge">—</b></span>
         <span>Location <b id="mLoc">—</b></span>
       </div>
-      <p class="note">A difference from expected means check this person or the sensor. It is not a diagnosis.${p.imu ? " IMU temp is the LSM6DSOX chip's own temperature, not skin or body temperature." : ""}${p.id.startsWith("mesh_") ? " For direction, mount the IMU level with +Z up and +X forward, then set its heading clockwise from north. Keep the IMU motionless and level for the first 30 seconds to calibrate velocity. Positions drift; correct them on the map." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
+      <p class="note">${p.imu ? "A new baseline uses 20 heart-rate readings after 30 seconds of steady activity. A learned baseline is available as soon as that motion returns. Motion labels and baselines need on-body calibration. " : ""}A difference from expected means check this person or the sensor. It is not a diagnosis.${p.id.startsWith("mesh_") ? " Keep the IMU motionless and level for the first 30 seconds to calibrate velocity. Mount +Z up and +X forward, then set its heading clockwise from north. Positions drift; correct them on the map." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
     root.querySelector("#markDistress").onclick = () => send({ type: "distress", person: p.id });
     const pb = root.querySelector("#placeBtn");
     if (pb) pb.onclick = () => startPlacing(p.id);
@@ -400,7 +392,7 @@ function renderDetail() {
   }
   root.querySelectorAll(".range button").forEach((b) => b.classList.toggle("on", +b.dataset.r === S.range));
   const r = S.last[p.id] || {};
-  const dev = r.hr != null && r.exp != null ? r.hr - r.exp : null;
+  const dev = r.hr != null && r.exp != null && r.quality === "good" ? r.hr - r.exp : null;
   const set = (id, html, cls = "") => { const el = root.querySelector(id); el.innerHTML = html; el.className = "v " + cls; };
   set("#mHr", `${fmt(r.hr)}<small>bpm</small>`, r.status === "distress" ? "crit" : "");
   if (p.id.startsWith("mesh_")) {
@@ -411,18 +403,12 @@ function renderDetail() {
   set("#mDev", dev == null ? "—" : `${dev > 0 ? "+" : ""}${fmt(dev)}<small>bpm</small>`, dev != null && Math.abs(dev) > S.meta.deviation_bpm ? "warn" : "");
   if (p.imu) {
     set("#mActivity", r.activity ? r.activity[0].toUpperCase() + r.activity.slice(1) : "Unknown");
-    root.querySelector("#baselineDetail").textContent = ["still", "walking", "running"].map((a) =>
-      `${a}: ${r.baselines?.[a] == null ? a === r.activity ? `learning (${r.baseline_samples || 0}/20 readings after 30 s stable)` : "not learned" : `${fmt(r.baselines[a])} bpm`}`).join(" · ");
+    for (const [activity, id] of [["still", "#mStill"], ["walking", "#mWalking"], ["running", "#mRunning"]]) {
+      const baseline = r.baselines?.[activity];
+      const progress = r.baseline_wait_s > 0 ? `Stabilizing ${r.baseline_wait_s}s` : r.quality !== "good" ? "Waiting for signal" : `Learning ${r.baseline_samples || 0}/20 readings`;
+      set(id, baseline == null ? activity === r.activity ? `<small>${progress}</small>` : "—" : `${fmt(baseline)}<small>bpm</small>`);
+    }
   }
-  set("#mRmssd", `${fmt(r.rmssd)}<small>ms</small>`);
-  set("#mMv", r.mv == null ? "—" : `${fmt(r.mv)}<small>mG</small>`);
-  set("#mRot", r.rot == null ? "—" : `${fmt(r.rot)}<small>°/s</small>`);
-  root.querySelector("#motionDetail").textContent = [
-    r.acc_xyz ? `Acceleration X/Y/Z: ${r.acc_xyz.join(" / ")} mG; magnitude ${r.acc_mag} mG` : "Acceleration: no recent sample",
-    p.imu ? (r.gyro_xyz ? `Gyro X/Y/Z: ${r.gyro_xyz.join(" / ")} °/s` : "Gyro: no recent sample") : null,
-    r.heading == null ? null : `Calibrated heading estimate: ${r.heading}° clockwise from north`,
-  ].filter(Boolean).join(" · ");
-  set("#mTemp", r.temp == null ? "—" : `${fmt(r.temp, 1)}<small>°C</small>`);
   set("#mQ", p.id.startsWith("mesh_") && r.signal != null ? `${r.signal}%` : r.quality ?? "—",
       p.id.startsWith("mesh_") ? r.signal < 50 ? "device" : "" : r.quality && r.quality !== "good" ? "device" : "");
   root.querySelector("#mAge").textContent = r.age == null ? "—" : `${fmt(r.age, 1)} s ago`;
@@ -430,8 +416,6 @@ function renderDetail() {
   const pb = root.querySelector("#placeBtn");
   if (pb) pb.textContent = S.placing === p.id ? "Click the map…" : r.loc ? "Correct position" : "Place on map";
   hrChart(root.querySelector("#hrChart"), p.history);
-  barChart(root.querySelector("#mvChart"), p.history, "mv", 200);
-  if (p.imu) barChart(root.querySelector("#rotChart"), p.history, "rot", 60);
 }
 
 function renderQueue() {
@@ -559,20 +543,6 @@ function hatch() {
   const g = _hatch.getContext("2d"); g.strokeStyle = "#2a4030"; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(0, 6); g.lineTo(6, 0); g.stroke();
   return _hatch;
-}
-
-function barChart(c, hist, key, floor) {
-  const { ctx, w, h } = setup(c);
-  const { t0, pts } = window_(hist);
-  const L = 36, R = 8, max = Math.max(floor, ...pts.map((d) => d[key] ?? 0));
-  const bw = Math.max(1, (w - L - R) / S.range - 0.5);
-  ctx.fillStyle = css("--faint"); ctx.font = `11px ${css("--mono")}`; ctx.textAlign = "right";
-  ctx.fillText(Math.round(max), L - 6, 10);
-  ctx.fillStyle = "#5e7862";
-  for (const d of pts) if (d[key] != null) {
-    const bh = Math.max(1, d[key] / max * (h - 4));
-    ctx.fillRect(L + (d.t - t0) / S.range * (w - L - R), h - bh, bw, bh);
-  }
 }
 
 // ---------------------------------------------------------------- map

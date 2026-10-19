@@ -126,6 +126,8 @@ Wearable-only lines appear on that wearable's own USB port, never on the root's.
 
 `latest` stays populated after a node goes offline; check `online` before treating it as current.
 
+When `--foundry-outbox` is enabled, the response also includes `foundry` with `queued`, `queued_bytes`, `oldest_age_s`, `dropped`, `write_failures`, `publishing`, `last_success`, and `error`. Without an outbox, `foundry` is null. The optional [Foundry feed](FOUNDRY_FEED.md) records each valid packet before `latest` is replaced.
+
 ### Dashboard consumption (`MeshApiSource`)
 
 - Maps each `--mesh-node Name=NODE_ID` to a person. `connected = online`.

@@ -14,3 +14,4 @@ runs/
 .venv-research/
 .venv*/
 .load-runs/
+.foundry-outbox/
