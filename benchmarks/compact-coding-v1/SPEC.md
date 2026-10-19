@@ -57,3 +57,17 @@ Raw requests/responses, API usage/timing, source edits, command results, develop
 The original shared API budget is $16. A provider reported 72,797 output tokens despite a 1,536-token request; the request cost remains in the ledger. The earlier $15.12 whole-run estimate assumed provider compliance and no longer guarantees completion. `scripts/resume_compact.py` reserves xAI's advertised maximum for accounting and rejects reported over-budget responses. `scripts/parallel_compact.py` shares the same transactional ledger across workers while serializing Docker. Both amendments and their implementation hashes are recorded in `reference.json`. Infrastructure/protocol failures must be retained and distinguished from a valid predictor's numerical loss.
 
 These are retrospective fixed-cohort lab tasks with builder exposure. No RL training, weight update, clinical claim, field/combat validity, or general research-agent improvement follows from a run. Compare a fine-tuned agent against its unchanged base under the same artifact, token, trial, dataset and evaluator contracts.
+
+## Public leaderboard reanalysis: pooled-task-elo-v1
+
+After the run, the public site was revised at the user's request to score every
+participant, including partial and failed runs. It pools all pairwise comparisons
+within matched task/seed slots (pulse, heat, load; seeds 0, 1, 2), with the same
+initial 1,000, K=32, scale=400, tolerance 1e-9, deterministic order seed 0, lower
+MAE wins, valid beats failed, and two failures skip. Per-task Elo likewise retains
+numeric ratings for every participant. No point losses or judge scores change.
+
+This is a post-run analysis, not a change to the frozen run policy above. The
+original complete-suite ratings remain in the public snapshot's `suite_elo`.
+The site displays `overall_elo`. Reproduce with `python3 site/scripts/rate_results.py`;
+`site/public/results/pooled-task-elo-v1.json` contains the comparison audit.

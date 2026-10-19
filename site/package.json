@@ -1,0 +1,21 @@
+{
+  "name": "soliderphys-bench-site",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "deploy": "next build && CLOUDFLARE_ACCOUNT_ID=bddd50b774c77c8bc7c31bf50bb30c33 wrangler pages deploy out --project-name soliderphys-bench --branch main"
+  },
+  "dependencies": {
+    "next": "15.5.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@types/react": "19.1.13",
+    "typescript": "5.9.2",
+    "wrangler": "4.40.2"
+  }
+}

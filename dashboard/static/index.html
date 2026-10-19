@@ -37,6 +37,8 @@ header {
 header h1 { font-size: 15px; font-weight: 600; margin: 0; }
 header .meta { color: var(--muted); font-size: 13px; display: flex; gap: 20px; }
 header .right { margin-left: auto; display: flex; gap: 20px; align-items: center; color: var(--muted); font-size: 13px; }
+.site-link { color: var(--muted); text-decoration: none; }
+.site-link:hover { color: var(--text); }
 .conn::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); margin-right: 7px; vertical-align: 1px; }
 .conn.on::before { background: #a6d98c; }
 
@@ -191,7 +193,7 @@ section { min-height: 0; overflow: auto; }
 <header>
   <h1>Outkast <span style="font-weight:400">Team Monitor</span></h1>
   <div class="meta"><span id="hSession"></span><span id="hCounts"></span></div>
-  <div class="right"><span id="hClock" class="mono"></span><span id="hConn" class="conn">Connecting</span></div>
+  <div class="right"><a class="site-link" href="https://soliderphys-bench.pages.dev">soliderphys-bench ↗</a><span id="hClock" class="mono"></span><span id="hConn" class="conn">Connecting</span></div>
 </header>
 
 <main>
@@ -373,7 +375,7 @@ function renderDetail() {
         <span>Last sample <b id="mAge">—</b></span>
         <span>Location <b id="mLoc">—</b></span>
       </div>
-      <p class="note">${p.imu ? "A new baseline uses 20 heart-rate readings after 30 seconds of steady activity. A learned baseline is available as soon as that motion returns. Motion labels and baselines need on-body calibration. " : ""}A difference from expected means check this person or the sensor. It is not a diagnosis.${p.id.startsWith("mesh_") ? " Keep the IMU motionless and level for the first 30 seconds to calibrate velocity. Mount +Z up and +X forward, then set its heading clockwise from north. Positions drift; correct them on the map." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
+      <p class="note">${p.imu ? "A new baseline uses 20 heart-rate readings after 30 seconds of steady activity. A learned baseline is available as soon as that motion returns. Motion labels and baselines need on-body calibration. " : ""}A difference from expected means check this person or the sensor. It is not a diagnosis.${p.imu ? " IMU temp is the LSM6DSOX chip's own temperature, not skin or body temperature." : ""}${p.id.startsWith("mesh_") ? " Keep the IMU motionless and level for the first 30 seconds to calibrate velocity. Mount +Z up and +X forward, then set its heading clockwise from north. Positions drift; correct them on the map." : ""}${p.source === "SYNTHETIC" ? " This person is simulated." : p.source === "REPLAY" ? " This is a recorded session played back." : ""}</p>`;
     root.querySelector("#markDistress").onclick = () => send({ type: "distress", person: p.id });
     const pb = root.querySelector("#placeBtn");
     if (pb) pb.onclick = () => startPlacing(p.id);
